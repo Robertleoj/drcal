@@ -16,7 +16,8 @@ from build_config import CMAKE_FLAGS
 BUILD_DIR = "build"
 
 # TARGET_NAME = "bindings.cpython-313-x86_64-linux-gnu.so"
-TARGETS = ["bindings.so", "bindings_npsp.so"]
+TARGETS = ["bindings.so", "bindings_npsp.so", "bindings_poseutils_npsp.so"]
+MODULES = ["bindings", "bindings_npsp", "bindings_poseutils_npsp"]
 
 
 LIB_DIR = Path("./build")
@@ -62,29 +63,18 @@ def build(debug: bool) -> None:
     env = os.environ.copy()
     env["PYTHONPATH"] = f".:{env.get('PYTHONPATH', '')}"
 
-    subprocess.run(
-        [
-            "pybind11-stubgen",
-            "bindings",
-            "--numpy-array-remove-parameters",
-            "-o",
-            ".",
-        ],
-        env=env,
-        check=True,
-    )
-
-    subprocess.run(
-        [
-            "pybind11-stubgen",
-            "bindings_npsp",
-            "--numpy-array-remove-parameters",
-            "-o",
-            ".",
-        ],
-        env=env,
-        check=True,
-    )
+    for module in MODULES:
+        subprocess.run(
+            [
+                "pybind11-stubgen",
+                module,
+                "--numpy-array-remove-parameters",
+                "-o",
+                ".",
+            ],
+            env=env,
+            check=True,
+        )
 
 
 def clean() -> None:

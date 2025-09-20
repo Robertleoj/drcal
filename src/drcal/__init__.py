@@ -20,14 +20,14 @@ mrcal.mmm.fff() can be called as mrcal.fff() instead. The latter is preferred.
 from .bindings import *
 
 # The C wrapper is generated from mrcal-genpywrap.py
-from ._mrcal_npsp import *
+from .bindings_npsp import *
 
 from .projections import *
 from .cameramodel import *
 from .poseutils import *
 
 # The C wrapper is generated from poseutils-genpywrap.py
-from ._poseutils_npsp import *
+from .bindings_poseutils_npsp import *
 from .stereo import *
 from .visualization import *
 from .model_analysis import *
@@ -36,10 +36,3 @@ from .calibration import *
 from .image_transforms import *
 from .utils import *
 from .triangulation import *
-
-
-# libelas is optional. If we don't have it, I don't complain
-try:
-    from ._elas_npsp import *
-except ModuleNotFoundError:
-    pass

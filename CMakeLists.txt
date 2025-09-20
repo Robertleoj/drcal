@@ -88,10 +88,7 @@ Python3_add_library(
 
     cpp_src/bindings_npsp_generated.c
     cpp_src/mrcal.c
-    # cpp_src/uncertainty.c
-    # cpp_src/image.c
     cpp_src/stereo.c
-    # cpp_src/traverse-sensor-links.c
     cpp_src/cahvore.cc
     cpp_src/opencv.c
     cpp_src/poseutils.c
@@ -99,7 +96,21 @@ Python3_add_library(
     cpp_src/dogleg.c
     cpp_src/poseutils-uses-autodiff.cc
     cpp_src/triangulation.cc
-    # cpp_src/heap.cc
+)
+
+Python3_add_library(
+    bindings_poseutils_npsp MODULE 
+
+    cpp_src/bindings_poseutils_npsp_generated.c
+    cpp_src/mrcal.c
+    cpp_src/stereo.c
+    cpp_src/cahvore.cc
+    cpp_src/opencv.c
+    cpp_src/poseutils.c
+    cpp_src/poseutils-opencv.c
+    cpp_src/dogleg.c
+    cpp_src/poseutils-uses-autodiff.cc
+    cpp_src/triangulation.cc
 )
 
 target_include_directories(bindings PRIVATE
@@ -107,6 +118,10 @@ target_include_directories(bindings PRIVATE
 )
 
 target_include_directories(bindings_npsp PRIVATE
+  ${NUMPY_INCLUDE_DIR}
+)
+
+target_include_directories(bindings_poseutils_npsp PRIVATE
   ${NUMPY_INCLUDE_DIR}
 )
 
@@ -132,4 +147,17 @@ target_link_libraries(
         BLAS::BLAS
 )
 
+target_link_libraries(
+    bindings_poseutils_npsp
+    
+    PRIVATE 
+        SuiteSparse::CHOLMOD_static
+        freeimage::FreeImage
+        freeimage::FreeImagePlus
+        LAPACK::LAPACK
+        BLAS::BLAS
+)
+
 install(TARGETS bindings DESTINATION drcal)
+install(TARGETS bindings_npsp DESTINATION drcal)
+install(TARGETS bindings_poseutils_npsp DESTINATION drcal)
