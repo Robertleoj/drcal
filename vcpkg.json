@@ -1,5 +1,6 @@
 {
   "dependencies": [
-    "suitesparse-cholmod"
+    "suitesparse-cholmod",
+    "lapack"
   ]
 }

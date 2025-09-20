@@ -14,10 +14,10 @@
 #include <stdlib.h>
 
 #include <assert.h>
-#include <dogleg.h>
 #include <math.h>
 #include <stdbool.h>
 #include <string.h>
+#include "dogleg.h"
 
 #include "cahvore.h"
 #include "minimath/minimath-extra.h"
@@ -4869,7 +4869,7 @@ static bool markOutliers(
             LOOP_TRIANGULATED_POINT_HEADER();
 
             /////////////// divergent triangulated observations are DEFINITELY
-            ///outliers
+            /// outliers
             if (pt0->outlier || pt1->outlier) {
                 Nmeasurements_outliers_triangulated_start++;
             } else {

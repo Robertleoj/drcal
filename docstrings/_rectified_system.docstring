@@ -1,4 +1,0 @@
-Build rectified models for stereo rectification
-
-This is an internal function. You probably want mrcal.rectified_system(). See the
-docs for that function for details.

@@ -15,7 +15,8 @@ from build_config import CMAKE_FLAGS
 
 BUILD_DIR = "build"
 
-TARGET_NAME = "bindings.cpython-313-x86_64-linux-gnu.so"
+# TARGET_NAME = "bindings.cpython-313-x86_64-linux-gnu.so"
+TARGET_NAME = "bindings.so"
 
 LIB_PATH = Path("./build") / TARGET_NAME
 DEST_PATH = Path("./src/drcal/") / TARGET_NAME

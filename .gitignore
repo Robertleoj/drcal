@@ -9,7 +9,6 @@ cscope*
 *.i
 *.rej
 
-*generated*
 *GENERATED*
 core*
 

@@ -9,7 +9,7 @@ if(NOT DEFINED CMAKE_TOOLCHAIN_FILE)
 endif()
 
 
-project(drcal LANGUAGES CXX)
+project(drcal LANGUAGES C CXX)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
@@ -32,25 +32,45 @@ find_package(CHOLMOD CONFIG REQUIRED)
 
 # add_subdirectory(external/SuiteSparse/CHOLMOD)
 
-find_package(Python REQUIRED COMPONENTS Interpreter Development.Module REQUIRED)
+find_package(Python3 REQUIRED COMPONENTS Interpreter Development.Module)
+find_package(Python3 COMPONENTS NumPy)
+set(NUMPY_INCLUDE_DIR "${Python3_NumPy_INCLUDE_DIRS}")
+
+
 
 # Try to find installed pybind11
 # find_package(pybind11 REQUIRED)
-find_package(pybind11 CONFIG QUIET)
+# find_package(pybind11 CONFIG QUIET)
 
-if(NOT pybind11_FOUND)
-    message(STATUS "pybind11 not found, using FetchContent to grab it")
-    include(FetchContent)
-    FetchContent_Declare(
-        pybind11
-        GIT_REPOSITORY https://github.com/pybind/pybind11.git
-        GIT_TAG        stable
-    )
-    FetchContent_MakeAvailable(pybind11)
-endif()
+# if(NOT pybind11_FOUND)
+#     message(STATUS "pybind11 not found, using FetchContent to grab it")
+#     include(FetchContent)
+#     FetchContent_Declare(
+#         pybind11
+#         GIT_REPOSITORY https://github.com/pybind/pybind11.git
+#         GIT_TAG        stable
+#     )
+#     FetchContent_MakeAvailable(pybind11)
+# endif()
 
 # Build the Python module
-pybind11_add_module(bindings cpp_src/bindings.cpp)
+# pybind11_add_module(
+#     bindings 
+
+#     cpp_src/bindings.cpp
+#     cpp_src/dogleg.c
+# )
+
+Python3_add_library(
+    bindings MODULE 
+
+    cpp_src/mrcal-pywrap.c
+    cpp_src/mrcal.c
+)
+
+target_include_directories(bindings PRIVATE
+  ${NUMPY_INCLUDE_DIR}
+)
 
 target_link_libraries(bindings PRIVATE SuiteSparse::CHOLMOD_static)
 

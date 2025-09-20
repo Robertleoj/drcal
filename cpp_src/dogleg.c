@@ -1,11 +1,3 @@
-// -*- mode: C; c-basic-offset: 2 -*-
-// Copyright 2011 Oblong Industries
-//           2017-2018 Dima Kogan <dima@secretsauce.net>
-// License: GNU LGPL <http://www.gnu.org/licenses>.
-
-// Apparently I need this in MSVC to get constants
-#define _USE_MATH_DEFINES
-
 #include "dogleg.h"
 #include <float.h>
 #include <math.h>
