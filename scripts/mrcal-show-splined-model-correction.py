@@ -8,7 +8,7 @@
 #
 #     http://www.apache.org/licenses/LICENSE-2.0
 
-r'''Visualizes the surface represented in a splined lens model
+r"""Visualizes the surface represented in a splined lens model
 
 SYNOPSIS
 
@@ -83,106 +83,132 @@ at the imager edges is usually too alarming or not alarming enough. Passing
 --show-imager-bounds is thus recommended only if we have very good calibration
 coverage at the edge of the imager.
 
-'''
-
+"""
 
 import sys
 import argparse
 import re
-import os
+
 
 def parse_args():
+    parser = argparse.ArgumentParser(
+        description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
+    )
 
-    parser = \
-        argparse.ArgumentParser(description = __doc__,
-                                formatter_class=argparse.RawDescriptionHelpFormatter)
+    parser.add_argument(
+        "--gridn",
+        type=int,
+        default=(60, 40),
+        nargs=2,
+        help="""The density of the plotted grid. By default we
+                        use a 60x40 grid""",
+    )
 
-    parser.add_argument('--gridn',
-                        type=int,
-                        default = (60,40),
-                        nargs = 2,
-                        help='''The density of the plotted grid. By default we
-                        use a 60x40 grid''')
+    parser.add_argument(
+        "--vectorfield",
+        action="store_true",
+        help="""Display the spline correction as a vector field.
+                        if --vectorfield: the 'xy' argument MUST be omitted""",
+    )
 
-    parser.add_argument('--vectorfield',
-                        action = 'store_true',
-                        help='''Display the spline correction as a vector field.
-                        if --vectorfield: the 'xy' argument MUST be omitted''')
-
-    parser.add_argument('--vectorscale',
-                        type = float,
-                        default = 1.0,
-                        help='''If plotting a vector field, scale all the
+    parser.add_argument(
+        "--vectorscale",
+        type=float,
+        default=1.0,
+        help="""If plotting a vector field, scale all the
                         vectors by this factor. Useful to improve legibility if
-                        the vectors are too small to see''')
+                        the vectors are too small to see""",
+    )
 
-    parser.add_argument('--title',
-                        type=str,
-                        default = None,
-                        help='''Title string for the plot. Overrides the default
-                        title. Exclusive with --extratitle''')
-    parser.add_argument('--extratitle',
-                        type=str,
-                        default = None,
-                        help='''Additional string for the plot to append to the
-                        default title. Exclusive with --title''')
+    parser.add_argument(
+        "--title",
+        type=str,
+        default=None,
+        help="""Title string for the plot. Overrides the default
+                        title. Exclusive with --extratitle""",
+    )
+    parser.add_argument(
+        "--extratitle",
+        type=str,
+        default=None,
+        help="""Additional string for the plot to append to the
+                        default title. Exclusive with --title""",
+    )
 
-    parser.add_argument('--hardcopy',
-                        type=str,
-                        help='''Write the output to disk, instead of making an interactive plot''')
-    parser.add_argument('--terminal',
-                        type=str,
-                        help=r'''gnuplotlib terminal. The default is good almost always, so most people don't
-                        need this option''')
-    parser.add_argument('--set',
-                        type=str,
-                        action='append',
-                        help='''Extra 'set' directives to gnuplotlib. Can be given multiple times''')
-    parser.add_argument('--unset',
-                        type=str,
-                        action='append',
-                        help='''Extra 'unset' directives to gnuplotlib. Can be given multiple times''')
-    parser.add_argument('--imager-domain',
-                        action='store_true',
-                        help='''By default, this produces a visualization in the domain of the spline-index
+    parser.add_argument(
+        "--hardcopy",
+        type=str,
+        help="""Write the output to disk, instead of making an interactive plot""",
+    )
+    parser.add_argument(
+        "--terminal",
+        type=str,
+        help=r"""gnuplotlib terminal. The default is good almost always, so most people don't
+                        need this option""",
+    )
+    parser.add_argument(
+        "--set",
+        type=str,
+        action="append",
+        help="""Extra 'set' directives to gnuplotlib. Can be given multiple times""",
+    )
+    parser.add_argument(
+        "--unset",
+        type=str,
+        action="append",
+        help="""Extra 'unset' directives to gnuplotlib. Can be given multiple times""",
+    )
+    parser.add_argument(
+        "--imager-domain",
+        action="store_true",
+        help="""By default, this produces a visualization in the domain of the spline-index
                         (normalized stereographic coordinates). Sometimes it's
                         more informative to look at the imager domain instead,
-                        by passing this option''')
-    parser.add_argument('--show-imager-bounds',
-                        action='store_true',
-                        help='''By default we communicate the usable projection
+                        by passing this option""",
+    )
+    parser.add_argument(
+        "--show-imager-bounds",
+        action="store_true",
+        help="""By default we communicate the usable projection
                         region to the user by displaying the valid-intrinsics
                         region. This isn't available in all models. To fall back
                         on the boundary of the full imager, pass
                         --show-imager-bounds. In the usual case of incomplete
                         calibration-time coverage at the edges, this results in
                         a very unrealistic representation of reality. Leaving
-                        this at the default is recommended''')
-    parser.add_argument('--observations',
-                        action='store_true',
-                        default=False,
-                        help='''If given, I show where the chessboard corners were observed at calibration
-                        time. This is useful to evaluate the reported unprojectable regions.''')
-    parser.add_argument('model',
-                        type=str,
-                        help='''Input camera model. If "-' is given, we read standard input''')
+                        this at the default is recommended""",
+    )
+    parser.add_argument(
+        "--observations",
+        action="store_true",
+        default=False,
+        help="""If given, I show where the chessboard corners were observed at calibration
+                        time. This is useful to evaluate the reported unprojectable regions.""",
+    )
+    parser.add_argument(
+        "model",
+        type=str,
+        help="""Input camera model. If "-' is given, we read standard input""",
+    )
 
-    parser.add_argument('xy',
-                        choices = ('x','y'),
-                        nargs   = '?',
-                        help='''Optional 'x' or 'y': which surface we're looking
+    parser.add_argument(
+        "xy",
+        choices=("x", "y"),
+        nargs="?",
+        help="""Optional 'x' or 'y': which surface we're looking
                         at. MUST be omitted if --vectorfield. If omitted and not
                         --vectorfield: we plot the magnitude of the
-                        (deltaux,deltauy) corretion vector''')
+                        (deltaux,deltauy) corretion vector""",
+    )
 
     args = parser.parse_args()
 
-    if args.title      is not None and \
-       args.extratitle is not None:
+    if args.title is not None and args.extratitle is not None:
         print("--title and --extratitle are exclusive", file=sys.stderr)
         sys.exit(1)
 
     return args
+
 
 args = parse_args()
 
@@ -190,13 +216,7 @@ args = parse_args()
 # stuff, so that I can generate the manpages and README
 
 
-
-
-import numpy as np
-import numpysane as nps
-
 import mrcal
-
 
 
 try:
@@ -206,41 +226,46 @@ except Exception as e:
     sys.exit(1)
 lensmodel = model.intrinsics()[0]
 
-if not re.match('LENSMODEL_SPLINED', lensmodel):
-    print(f"This only makes sense with splined models. Input uses {lensmodel}",
-          file = sys.stderr)
+if not re.match("LENSMODEL_SPLINED", lensmodel):
+    print(
+        f"This only makes sense with splined models. Input uses {lensmodel}",
+        file=sys.stderr,
+    )
     sys.exit(1)
 
-if not args.show_imager_bounds and \
-   model.valid_intrinsics_region() is None:
-    print("The given model has no valid-intrinsics region. Pass --show-imager-bounds",
-          file = sys.stderr)
+if not args.show_imager_bounds and model.valid_intrinsics_region() is None:
+    print(
+        "The given model has no valid-intrinsics region. Pass --show-imager-bounds",
+        file=sys.stderr,
+    )
     sys.exit(1)
 
 plotkwargs = {}
 if args.set is not None:
-    plotkwargs['set'] = args.set
+    plotkwargs["set"] = args.set
 if args.unset is not None:
-    plotkwargs['unset'] = args.unset
+    plotkwargs["unset"] = args.unset
 
 if args.title is not None:
-    plotkwargs['title'] = args.title
+    plotkwargs["title"] = args.title
 if args.extratitle is not None:
-    plotkwargs['extratitle'] = args.extratitle
+    plotkwargs["extratitle"] = args.extratitle
 
 try:
-    plot = mrcal.show_splined_model_correction( model,
-                                                vectorfield             = args.vectorfield,
-                                                xy                      = args.xy,
-                                                imager_domain           = args.imager_domain,
-                                                gridn_width             = args.gridn[0],
-                                                gridn_height            = args.gridn[1],
-                                                vectorscale             = args.vectorscale,
-                                                valid_intrinsics_region = not args.show_imager_bounds,
-                                                observations            = args.observations,
-                                                hardcopy                = args.hardcopy,
-                                                terminal                = args.terminal,
-                                                **plotkwargs)
+    plot = mrcal.show_splined_model_correction(
+        model,
+        vectorfield=args.vectorfield,
+        xy=args.xy,
+        imager_domain=args.imager_domain,
+        gridn_width=args.gridn[0],
+        gridn_height=args.gridn[1],
+        vectorscale=args.vectorscale,
+        valid_intrinsics_region=not args.show_imager_bounds,
+        observations=args.observations,
+        hardcopy=args.hardcopy,
+        terminal=args.terminal,
+        **plotkwargs,
+    )
 except Exception as e:
     print(f"Error: {e}", file=sys.stderr)
     sys.exit(1)

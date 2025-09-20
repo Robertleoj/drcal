@@ -8,7 +8,7 @@
 #
 #     http://www.apache.org/licenses/LICENSE-2.0
 
-r'''Converts a kalibr-formatted camera model to the .cameramodel file format
+r"""Converts a kalibr-formatted camera model to the .cameramodel file format
 
 SYNOPSIS
 
@@ -54,48 +54,62 @@ which corresponds to
 
   camera_model == 'pinhole' and distortion_model in ('radtan','none')
 
-'''
+"""
 
 import sys
 import argparse
 import re
 import os
 
+
 def parse_args():
+    parser = argparse.ArgumentParser(
+        description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
+    )
 
-    parser = \
-        argparse.ArgumentParser(description = __doc__,
-                                formatter_class=argparse.RawDescriptionHelpFormatter)
-
-    parser.add_argument('--cam0-at-reference',
-                        action='store_true',
-                        default=False,
-                        help='''By default we set the extrinsics of camera-0 as
+    parser.add_argument(
+        "--cam0-at-reference",
+        action="store_true",
+        default=False,
+        help="""By default we set the extrinsics of camera-0 as
                         they appear in the input. If we want to force camera-0
                         to have an identity transform, pass --cam0-at-reference.
                         Usually this will be the case anyway in the input data,
-                        but this option makes sure''')
-    parser.add_argument('--camera',
-                        help='''Kalibr model files may contain multiple cameras,
+                        but this option makes sure""",
+    )
+    parser.add_argument(
+        "--camera",
+        help="""Kalibr model files may contain multiple cameras,
                         selected by this argument. If omitted, all available
                         cameras will be read. If given, we read JUST the one
-                        requested camera''')
-    parser.add_argument('--force', '-f',
-                        action='store_true',
-                        default=False,
-                        help='''By default existing files are not overwritten. Pass --force to overwrite them
-                        without complaint''')
-    parser.add_argument('--outdir',
-                        required=False,
-                        type=lambda d: d if os.path.isdir(d) else \
-                                parser.error("--outdir requires an existing directory as the arg, but got '{}'".format(d)),
-                        help='''Directory to write the output models into. If omitted, we write the output
-                        models to the same directory as the input models''')
-    parser.add_argument('model',
-                        default=['-'],
-                        nargs='*',
-                        type=str,
-                        help='''Input camera model; '-' to read standard input''')
+                        requested camera""",
+    )
+    parser.add_argument(
+        "--force",
+        "-f",
+        action="store_true",
+        default=False,
+        help="""By default existing files are not overwritten. Pass --force to overwrite them
+                        without complaint""",
+    )
+    parser.add_argument(
+        "--outdir",
+        required=False,
+        type=lambda d: d
+        if os.path.isdir(d)
+        else parser.error(
+            "--outdir requires an existing directory as the arg, but got '{}'".format(d)
+        ),
+        help="""Directory to write the output models into. If omitted, we write the output
+                        models to the same directory as the input models""",
+    )
+    parser.add_argument(
+        "model",
+        default=["-"],
+        nargs="*",
+        type=str,
+        help="""Input camera model; '-' to read standard input""",
+    )
 
     args = parser.parse_args()
 
@@ -104,6 +118,7 @@ def parse_args():
         sys.exit(1)
     args.model = args.model[0]
     return args
+
 
 args = parse_args()
 
@@ -118,21 +133,20 @@ import numpy as np
 import numpysane as nps
 
 
-
 Rt_camprev_ref = None
+
 
 # stolen from mrcal-to-kalibr. Please consolidate
 def Rt_is_identity(Rt):
-    cos_th = (np.trace(Rt[:3,:]) - 1.) / 2.
+    cos_th = (np.trace(Rt[:3, :]) - 1.0) / 2.0
     # cos_th ~ 1 - x^2/2
-    th_sq = (1 - cos_th)*2.
-    norm2_t = nps.norm2(Rt[3,:])
+    th_sq = (1 - cos_th) * 2.0
+    norm2_t = nps.norm2(Rt[3, :])
     return norm2_t < 1e-12 and th_sq < 1e-12
 
-def convert_one(d,name):
 
+def convert_one(d, name):
     global Rt_camprev_ref
-
 
     # I expect at least this structure:
     #
@@ -148,93 +162,115 @@ def convert_one(d,name):
     #   - [0.0, 0.0, 0.0, 1.0]
     #
     # T_cn_cnm1 may be omitted: I use an identity transform in that case
-    camera_model_known = set(('pinhole',
-                              'cahvor','cahvore'),)
-    if not d['camera_model'] in camera_model_known:
-        print(f"ERROR: at this time I only support kalibr camera_model: {camera_model_known}; got camera_model={d['camera_model']}",
-              file=sys.stderr)
+    camera_model_known = set(
+        ("pinhole", "cahvor", "cahvore"),
+    )
+    if d["camera_model"] not in camera_model_known:
+        print(
+            f"ERROR: at this time I only support kalibr camera_model: {camera_model_known}; got camera_model={d['camera_model']}",
+            file=sys.stderr,
+        )
         sys.exit(1)
 
-    if not re.match('cahvor',d['camera_model']):
-
+    if not re.match("cahvor", d["camera_model"]):
         # The "usual" path
-        distortion_model_known = set(('radtan','none'),)
-        if not d['distortion_model'] in distortion_model_known:
-            print(f"ERROR: at this time I only support kalibr distortion_model: {distortion_model_known}; got distortion_model={d['distortion_model']}",
-                  file=sys.stderr)
+        distortion_model_known = set(
+            ("radtan", "none"),
+        )
+        if d["distortion_model"] not in distortion_model_known:
+            print(
+                f"ERROR: at this time I only support kalibr distortion_model: {distortion_model_known}; got distortion_model={d['distortion_model']}",
+                file=sys.stderr,
+            )
             sys.exit(1)
 
-        if d['distortion_model'] == 'radtan':
-            intrinsics = ('LENSMODEL_OPENCV4',
-                          np.array(d['intrinsics'] +
-                                   d['distortion_coeffs'],
-                                   dtype=float))
+        if d["distortion_model"] == "radtan":
+            intrinsics = (
+                "LENSMODEL_OPENCV4",
+                np.array(d["intrinsics"] + d["distortion_coeffs"], dtype=float),
+            )
         else:
-            intrinsics = ('LENSMODEL_PINHOLE',
-                          np.array(d['intrinsics'],
-                                   dtype=float))
+            intrinsics = ("LENSMODEL_PINHOLE", np.array(d["intrinsics"], dtype=float))
 
-        m = mrcal.cameramodel( intrinsics = intrinsics,
-                               imagersize = np.array(d['resolution'],
-                                                     dtype=int) )
+        m = mrcal.cameramodel(
+            intrinsics=intrinsics, imagersize=np.array(d["resolution"], dtype=int)
+        )
 
     else:
         # cahvor or cahvore. This can only come from the hacked kalibr at jpl
-        if 'distortion_model' in d:
-            print(f"ERROR: camera_model={d['camera_model']}, so no distortion_model should have been given, but we have distortion_model={d['distortion_model']}",
-                  file=sys.stderr)
+        if "distortion_model" in d:
+            print(
+                f"ERROR: camera_model={d['camera_model']}, so no distortion_model should have been given, but we have distortion_model={d['distortion_model']}",
+                file=sys.stderr,
+            )
             sys.exit(1)
 
-        intrinsics = np.array(d['intrinsics'])
+        intrinsics = np.array(d["intrinsics"])
 
-        if d['camera_model'] == 'cahvor':
-            if intrinsics.size != 6*3:
-                print(f"ERROR: camera_model='cahvor' should have {6*3} intrinsics values, but got {intrinsics.size}",
-                      file=sys.stderr)
+        if d["camera_model"] == "cahvor":
+            if intrinsics.size != 6 * 3:
+                print(
+                    f"ERROR: camera_model='cahvor' should have {6 * 3} intrinsics values, but got {intrinsics.size}",
+                    file=sys.stderr,
+                )
                 sys.exit(1)
 
-            C,A,H,V,O,R = intrinsics.reshape(6,3)
+            C, A, H, V, O, R = intrinsics.reshape(6, 3)
             E = None
 
         else:
             # cahvore
-            if intrinsics.size != 7*3:
-                print(f"ERROR: camera_model='cahvor' should have {7*3} intrinsics values, but got {intrinsics.size}",
-                      file=sys.stderr)
+            if intrinsics.size != 7 * 3:
+                print(
+                    f"ERROR: camera_model='cahvor' should have {7 * 3} intrinsics values, but got {intrinsics.size}",
+                    file=sys.stderr,
+                )
                 sys.exit(1)
 
-            C,A,H,V,O,R,E = intrinsics.reshape(7,3)
+            C, A, H, V, O, R, E = intrinsics.reshape(7, 3)
 
         try:
-            m = mrcal.cahvor._construct_model(C,A,H,V,O,R,E,
-                                              is_cahvor_or_cahvore = True,
-                                              is_cahvore           = E is not None,
-                                              cahvore_linearity    = d.get('cahvore_linearity',0.37),
-                                              Dimensions           = np.array(d['resolution'],dtype=np.int32),
-                                              name                 = name)
+            m = mrcal.cahvor._construct_model(
+                C,
+                A,
+                H,
+                V,
+                O,
+                R,
+                E,
+                is_cahvor_or_cahvore=True,
+                is_cahvore=E is not None,
+                cahvore_linearity=d.get("cahvore_linearity", 0.37),
+                Dimensions=np.array(d["resolution"], dtype=np.int32),
+                name=name,
+            )
         except Exception as e:
-            print(f"ERROR: couldn't parse cahvor(e) model: {e}",
-                  file=sys.stderr)
+            print(f"ERROR: couldn't parse cahvor(e) model: {e}", file=sys.stderr)
             sys.exit(1)
 
         if not Rt_is_identity(m.extrinsics_Rt_fromref()):
-            print(f"ERROR: given cahvor(e) model has non-identity extrinsics. These may conflict with the extrinsics in the rest of the kalibr file",
-                  file=sys.stderr)
+            print(
+                "ERROR: given cahvor(e) model has non-identity extrinsics. These may conflict with the extrinsics in the rest of the kalibr file",
+                file=sys.stderr,
+            )
             sys.exit(1)
 
-
-    if not 'T_cn_cnm1' in d:
+    if "T_cn_cnm1" not in d:
         Rt_cam_camprev = mrcal.identity_Rt()
 
     else:
-        T_cn_cnm1 = np.array(d['T_cn_cnm1'])
-        if T_cn_cnm1.shape != (4,4):
-            print(f"ERROR: T_cn_cnm1 must be a 4x4 array; got T_cn_cnm1.shape={T_cn_cnm1.shape}",
-                  file=sys.stderr)
+        T_cn_cnm1 = np.array(d["T_cn_cnm1"])
+        if T_cn_cnm1.shape != (4, 4):
+            print(
+                f"ERROR: T_cn_cnm1 must be a 4x4 array; got T_cn_cnm1.shape={T_cn_cnm1.shape}",
+                file=sys.stderr,
+            )
             sys.exit()
-        if np.any(T_cn_cnm1[3,:] - np.array((0,0,0,1))):
-            print(f"ERROR: T_cn_cnm1 must have a last row of (0,0,0,1); got {T_cn_cnm1[3,:]}",
-                  file=sys.stderr)
+        if np.any(T_cn_cnm1[3, :] - np.array((0, 0, 0, 1))):
+            print(
+                f"ERROR: T_cn_cnm1 must have a last row of (0,0,0,1); got {T_cn_cnm1[3, :]}",
+                file=sys.stderr,
+            )
             sys.exit()
 
         # The documentation is here:
@@ -248,13 +284,18 @@ def convert_one(d,name):
         #   cam1 coordinates)
         #
         # This isn't clear. I assume "last" means "previous"
-        R_cam_camprev = T_cn_cnm1[:3,:3]
-        if nps.norm2((nps.matmult(R_cam_camprev, R_cam_camprev.T) - np.eye(3)).ravel()) > 1e-12:
-            print(f"ERROR: T_cn_cnm1[:3,:3] must be a valid rotation. Instead it is {T_cn_cnm1[:3,:3]}",
-                  file=sys.stderr)
+        R_cam_camprev = T_cn_cnm1[:3, :3]
+        if (
+            nps.norm2((nps.matmult(R_cam_camprev, R_cam_camprev.T) - np.eye(3)).ravel())
+            > 1e-12
+        ):
+            print(
+                f"ERROR: T_cn_cnm1[:3,:3] must be a valid rotation. Instead it is {T_cn_cnm1[:3, :3]}",
+                file=sys.stderr,
+            )
             sys.exit(1)
         t_cam_camprev = T_cn_cnm1[:3, 3]
-        Rt_cam_camprev = nps.glue(R_cam_camprev,t_cam_camprev, axis=-2)
+        Rt_cam_camprev = nps.glue(R_cam_camprev, t_cam_camprev, axis=-2)
 
     if Rt_camprev_ref is not None:
         Rt_cam_ref = mrcal.compose_Rt(Rt_cam_camprev, Rt_camprev_ref)
@@ -266,15 +307,13 @@ def convert_one(d,name):
             # By default the "prev cam" from cam0 is the reference
             Rt_cam_ref = Rt_cam_camprev
 
-
-    Rt_camprev_ref = Rt_cam_ref # for the next one
+    Rt_camprev_ref = Rt_cam_ref  # for the next one
 
     m.extrinsics_Rt_fromref(Rt_cam_ref)
     return m
 
 
 def convert_all(f, which):
-
     # which is None = "all cameras"
 
     try:
@@ -285,92 +324,96 @@ def convert_all(f, which):
         sys.exit(1)
 
     if len(D) == 0:
-        print("Zero models read from input",
-              file=sys.stderr)
+        print("Zero models read from input", file=sys.stderr)
         sys.exit(1)
 
-    if 'camera_model' in D:
+    if "camera_model" in D:
         # one camera; stored inline
         d = D
         if which is not None:
-            print(f"Error: a single in-line model found in the file, but a specific camera is requested: '{which}'. Omit --camera",
-                  file=sys.stderr)
+            print(
+                f"Error: a single in-line model found in the file, but a specific camera is requested: '{which}'. Omit --camera",
+                file=sys.stderr,
+            )
             sys.exit(1)
         try:
-            return ( \
-                     (None, convert_one(d,'camera')),
-                    )
+            return ((None, convert_one(d, "camera")),)
         except KeyError as e:
             print(f"Error parsing input; missing key: {e}", file=sys.stderr)
             sys.exit(1)
 
-    if which is not None and \
-       not which in D:
-        print(f"Error: asked for camera '{which}', but the given file contains only these cameras: {tuple(D.keys())}",
-              file=sys.stderr)
+    if which is not None and which not in D:
+        print(
+            f"Error: asked for camera '{which}', but the given file contains only these cameras: {tuple(D.keys())}",
+            file=sys.stderr,
+        )
         sys.exit(1)
-
 
     # The extrinsics are specified as a serial chain. So I need to parse all the
     # cameras, even if I only need to save one
     models = dict()
-    for name,d in D.items():
+    for name, d in D.items():
         try:
-            models[name] = convert_one(d,name)
+            models[name] = convert_one(d, name)
         except KeyError as e:
             print(f"Error parsing input; missing key: {e}", file=sys.stderr)
             sys.exit(1)
 
     if which is None:
         # all cameras requested
-        return [ (name, models[name]) \
-                 for name in models.keys() ]
+        return [(name, models[name]) for name in models.keys()]
 
-    return ( \
-             (which, models[which]),
-           )
+    return ((which, models[which]),)
 
 
-
-if args.model == '-':
+if args.model == "-":
     if sys.stdin.isatty():
         # This isn't an error per-se. But most likely the user ran this
         # without redirecting any data into it. Without this check the
         # program will sit there, waiting for input. Which will look strange
         # to an unsuspecting user
-        print("Trying to read a model from standard input, but no file is being redirected into it",
-              file=sys.stderr)
+        print(
+            "Trying to read a model from standard input, but no file is being redirected into it",
+            file=sys.stderr,
+        )
         sys.exit(1)
 
-    names_models = convert_all(sys.stdin, which = args.camera)
+    names_models = convert_all(sys.stdin, which=args.camera)
     if len(names_models) > 1:
-        print(f"Reading from standard input may only produce ONE model on stdout, but got more here. Pass --camera to select the camera you want; available cameras: {list(n for n,m in names_models)}",
-              file=sys.stderr)
+        print(
+            f"Reading from standard input may only produce ONE model on stdout, but got more here. Pass --camera to select the camera you want; available cameras: {list(n for n, m in names_models)}",
+            file=sys.stderr,
+        )
         sys.exit(1)
 
     names_models[0][1].write(sys.stdout)
 
 else:
-    base,extension = os.path.splitext(args.model)
-    if extension.lower() == '.cameramodel':
-        print("Input file is already in the cameramodel format (judging from the filename). Doing nothing",
-              file=sys.stderr)
+    base, extension = os.path.splitext(args.model)
+    if extension.lower() == ".cameramodel":
+        print(
+            "Input file is already in the cameramodel format (judging from the filename). Doing nothing",
+            file=sys.stderr,
+        )
         sys.exit(0)
 
     if args.outdir is not None:
-        base = args.outdir + '/' + os.path.split(base)[1]
+        base = args.outdir + "/" + os.path.split(base)[1]
 
     with open(args.model, "r") as f:
-        names_models = convert_all(f, which = args.camera)
+        names_models = convert_all(f, which=args.camera)
 
-    for name,model in names_models:
-
-        if name is None: name = ''
-        else:            name = f"-{name}"
+    for name, model in names_models:
+        if name is None:
+            name = ""
+        else:
+            name = f"-{name}"
         filename_out = f"{base}{name}.cameramodel"
         if not args.force and os.path.exists(filename_out):
-            print(f"Target model '{filename_out}' already exists. Doing nothing with this model. Pass -f to overwrite",
-                  file=sys.stderr)
+            print(
+                f"Target model '{filename_out}' already exists. Doing nothing with this model. Pass -f to overwrite",
+                file=sys.stderr,
+            )
             continue
 
         model.write(filename_out)

@@ -8,7 +8,7 @@
 #
 #     http://www.apache.org/licenses/LICENSE-2.0
 
-r'''Combines the intrinsics of one cameramodel with the extrinsics of another
+r"""Combines the intrinsics of one cameramodel with the extrinsics of another
 
 SYNOPSIS
 
@@ -89,90 +89,103 @@ difference in options is that THIS tool uses --radius 0 by default, so we do not
 compute or apply the implied transformation unless asked. Pass --radius with a
 non-zero argument to compute and apply the implied transformation.
 
-'''
-
+"""
 
 import sys
 import argparse
-import re
-import os
+
 
 def parse_args():
+    parser = argparse.ArgumentParser(
+        description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
+    )
 
-    parser = \
-        argparse.ArgumentParser(description = __doc__,
-                                formatter_class=argparse.RawDescriptionHelpFormatter)
-
-    parser.add_argument('--gridn',
-                        type=int,
-                        default = (60,40),
-                        nargs = 2,
-                        help='''Used if we're computing the implied-by-the-intrinsics transformation. How
-                        densely we should sample the imager. By default we use a 60x40 grid''')
-    parser.add_argument('--distance',
-                        type=str,
-                        help='''Used if we're computing the implied-by-the-intrinsics transformation. By
+    parser.add_argument(
+        "--gridn",
+        type=int,
+        default=(60, 40),
+        nargs=2,
+        help="""Used if we're computing the implied-by-the-intrinsics transformation. How
+                        densely we should sample the imager. By default we use a 60x40 grid""",
+    )
+    parser.add_argument(
+        "--distance",
+        type=str,
+        help="""Used if we're computing the implied-by-the-intrinsics transformation. By
                         default we compute the implied transformation for points
                         infinitely far away from the camera. If we want to look
                         closer in, the desired observation distance can be given
                         in this argument. We can also fit multiple distances at
                         the same time by passing them here in a comma-separated,
-                        whitespace-less list''')
-    parser.add_argument('--where',
-                        type=float,
-                        nargs=2,
-                        help='''Used if we're computing the implied-by-the-intrinsics transformation. Center
+                        whitespace-less list""",
+    )
+    parser.add_argument(
+        "--where",
+        type=float,
+        nargs=2,
+        help="""Used if we're computing the implied-by-the-intrinsics transformation. Center
                         of the region of interest used for the transformation
                         fit. It is usually impossible for the models to match
                         everywhere, but focusing on a particular area can work
                         better. The implied transformation will be fit to match
                         as large as possible an area centered on this argument.
-                        If omitted, we will focus on the center of the imager''')
-    parser.add_argument('--radius',
-                        type=float,
-                        default=0.,
-                        help='''Used if we're computing the
+                        If omitted, we will focus on the center of the imager""",
+    )
+    parser.add_argument(
+        "--radius",
+        type=float,
+        default=0.0,
+        help="""Used if we're computing the
                         implied-by-the-intrinsics transformation. Radius of the
                         region of interest. If ==0 (the default), we do NOT fit
                         an implied transformation at all. If <0, we use a
                         "reasonable" value: the whole imager if we're using
                         uncertainties, or min(width,height)/6 if
                         --no-uncertainties. To fit with data across the whole
-                        imager in either case, pass in a very large radius''')
-    parser.add_argument('--no-uncertainties',
-                        action = 'store_true',
-                        default = False,
-                        help='''Used if we're computing the implied-by-the-intrinsics transformation. By
+                        imager in either case, pass in a very large radius""",
+    )
+    parser.add_argument(
+        "--no-uncertainties",
+        action="store_true",
+        default=False,
+        help="""Used if we're computing the implied-by-the-intrinsics transformation. By
                         default we use the uncertainties in the model to weigh
                         the fit. This will focus the fit on the confident
                         region in the models without --where or --radius. The
                         computation will run faster with --no-uncertainties, but
                         the default --where and --radius may need to be
-                        adjusted''')
+                        adjusted""",
+    )
 
-    parser.add_argument('intrinsics',
-                        type=str,
-                        help='''Input camera model for the intrinsics. If "-" is given, we read standard
-                        input. Both the intrinsics and extrinsics sources may not be "-"''')
-    parser.add_argument('extrinsics',
-                        type=str,
-                        help='''Input camera model for the extrinsics. If "-" is given, we read standard
-                        input. Both the intrinsics and extrinsics sources may not be "-"''')
+    parser.add_argument(
+        "intrinsics",
+        type=str,
+        help='''Input camera model for the intrinsics. If "-" is given, we read standard
+                        input. Both the intrinsics and extrinsics sources may not be "-"''',
+    )
+    parser.add_argument(
+        "extrinsics",
+        type=str,
+        help='''Input camera model for the extrinsics. If "-" is given, we read standard
+                        input. Both the intrinsics and extrinsics sources may not be "-"''',
+    )
 
     args = parser.parse_args()
 
     if args.intrinsics == "-" and args.extrinsics == "-":
-        print("Error: both intrinsics and extrinsics may not be given as '-'", file=sys.stderr)
+        print(
+            "Error: both intrinsics and extrinsics may not be given as '-'",
+            file=sys.stderr,
+        )
         sys.exit(1)
 
     return args
+
 
 args = parse_args()
 
 # arg-parsing is done before the imports so that --help works without building
 # stuff, so that I can generate the manpages and README
-
-
 
 
 import numpy as np
@@ -181,57 +194,60 @@ import mrcal
 import time
 
 
-
-
 model_intrinsics = mrcal.cameramodel(args.intrinsics)
 model_extrinsics = mrcal.cameramodel(args.extrinsics)
-
 
 
 if args.distance is None:
     distance = None
 else:
     try:
-        distance = [float(d) for d in args.distance.split(',')]
+        distance = [float(d) for d in args.distance.split(",")]
     except:
-        print("Error: distances must be given a comma-separated list of floats in --distance",
-              file=sys.stderr)
+        print(
+            "Error: distances must be given a comma-separated list of floats in --distance",
+            file=sys.stderr,
+        )
         sys.exit(1)
 
 if args.radius == 0:
     rt_cr = model_extrinsics.extrinsics_rt_fromref()
     model_intrinsics.extrinsics_rt_fromref(rt_cr)
 else:
-    difflen,diff,q0, Rt_camoldintrinsics_camnewintrinsics = \
-        mrcal.projection_diff((model_intrinsics, model_extrinsics),
-
-                               gridn_width       = args.gridn[0],
-                               gridn_height      = args.gridn[1],
-                               intrinsics_only   = False,
-                               distance          = distance,
-                               use_uncertainties = not args.no_uncertainties,
-                               focus_center      = args.where,
-                               focus_radius      = args.radius)
+    difflen, diff, q0, Rt_camoldintrinsics_camnewintrinsics = mrcal.projection_diff(
+        (model_intrinsics, model_extrinsics),
+        gridn_width=args.gridn[0],
+        gridn_height=args.gridn[1],
+        intrinsics_only=False,
+        distance=distance,
+        use_uncertainties=not args.no_uncertainties,
+        focus_center=args.where,
+        focus_radius=args.radius,
+    )
 
     rt10 = mrcal.rt_from_Rt(Rt_camoldintrinsics_camnewintrinsics)
-    print(f"Transformation cam1 <-- cam0:  rotation: {nps.mag(rt10[:3])*180./np.pi:.03f} degrees, translation: {rt10[3:]} m",
-          file = sys.stderr)
+    print(
+        f"Transformation cam1 <-- cam0:  rotation: {nps.mag(rt10[:3]) * 180.0 / np.pi:.03f} degrees, translation: {rt10[3:]} m",
+        file=sys.stderr,
+    )
 
     rt_camoldintrinsics_ref = model_extrinsics.extrinsics_rt_fromref()
 
-    rt_camnewintrinsics_ref = \
-        mrcal.compose_rt( mrcal.rt_from_Rt( mrcal.invert_Rt(Rt_camoldintrinsics_camnewintrinsics)),
-                          rt_camoldintrinsics_ref)
+    rt_camnewintrinsics_ref = mrcal.compose_rt(
+        mrcal.rt_from_Rt(mrcal.invert_Rt(Rt_camoldintrinsics_camnewintrinsics)),
+        rt_camoldintrinsics_ref,
+    )
 
     model_intrinsics.extrinsics_rt_fromref(rt_camnewintrinsics_ref)
 
 
+note = "Generated on {} with   {}\n".format(
+    time.strftime("%Y-%m-%d %H:%M:%S"), " ".join(mrcal.shellquote(s) for s in sys.argv)
+)
 
-note = \
-    "Generated on {} with   {}\n".format(time.strftime("%Y-%m-%d %H:%M:%S"),
-                                         ' '.join(mrcal.shellquote(s) for s in sys.argv))
-
-print(f"Combined\nIntrinsics from '{args.intrinsics}'\nExtrinsics from '{args.extrinsics}'",
-      file = sys.stderr)
+print(
+    f"Combined\nIntrinsics from '{args.intrinsics}'\nExtrinsics from '{args.extrinsics}'",
+    file=sys.stderr,
+)
 
 model_intrinsics.write(sys.stdout, note=note)

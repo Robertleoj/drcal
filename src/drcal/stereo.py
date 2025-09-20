@@ -8,30 +8,31 @@
 #
 #     http://www.apache.org/licenses/LICENSE-2.0
 
-'''Routines for stereo processing: rectification and ranging
+"""Routines for stereo processing: rectification and ranging
 
 All functions are exported into the mrcal module. So you can call these via
 mrcal.stereo.fff() or mrcal.fff(). The latter is preferred.
-'''
+"""
 
-import sys
 import numpy as np
 import numpysane as nps
 import mrcal
 import re
 
-def rectified_resolution(model,
-                         *,
-                         az_fov_deg,
-                         el_fov_deg,
-                         az0_deg,
-                         el0_deg,
-                         R_cam0_rect0,
-                         pixels_per_deg_az   = -1.,
-                         pixels_per_deg_el   = -1.,
-                         rectification_model = 'LENSMODEL_LATLON'):
 
-    r'''Compute the resolution to be used for the rectified system
+def rectified_resolution(
+    model,
+    *,
+    az_fov_deg,
+    el_fov_deg,
+    az0_deg,
+    el0_deg,
+    R_cam0_rect0,
+    pixels_per_deg_az=-1.0,
+    pixels_per_deg_el=-1.0,
+    rectification_model="LENSMODEL_LATLON",
+):
+    r"""Compute the resolution to be used for the rectified system
 
 SYNOPSIS
 
@@ -99,45 +100,47 @@ ARGUMENTS
 RETURNED VALUES
 
 A tuple (pixels_per_deg_az,pixels_per_deg_el)
-'''
+"""
     # The guts of this function are implemented in C. Call that
-    return mrcal._mrcal._rectified_resolution(*model.intrinsics(),
-                                              R_cam0_rect0        = np.ascontiguousarray(R_cam0_rect0),
-                                              az_fov_deg          = az_fov_deg,
-                                              el_fov_deg          = el_fov_deg,
-                                              az0_deg             = az0_deg,
-                                              el0_deg             = el0_deg,
-                                              pixels_per_deg_az   = pixels_per_deg_az,
-                                              pixels_per_deg_el   = pixels_per_deg_el,
-                                              rectification_model = rectification_model)
+    return mrcal._mrcal._rectified_resolution(
+        *model.intrinsics(),
+        R_cam0_rect0=np.ascontiguousarray(R_cam0_rect0),
+        az_fov_deg=az_fov_deg,
+        el_fov_deg=el_fov_deg,
+        az0_deg=az0_deg,
+        el0_deg=el0_deg,
+        pixels_per_deg_az=pixels_per_deg_az,
+        pixels_per_deg_el=pixels_per_deg_el,
+        rectification_model=rectification_model,
+    )
 
-def _rectified_resolution_python(model,
-                                 *,
-                                 az_fov_deg,
-                                 el_fov_deg,
-                                 az0_deg,
-                                 el0_deg,
-                                 R_cam0_rect0,
-                                 pixels_per_deg_az   = -1.,
-                                 pixels_per_deg_el   = -1.,
-                                 rectification_model = 'LENSMODEL_LATLON'):
 
-    r'''Reference implementation of mrcal_rectified_resolution() in python
+def _rectified_resolution_python(
+    model,
+    *,
+    az_fov_deg,
+    el_fov_deg,
+    az0_deg,
+    el0_deg,
+    R_cam0_rect0,
+    pixels_per_deg_az=-1.0,
+    pixels_per_deg_el=-1.0,
+    rectification_model="LENSMODEL_LATLON",
+):
+    r"""Reference implementation of mrcal_rectified_resolution() in python
 
-The main implementation is written in C in stereo.c:
+    The main implementation is written in C in stereo.c:
 
-  mrcal_rectified_resolution()
+      mrcal_rectified_resolution()
 
-This should be identical to the rectified_resolution() function above. There's
-no explicit test to compare the two implementations, but test/test-stereo.py
-should catch any differences.
+    This should be identical to the rectified_resolution() function above. There's
+    no explicit test to compare the two implementations, but test/test-stereo.py
+    should catch any differences.
 
-    '''
+    """
 
-    if pixels_per_deg_az < 0 or \
-       pixels_per_deg_el < 0:
-
-        azel0 = np.array((az0_deg,el0_deg)) * np.pi/180.
+    if pixels_per_deg_az < 0 or pixels_per_deg_el < 0:
+        azel0 = np.array((az0_deg, el0_deg)) * np.pi / 180.0
 
         # I need to compute the resolution of the rectified images. I try to
         # match the resolution of the cameras. I just look at camera0. If your
@@ -146,34 +149,30 @@ should catch any differences.
         # I look at the center of the stereo field of view. There I have q =
         # project(v) where v is a unit projection vector. I compute dq/dth where
         # th is an angular perturbation applied to v.
-        if rectification_model == 'LENSMODEL_LATLON':
+        if rectification_model == "LENSMODEL_LATLON":
             q0_normalized = azel0
-            v,dv_dazel = \
-                mrcal.unproject_latlon( q0_normalized,
-                                        get_gradients = True )
-        elif rectification_model == 'LENSMODEL_LONLAT':
+            v, dv_dazel = mrcal.unproject_latlon(q0_normalized, get_gradients=True)
+        elif rectification_model == "LENSMODEL_LONLAT":
             q0_normalized = azel0
-            v,dv_dazel = \
-                mrcal.unproject_lonlat( q0_normalized,
-                                        get_gradients = True )
-        elif rectification_model == 'LENSMODEL_PINHOLE':
+            v, dv_dazel = mrcal.unproject_lonlat(q0_normalized, get_gradients=True)
+        elif rectification_model == "LENSMODEL_PINHOLE":
             q0_normalized = np.tan(azel0)
-            v,dv_dq0normalized = \
-                mrcal.unproject_pinhole( q0_normalized,
-                                         get_gradients = True )
+            v, dv_dq0normalized = mrcal.unproject_pinhole(
+                q0_normalized, get_gradients=True
+            )
             # dq/dth = dtanth/dth = 1/cos^2(th)
             dv_dazel = dv_dq0normalized
 
             cos_azel0 = np.cos(azel0)
-            dv_dazel /= cos_azel0*cos_azel0
+            dv_dazel /= cos_azel0 * cos_azel0
 
         else:
             raise Exception("Unsupported rectification model")
 
-        v0         = mrcal.rotate_point_R(R_cam0_rect0, v)
-        dv0_dazel  = nps.matmult(R_cam0_rect0, dv_dazel)
+        v0 = mrcal.rotate_point_R(R_cam0_rect0, v)
+        dv0_dazel = nps.matmult(R_cam0_rect0, dv_dazel)
 
-        _,dq_dv0,_ = mrcal.project(v0, *model.intrinsics(), get_gradients = True)
+        _, dq_dv0, _ = mrcal.project(v0, *model.intrinsics(), get_gradients=True)
 
         # More complex method that's probably not any better
         #
@@ -196,11 +195,11 @@ should catch any differences.
         dq_dazel = nps.matmult(dq_dv0, dv0_dazel)
 
         if pixels_per_deg_az < 0:
-            pixels_per_deg_az_have = nps.mag(dq_dazel[:,0])*np.pi/180.
+            pixels_per_deg_az_have = nps.mag(dq_dazel[:, 0]) * np.pi / 180.0
             pixels_per_deg_az *= -pixels_per_deg_az_have
 
         if pixels_per_deg_el < 0:
-            pixels_per_deg_el_have = nps.mag(dq_dazel[:,1])*np.pi/180.
+            pixels_per_deg_el_have = nps.mag(dq_dazel[:, 1]) * np.pi / 180.0
             pixels_per_deg_el *= -pixels_per_deg_el_have
 
     # I now have the desired pixels_per_deg
@@ -211,31 +210,32 @@ should catch any differences.
     #
     # With LENSMODEL_PINHOLE this is much more complex, so this function just
     # leaves the desired pixels_per_deg as it is
-    if rectification_model == 'LENSMODEL_LATLON' or \
-       rectification_model == 'LENSMODEL_LONLAT':
+    if (
+        rectification_model == "LENSMODEL_LATLON"
+        or rectification_model == "LENSMODEL_LONLAT"
+    ):
+        Naz = round(az_fov_deg * pixels_per_deg_az)
+        Nel = round(el_fov_deg * pixels_per_deg_el)
 
-        Naz = round(az_fov_deg*pixels_per_deg_az)
-        Nel = round(el_fov_deg*pixels_per_deg_el)
+        pixels_per_deg_az = Naz / az_fov_deg
+        pixels_per_deg_el = Nel / el_fov_deg
 
-        pixels_per_deg_az = Naz/az_fov_deg
-        pixels_per_deg_el = Nel/el_fov_deg
+    return pixels_per_deg_az, pixels_per_deg_el
 
-    return \
-        pixels_per_deg_az, \
-        pixels_per_deg_el
 
-def rectified_system(models,
-                     *,
-                     az_fov_deg,
-                     el_fov_deg,
-                     az0_deg             = None,
-                     el0_deg             = 0,
-                     pixels_per_deg_az   = -1.,
-                     pixels_per_deg_el   = -1.,
-                     rectification_model = 'LENSMODEL_LATLON',
-                     return_metadata     = False):
-
-    r'''Build rectified models for stereo rectification
+def rectified_system(
+    models,
+    *,
+    az_fov_deg,
+    el_fov_deg,
+    az0_deg=None,
+    el0_deg=0,
+    pixels_per_deg_az=-1.0,
+    pixels_per_deg_el=-1.0,
+    rectification_model="LENSMODEL_LATLON",
+    return_metadata=False,
+):
+    r"""Build rectified models for stereo rectification
 
 SYNOPSIS
 
@@ -407,53 +407,62 @@ direction in rectified coordinates.
 if not return_metadata: we return this tuple of models
 else:                   we return this tuple of models, dict of metadata
 
-    '''
+    """
 
     for m in models:
         lensmodel = m.intrinsics()[0]
         meta = mrcal.lensmodel_metadata_and_config(lensmodel)
-        if meta['noncentral']:
+        if meta["noncentral"]:
             if re.match("^LENSMODEL_CAHVORE", lensmodel):
                 if nps.norm2(m.intrinsics()[1][-3:]) > 0:
-                    raise Exception("Stereo rectification is only possible with a central projection. Please centralize your models. This is CAHVORE, so set E=0 to centralize. This will ignore all noncentral effects near the lens")
+                    raise Exception(
+                        "Stereo rectification is only possible with a central projection. Please centralize your models. This is CAHVORE, so set E=0 to centralize. This will ignore all noncentral effects near the lens"
+                    )
             else:
-                raise Exception("Stereo rectification is only possible with a central projection. Please centralize your models")
+                raise Exception(
+                    "Stereo rectification is only possible with a central projection. Please centralize your models"
+                )
 
-    if rectification_model == 'LENSMODEL_PINHOLE':
+    if rectification_model == "LENSMODEL_PINHOLE":
         # The pinhole rectification path is not implemented in C yet. Call the
         # Python
-        return _rectified_system_python(models,
-                                        az_fov_deg          = az_fov_deg,
-                                        el_fov_deg          = el_fov_deg,
-                                        az0_deg             = az0_deg,
-                                        el0_deg             = el0_deg,
-                                        pixels_per_deg_az   = pixels_per_deg_az,
-                                        pixels_per_deg_el   = pixels_per_deg_el,
-                                        rectification_model = rectification_model,
-                                        return_metadata     = return_metadata)
+        return _rectified_system_python(
+            models,
+            az_fov_deg=az_fov_deg,
+            el_fov_deg=el_fov_deg,
+            az0_deg=az0_deg,
+            el0_deg=el0_deg,
+            pixels_per_deg_az=pixels_per_deg_az,
+            pixels_per_deg_el=pixels_per_deg_el,
+            rectification_model=rectification_model,
+            return_metadata=return_metadata,
+        )
 
     # The guts of this function are implemented in C. Call that
-    pixels_per_deg_az, \
-    pixels_per_deg_el, \
-    Naz, Nel,          \
-    fxycxy_rectified,  \
-    rt_rect0_ref,      \
-    baseline,          \
-    az_fov_deg,        \
-    el_fov_deg,        \
-    az0_deg,           \
-    el0_deg =          \
-        mrcal._mrcal._rectified_system(*models[0].intrinsics(),
-                                       models[0].extrinsics_rt_fromref(),
-                                       models[1].extrinsics_rt_fromref(),
-                                       az_fov_deg          = az_fov_deg,
-                                       el_fov_deg          = el_fov_deg,
-                                       az0_deg             = az0_deg if az0_deg is not None else 1e7,
-                                       el0_deg             = el0_deg,
-                                       pixels_per_deg_az   = pixels_per_deg_az,
-                                       pixels_per_deg_el   = pixels_per_deg_el,
-                                       rectification_model = rectification_model)
-
+    (
+        pixels_per_deg_az,
+        pixels_per_deg_el,
+        Naz,
+        Nel,
+        fxycxy_rectified,
+        rt_rect0_ref,
+        baseline,
+        az_fov_deg,
+        el_fov_deg,
+        az0_deg,
+        el0_deg,
+    ) = mrcal._mrcal._rectified_system(
+        *models[0].intrinsics(),
+        models[0].extrinsics_rt_fromref(),
+        models[1].extrinsics_rt_fromref(),
+        az_fov_deg=az_fov_deg,
+        el_fov_deg=el_fov_deg,
+        az0_deg=az0_deg if az0_deg is not None else 1e7,
+        el0_deg=el0_deg,
+        pixels_per_deg_az=pixels_per_deg_az,
+        pixels_per_deg_el=pixels_per_deg_el,
+        rectification_model=rectification_model,
+    )
 
     ######## The geometry
 
@@ -464,71 +473,91 @@ else:                   we return this tuple of models, dict of metadata
     rt_rect1_ref = rt_rect0_ref.copy()
     rt_rect1_ref[3] -= baseline
 
-    models_rectified = \
-        ( mrcal.cameramodel( intrinsics = (rectification_model, fxycxy_rectified),
-                             imagersize = (Naz, Nel),
-                             extrinsics_rt_fromref = rt_rect0_ref),
-
-          mrcal.cameramodel( intrinsics = (rectification_model, fxycxy_rectified),
-                             imagersize = (Naz, Nel),
-                             extrinsics_rt_fromref = rt_rect1_ref) )
+    models_rectified = (
+        mrcal.cameramodel(
+            intrinsics=(rectification_model, fxycxy_rectified),
+            imagersize=(Naz, Nel),
+            extrinsics_rt_fromref=rt_rect0_ref,
+        ),
+        mrcal.cameramodel(
+            intrinsics=(rectification_model, fxycxy_rectified),
+            imagersize=(Naz, Nel),
+            extrinsics_rt_fromref=rt_rect1_ref,
+        ),
+    )
 
     if not return_metadata:
         return models_rectified
 
-    metadata = \
-        dict( az_fov_deg        = az_fov_deg,
-              el_fov_deg        = el_fov_deg,
-              az0_deg           = az0_deg,
-              el0_deg           = el0_deg,
-              pixels_per_deg_az = pixels_per_deg_az,
-              pixels_per_deg_el = pixels_per_deg_el,
-              baseline          = baseline )
+    metadata = dict(
+        az_fov_deg=az_fov_deg,
+        el_fov_deg=el_fov_deg,
+        az0_deg=az0_deg,
+        el0_deg=el0_deg,
+        pixels_per_deg_az=pixels_per_deg_az,
+        pixels_per_deg_el=pixels_per_deg_el,
+        baseline=baseline,
+    )
 
     return models_rectified, metadata
 
-def _rectified_system_python(models,
-                             *,
-                             az_fov_deg,
-                             el_fov_deg,
-                             az0_deg             = None,
-                             el0_deg             = 0,
-                             pixels_per_deg_az   = -1.,
-                             pixels_per_deg_el   = -1.,
-                             rectification_model = 'LENSMODEL_LATLON',
-                             return_metadata     = False):
 
-    r'''Reference implementation of mrcal_rectified_system() in python
+def _rectified_system_python(
+    models,
+    *,
+    az_fov_deg,
+    el_fov_deg,
+    az0_deg=None,
+    el0_deg=0,
+    pixels_per_deg_az=-1.0,
+    pixels_per_deg_el=-1.0,
+    rectification_model="LENSMODEL_LATLON",
+    return_metadata=False,
+):
+    r"""Reference implementation of mrcal_rectified_system() in python
 
-The main implementation is written in C in stereo.c:
+    The main implementation is written in C in stereo.c:
 
-  mrcal_rectified_system()
+      mrcal_rectified_system()
 
-This should be identical to the rectified_system() function above. There's no
-explicit test to compare the two implementations, but test/test-stereo.py should
-catch any differences.
+    This should be identical to the rectified_system() function above. There's no
+    explicit test to compare the two implementations, but test/test-stereo.py should
+    catch any differences.
 
-NOTE: THE C IMPLEMENTATION HANDLES LENSMODEL_LATLON only. The
-mrcal.rectified_system() wrapper above calls THIS function in that case
+    NOTE: THE C IMPLEMENTATION HANDLES LENSMODEL_LATLON only. The
+    mrcal.rectified_system() wrapper above calls THIS function in that case
 
-    '''
+    """
 
-
-    if not (rectification_model == 'LENSMODEL_LATLON' or \
-            rectification_model == 'LENSMODEL_PINHOLE'):
-        raise(f"Unsupported rectification model '{rectification_model}'. Only LENSMODEL_LATLON and LENSMODEL_PINHOLE are supported.")
+    if not (
+        rectification_model == "LENSMODEL_LATLON"
+        or rectification_model == "LENSMODEL_PINHOLE"
+    ):
+        raise (
+            f"Unsupported rectification model '{rectification_model}'. Only LENSMODEL_LATLON and LENSMODEL_PINHOLE are supported."
+        )
 
     if len(models) != 2:
         raise Exception("I need exactly 2 camera models")
 
     if pixels_per_deg_az == 0:
-        raise Exception("pixels_per_deg_az == 0 is illegal. Must be >0 if we're trying to specify a value, or <0 to autodetect")
+        raise Exception(
+            "pixels_per_deg_az == 0 is illegal. Must be >0 if we're trying to specify a value, or <0 to autodetect"
+        )
     if pixels_per_deg_el == 0:
-        raise Exception("pixels_per_deg_el == 0 is illegal. Must be >0 if we're trying to specify a value, or <0 to autodetect")
+        raise Exception(
+            "pixels_per_deg_el == 0 is illegal. Must be >0 if we're trying to specify a value, or <0 to autodetect"
+        )
 
-    if az_fov_deg is None or el_fov_deg is None or \
-       az_fov_deg <= 0.   or el_fov_deg <= 0.:
-        raise Exception("az_fov_deg, el_fov_deg must be > 0. No auto-detection implemented yet")
+    if (
+        az_fov_deg is None
+        or el_fov_deg is None
+        or az_fov_deg <= 0.0
+        or el_fov_deg <= 0.0
+    ):
+        raise Exception(
+            "az_fov_deg, el_fov_deg must be > 0. No auto-detection implemented yet"
+        )
 
     ######## Compute the geometry of the rectified stereo system. This is a
     ######## rotation, centered at camera0. More or less we have axes:
@@ -537,45 +566,46 @@ mrcal.rectified_system() wrapper above calls THIS function in that case
     ######## y: completes the system from x,z
     ######## z: component of the cameras' viewing direction
     ########    normal to the baseline
-    Rt01 = mrcal.compose_Rt( models[0].extrinsics_Rt_fromref(),
-                             models[1].extrinsics_Rt_toref())
+    Rt01 = mrcal.compose_Rt(
+        models[0].extrinsics_Rt_fromref(), models[1].extrinsics_Rt_toref()
+    )
 
     # Rotation relating camera0 coords to the rectified camera coords. I fill in
     # each row separately
-    Rt_rect0_cam0 = np.zeros((4,3), dtype=float)
-    R_rect0_cam0 = Rt_rect0_cam0[:3,:]
+    Rt_rect0_cam0 = np.zeros((4, 3), dtype=float)
+    R_rect0_cam0 = Rt_rect0_cam0[:3, :]
 
     # Axes of the rectified system, in the cam0 coord system
-    right       = R_rect0_cam0[0,:]
-    down        = R_rect0_cam0[1,:]
-    forward     = R_rect0_cam0[2,:]
+    right = R_rect0_cam0[0, :]
+    down = R_rect0_cam0[1, :]
+    forward = R_rect0_cam0[2, :]
 
     # "right" of the rectified coord system: towards the origin of camera1 from
     # camera0, in camera0 coords
-    right[:] = Rt01[3,:]
+    right[:] = Rt01[3, :]
     baseline = nps.mag(right)
-    right   /= baseline
+    right /= baseline
 
     # "forward" for each of the two cameras, in the cam0 coord system
-    forward0 = np.array((0,0,1.))
-    forward1 = Rt01[:3,2]
+    forward0 = np.array((0, 0, 1.0))
+    forward1 = Rt01[:3, 2]
 
     # "forward" of the rectified coord system, in camera0 coords. The mean
     # optical-axis direction of the two cameras: component orthogonal to "right"
     forward01 = forward0 + forward1
-    forward01_proj_right = nps.inner(forward01,right)
-    forward[:] = forward01 - forward01_proj_right*right
+    forward01_proj_right = nps.inner(forward01, right)
+    forward[:] = forward01 - forward01_proj_right * right
     forward /= nps.mag(forward)
 
     # "down" of the rectified coord system, in camera0 coords. Completes the
     # right,down,forward coordinate system
-    down[:] = np.cross(forward,right)
+    down[:] = np.cross(forward, right)
 
     ######## Done with the geometry! Now to get the az/el grid. I need to figure
     ######## out the resolution and the extents
 
     if az0_deg is not None:
-        az0 = az0_deg * np.pi/180.
+        az0 = az0_deg * np.pi / 180.0
 
     else:
         # In the rectified system az=0 sits perpendicular to the baseline.
@@ -603,22 +633,22 @@ mrcal.rectified_system() wrapper above calls THIS function in that case
         # perpendicular to the baseline. Thus I compute the mean "forward"
         # direction of the cameras in the rectified system, and set that as the
         # center azimuth az0.
-        az0 = np.arcsin( forward01_proj_right / nps.mag(forward01) )
-        az0_deg = az0 * 180./np.pi
+        az0 = np.arcsin(forward01_proj_right / nps.mag(forward01))
+        az0_deg = az0 * 180.0 / np.pi
 
-    el0 = el0_deg * np.pi/180.
+    el0 = el0_deg * np.pi / 180.0
 
-    pixels_per_deg_az,  \
-    pixels_per_deg_el = \
-        mrcal.rectified_resolution(models[0],
-                                   az_fov_deg          = az_fov_deg,
-                                   el_fov_deg          = el_fov_deg,
-                                   az0_deg             = az0_deg,
-                                   el0_deg             = el0_deg,
-                                   R_cam0_rect0        = nps.transpose(R_rect0_cam0),
-                                   pixels_per_deg_az   = pixels_per_deg_az,
-                                   pixels_per_deg_el   = pixels_per_deg_el,
-                                   rectification_model = rectification_model)
+    pixels_per_deg_az, pixels_per_deg_el = mrcal.rectified_resolution(
+        models[0],
+        az_fov_deg=az_fov_deg,
+        el_fov_deg=el_fov_deg,
+        az0_deg=az0_deg,
+        el0_deg=el0_deg,
+        R_cam0_rect0=nps.transpose(R_rect0_cam0),
+        pixels_per_deg_az=pixels_per_deg_az,
+        pixels_per_deg_el=pixels_per_deg_el,
+        rectification_model=rectification_model,
+    )
 
     # How do we apply the desired pixels_per_deg?
     #
@@ -628,24 +658,31 @@ mrcal.rectified_system() wrapper above calls THIS function in that case
     # With LENSMODEL_PINHOLE the angular resolution changes across the image: q
     # = f tan(th) + c -> dq/dth = f/cos^2(th). So at the center, th=0 and we
     # have the maximum resolution
-    fxycxy = np.array((pixels_per_deg_az / np.pi*180.,
-                       pixels_per_deg_el / np.pi*180.,
-                       0., 0.), dtype=float)
-    if rectification_model == 'LENSMODEL_LATLON':
+    fxycxy = np.array(
+        (
+            pixels_per_deg_az / np.pi * 180.0,
+            pixels_per_deg_el / np.pi * 180.0,
+            0.0,
+            0.0,
+        ),
+        dtype=float,
+    )
+    if rectification_model == "LENSMODEL_LATLON":
         # The angular resolution is consistent everywhere, so fx,fy are already
         # set. Let's set cx,cy such that
         # (az0,el0) = unproject(imager center)
-        Naz = round(az_fov_deg*pixels_per_deg_az)
-        Nel = round(el_fov_deg*pixels_per_deg_el)
-        fxycxy[2:] = \
-            np.array(((Naz-1.)/2.,(Nel-1.)/2.)) - \
-            np.array((az0,el0)) * fxycxy[:2]
+        Naz = round(az_fov_deg * pixels_per_deg_az)
+        Nel = round(el_fov_deg * pixels_per_deg_el)
+        fxycxy[2:] = (
+            np.array(((Naz - 1.0) / 2.0, (Nel - 1.0) / 2.0))
+            - np.array((az0, el0)) * fxycxy[:2]
+        )
 
-    elif rectification_model == 'LENSMODEL_PINHOLE':
+    elif rectification_model == "LENSMODEL_PINHOLE":
         cos_az0 = np.cos(az0)
         cos_el0 = np.cos(el0)
-        fxycxy[0] *= cos_az0*cos_az0
-        fxycxy[1] *= cos_el0*cos_el0
+        fxycxy[0] *= cos_az0 * cos_az0
+        fxycxy[1] *= cos_el0 * cos_el0
 
         # fx,fy are set. Let's set cx,cy. Unlike the LENSMODEL_LATLON case, this
         # is asymmetric, so I explicitly solve for (cx,Naz). cy,Nel work the
@@ -675,15 +712,19 @@ mrcal.rectified_system() wrapper above calls THIS function in that case
         #
         # I can solve this numerically
         def cxy(fxy, tanazel0, fov_deg):
-            cosfov = np.cos(fov_deg*np.pi/180.)
-            cos2fov = cosfov*cosfov
-            K = 2.*tanazel0
+            cosfov = np.cos(fov_deg * np.pi / 180.0)
+            cos2fov = cosfov * cosfov
+            K = 2.0 * tanazel0
 
-            C = np.roots( [ (cos2fov - 1),
-                            2.* K * (cos2fov - 1 ),
-                            cos2fov * K*K + 2.*cos2fov - K*K + 2,
-                            2.* K * (cos2fov + 1 ),
-                            cos2fov * (K*K + 1.) - 1 ] )
+            C = np.roots(
+                [
+                    (cos2fov - 1),
+                    2.0 * K * (cos2fov - 1),
+                    cos2fov * K * K + 2.0 * cos2fov - K * K + 2,
+                    2.0 * K * (cos2fov + 1),
+                    cos2fov * (K * K + 1.0) - 1,
+                ]
+            )
 
             # Some numerical fuzz (if fov ~ 90deg) may give me slightly
             # imaginary numbers, so I just look at the real component.
@@ -700,111 +741,138 @@ mrcal.rectified_system() wrapper above calls THIS function in that case
             #   cosfov = (1 - K*C - C^2) / sqrt( (1+C^2)*(1+C^2+K^2+2*K*C))
             #
             # So I must have cosfov*(1 - K*C - C^2) > 0
-            C = C[cosfov*(1 - K*C - C*C) >= -1e-9]
+            C = C[cosfov * (1 - K * C - C * C) >= -1e-9]
 
             # And the implied imager size MUST be positive
-            C = C[(tanazel0*fxy + C*fxy)*2. + 1 > 0]
+            C = C[(tanazel0 * fxy + C * fxy) * 2.0 + 1 > 0]
 
             if len(C) == 0:
-                raise Exception("Couldn't compute the rectified pinhole center pixel. Something is wrong.")
+                raise Exception(
+                    "Couldn't compute the rectified pinhole center pixel. Something is wrong."
+                )
 
             # I should have exactly one solution let. Due to some numerical
             # fuzz, I might have more, and I pick the most positive one in the
             # condition above
-            return C[np.argmax(cosfov*(1 - K*C - C*C))] * fxy
-
-
+            return C[np.argmax(cosfov * (1 - K * C - C * C))] * fxy
 
         tanaz0 = np.tan(az0)
         tanel0 = np.tan(el0)
         fxycxy[2] = cxy(fxycxy[0], tanaz0, az_fov_deg)
         fxycxy[3] = cxy(fxycxy[1], tanel0, el_fov_deg)
 
-        Naz = round((tanaz0*fxycxy[0] + fxycxy[2])*2.) + 1
-        Nel = round((tanel0*fxycxy[1] + fxycxy[3])*2.) + 1
+        Naz = round((tanaz0 * fxycxy[0] + fxycxy[2]) * 2.0) + 1
+        Nel = round((tanel0 * fxycxy[1] + fxycxy[3]) * 2.0) + 1
 
     else:
         raise Exception("Shouldn't get here; This case was checked above")
 
     if Nel <= 0:
-        raise Exception(f"Resulting stereo geometry has Nel={Nel}. This is nonsensical. You should examine the geometry or adjust the elevation bounds or pixels-per-deg")
+        raise Exception(
+            f"Resulting stereo geometry has Nel={Nel}. This is nonsensical. You should examine the geometry or adjust the elevation bounds or pixels-per-deg"
+        )
 
     ######## The geometry
-    Rt_rect0_ref  = mrcal.compose_Rt( Rt_rect0_cam0,
-                                      models[0].extrinsics_Rt_fromref())
+    Rt_rect0_ref = mrcal.compose_Rt(Rt_rect0_cam0, models[0].extrinsics_Rt_fromref())
     # rect1 coord system has the same orientation as rect0, but is translated so
     # that its origin is at the origin of cam1
-    R_rect1_cam0  = R_rect0_cam0
-    R_rect1_cam1  = nps.matmult(R_rect1_cam0, Rt01[:3,:])
+    R_rect1_cam0 = R_rect0_cam0
+    R_rect1_cam1 = nps.matmult(R_rect1_cam0, Rt01[:3, :])
 
-    Rt_rect1_cam1 = nps.glue(R_rect1_cam1, np.zeros((3,),), axis=-2)
-    Rt_rect1_ref  = mrcal.compose_Rt( Rt_rect1_cam1,
-                                      models[1].extrinsics_Rt_fromref())
+    Rt_rect1_cam1 = nps.glue(
+        R_rect1_cam1,
+        np.zeros(
+            (3,),
+        ),
+        axis=-2,
+    )
+    Rt_rect1_ref = mrcal.compose_Rt(Rt_rect1_cam1, models[1].extrinsics_Rt_fromref())
 
-    models_rectified = \
-        ( mrcal.cameramodel( intrinsics = (rectification_model, fxycxy),
-                             imagersize = (Naz, Nel),
-                             extrinsics_Rt_fromref = Rt_rect0_ref),
-
-          mrcal.cameramodel( intrinsics = (rectification_model, fxycxy),
-                             imagersize = (Naz, Nel),
-                             extrinsics_Rt_fromref = Rt_rect1_ref) )
+    models_rectified = (
+        mrcal.cameramodel(
+            intrinsics=(rectification_model, fxycxy),
+            imagersize=(Naz, Nel),
+            extrinsics_Rt_fromref=Rt_rect0_ref,
+        ),
+        mrcal.cameramodel(
+            intrinsics=(rectification_model, fxycxy),
+            imagersize=(Naz, Nel),
+            extrinsics_Rt_fromref=Rt_rect1_ref,
+        ),
+    )
 
     if not return_metadata:
         return models_rectified
 
-    metadata = \
-        dict( az_fov_deg        = az_fov_deg,
-              el_fov_deg        = el_fov_deg,
-              az0_deg           = az0 * 180./np.pi,
-              el0_deg           = el0_deg,
-              pixels_per_deg_az = pixels_per_deg_az,
-              pixels_per_deg_el = pixels_per_deg_el,
-              baseline          = baseline )
+    metadata = dict(
+        az_fov_deg=az_fov_deg,
+        el_fov_deg=el_fov_deg,
+        az0_deg=az0 * 180.0 / np.pi,
+        el0_deg=el0_deg,
+        pixels_per_deg_az=pixels_per_deg_az,
+        pixels_per_deg_el=pixels_per_deg_el,
+        baseline=baseline,
+    )
 
     return models_rectified, metadata
 
+
 def _validate_models_rectified(models_rectified):
-    r'''Internal function to validate a rectified system
+    r"""Internal function to validate a rectified system
 
-These should have been returned by rectified_system(). Should have two
-LENSMODEL_LATLON or LENSMODEL_PINHOLE cameras with identical intrinsics.
-extrinsics should be identical too EXCEPT for a baseline translation in the x
-rectified direction
+    These should have been returned by rectified_system(). Should have two
+    LENSMODEL_LATLON or LENSMODEL_PINHOLE cameras with identical intrinsics.
+    extrinsics should be identical too EXCEPT for a baseline translation in the x
+    rectified direction
 
-    '''
+    """
 
     if len(models_rectified) != 2:
-        raise Exception(f"Must have received exactly two models. Got {len(models_rectified)} instead")
+        raise Exception(
+            f"Must have received exactly two models. Got {len(models_rectified)} instead"
+        )
 
     intrinsics = [m.intrinsics() for m in models_rectified]
-    Rt01 = mrcal.compose_Rt( models_rectified[0].extrinsics_Rt_fromref(),
-                             models_rectified[1].extrinsics_Rt_toref())
+    Rt01 = mrcal.compose_Rt(
+        models_rectified[0].extrinsics_Rt_fromref(),
+        models_rectified[1].extrinsics_Rt_toref(),
+    )
 
-    if not ( (intrinsics[0][0] == 'LENSMODEL_LATLON'  and intrinsics[1][0] == 'LENSMODEL_LATLON' ) or \
-             (intrinsics[0][0] == 'LENSMODEL_PINHOLE' and intrinsics[1][0] == 'LENSMODEL_PINHOLE') ):
-        raise Exception(f"Expected two models with the same  'LENSMODEL_LATLON' or 'LENSMODEL_PINHOLE' but got {intrinsics[0][0]} and {intrinsics[1][0]}")
+    if not (
+        (
+            intrinsics[0][0] == "LENSMODEL_LATLON"
+            and intrinsics[1][0] == "LENSMODEL_LATLON"
+        )
+        or (
+            intrinsics[0][0] == "LENSMODEL_PINHOLE"
+            and intrinsics[1][0] == "LENSMODEL_PINHOLE"
+        )
+    ):
+        raise Exception(
+            f"Expected two models with the same  'LENSMODEL_LATLON' or 'LENSMODEL_PINHOLE' but got {intrinsics[0][0]} and {intrinsics[1][0]}"
+        )
 
     if nps.norm2(intrinsics[0][1] - intrinsics[1][1]) > 1e-6:
         raise Exception("The two rectified models MUST have the same intrinsics values")
 
-    imagersize_diff = \
-        np.array(models_rectified[0].imagersize()) - \
-        np.array(models_rectified[1].imagersize())
+    imagersize_diff = np.array(models_rectified[0].imagersize()) - np.array(
+        models_rectified[1].imagersize()
+    )
     if imagersize_diff[0] != 0 or imagersize_diff[1] != 0:
         raise Exceptions("The two rectified models MUST have the same imager size")
 
-    costh = (np.trace(Rt01[:3,:]) - 1.) / 2.
+    costh = (np.trace(Rt01[:3, :]) - 1.0) / 2.0
     if costh < 0.999999:
         raise Exception("The two rectified models MUST have the same relative rotation")
 
-    if nps.norm2(Rt01[3,1:]) > 1e-9:
-        raise Exception("The two rectified models MUST have a translation ONLY in the +x rectified direction")
+    if nps.norm2(Rt01[3, 1:]) > 1e-9:
+        raise Exception(
+            "The two rectified models MUST have a translation ONLY in the +x rectified direction"
+        )
 
-def rectification_maps(models,
-                       models_rectified):
 
-    r'''Construct image transformation maps to make rectified images
+def rectification_maps(models, models_rectified):
+    r"""Construct image transformation maps to make rectified images
 
 SYNOPSIS
 
@@ -888,43 +956,48 @@ mrcal.transform_image() and cv2.remap()). Each array has shape (Nel,Naz,2),
 where (Nel,Naz) is the shape of each rectified image. Each shape-(2,) row
 contains corresponding pixel coordinates in the input image
 
-    '''
+    """
 
     _validate_models_rectified(models_rectified)
 
-    Naz,Nel = models_rectified[0].imagersize()
+    Naz, Nel = models_rectified[0].imagersize()
     # shape (Ncameras=2, Nel, Naz, Nxy=2)
-    rectification_maps = np.zeros((2, Nel, Naz, 2),
-                                  dtype = np.float32)
-    mrcal._mrcal._rectification_maps(*models[0].intrinsics(),
-                                     *models[1].intrinsics(),
-                                     *models_rectified[0].intrinsics(),
-                                     r_cam0_ref  = models[0].extrinsics_rt_fromref()[:3],
-                                     r_cam1_ref  = models[1].extrinsics_rt_fromref()[:3],
-                                     r_rect0_ref = models_rectified[0].extrinsics_rt_fromref()[:3],
-                                     rectification_maps = rectification_maps)
+    rectification_maps = np.zeros((2, Nel, Naz, 2), dtype=np.float32)
+    mrcal._mrcal._rectification_maps(
+        *models[0].intrinsics(),
+        *models[1].intrinsics(),
+        *models_rectified[0].intrinsics(),
+        r_cam0_ref=models[0].extrinsics_rt_fromref()[:3],
+        r_cam1_ref=models[1].extrinsics_rt_fromref()[:3],
+        r_rect0_ref=models_rectified[0].extrinsics_rt_fromref()[:3],
+        rectification_maps=rectification_maps,
+    )
 
     return rectification_maps
 
-def _rectification_maps_python(models,
-                               models_rectified):
-    r'''Reference implementation of mrcal.rectification_maps() in python
 
-The main implementation is written in C in stereo.c:
+def _rectification_maps_python(models, models_rectified):
+    r"""Reference implementation of mrcal.rectification_maps() in python
 
-  mrcal_rectification_maps()
+    The main implementation is written in C in stereo.c:
 
-This should be identical to the rectification_maps() function above. This is
-checked by the test-rectification-maps.py test.
+      mrcal_rectification_maps()
 
-    '''
+    This should be identical to the rectification_maps() function above. This is
+    checked by the test-rectification-maps.py test.
 
-    Naz,Nel = models_rectified[0].imagersize()
-    fxycxy  = models_rectified[0].intrinsics()[1]
+    """
 
-    R_cam_rect = [ nps.matmult(models          [i].extrinsics_Rt_fromref()[:3,:],
-                               models_rectified[i].extrinsics_Rt_toref  ()[:3,:]) \
-                   for i in range(2) ]
+    Naz, Nel = models_rectified[0].imagersize()
+    fxycxy = models_rectified[0].intrinsics()[1]
+
+    R_cam_rect = [
+        nps.matmult(
+            models[i].extrinsics_Rt_fromref()[:3, :],
+            models_rectified[i].extrinsics_Rt_toref()[:3, :],
+        )
+        for i in range(2)
+    ]
 
     # This is massively inefficient. I should
     #
@@ -937,38 +1010,36 @@ checked by the test-rectification-maps.py test.
     #   multiplication/addition steps from there
 
     # shape (Nel,Naz,3)
-    if models_rectified[0].intrinsics()[0] == 'LENSMODEL_LATLON':
+    if models_rectified[0].intrinsics()[0] == "LENSMODEL_LATLON":
         unproject = mrcal.unproject_latlon
     else:
         unproject = mrcal.unproject_pinhole
 
-    az, el = \
-        np.meshgrid(np.arange(Naz,dtype=float),
-                    np.arange(Nel,dtype=float))
+    az, el = np.meshgrid(np.arange(Naz, dtype=float), np.arange(Nel, dtype=float))
 
-    v = unproject( np.ascontiguousarray( \
-           nps.mv( nps.cat(az,el),
-                   0, -1)),
-                   fxycxy)
+    v = unproject(np.ascontiguousarray(nps.mv(nps.cat(az, el), 0, -1)), fxycxy)
 
     v0 = mrcal.rotate_point_R(R_cam_rect[0], v)
     v1 = mrcal.rotate_point_R(R_cam_rect[1], v)
 
-    return                                                                \
-        (mrcal.project( v0, *models[0].intrinsics()).astype(np.float32),  \
-         mrcal.project( v1, *models[1].intrinsics()).astype(np.float32))
+    return (
+        mrcal.project(v0, *models[0].intrinsics()).astype(np.float32),
+        mrcal.project(v1, *models[1].intrinsics()).astype(np.float32),
+    )
 
-def stereo_range(disparity,
-                 models_rectified,
-                 *,
-                 disparity_scale      = 1,
-                 disparity_min        = None,
-                 disparity_scaled_min = None,
-                 disparity_max        = None,
-                 disparity_scaled_max = None,
-                 qrect0               = None):
 
-    r'''Compute ranges from observed disparities
+def stereo_range(
+    disparity,
+    models_rectified,
+    *,
+    disparity_scale=1,
+    disparity_min=None,
+    disparity_scaled_min=None,
+    disparity_max=None,
+    disparity_scaled_max=None,
+    qrect0=None,
+):
+    r"""Compute ranges from observed disparities
 
 SYNOPSIS
 
@@ -1201,15 +1272,21 @@ RETURNED VALUES
   array. Contains floating-point data. Invalid or missing ranges are represented
   as 0.
 
-    '''
+    """
 
     _validate_models_rectified(models_rectified)
 
-    if disparity_min is not None and disparity_scaled_min is not None and \
-       disparity_min != disparity_scaled_min:
+    if (
+        disparity_min is not None
+        and disparity_scaled_min is not None
+        and disparity_min != disparity_scaled_min
+    ):
         raise Exception("disparity_min and disparity_scaled_min may not both be given")
-    if disparity_max is not None and disparity_scaled_max is not None and \
-       disparity_max != disparity_scaled_max:
+    if (
+        disparity_max is not None
+        and disparity_scaled_max is not None
+        and disparity_max != disparity_scaled_max
+    ):
         raise Exception("disparity_max and disparity_scaled_max may not both be given")
 
     if qrect0 is None:
@@ -1246,72 +1323,84 @@ RETURNED VALUES
         if len(s) == 0:
             is_scalar = True
     if is_scalar:
-        disparity = np.array((disparity,),)
+        disparity = np.array(
+            (disparity,),
+        )
 
-    Rt01 = mrcal.compose_Rt( models_rectified[0].extrinsics_Rt_fromref(),
-                             models_rectified[1].extrinsics_Rt_toref())
-    baseline = nps.mag(Rt01[3,:])
+    Rt01 = mrcal.compose_Rt(
+        models_rectified[0].extrinsics_Rt_fromref(),
+        models_rectified[1].extrinsics_Rt_toref(),
+    )
+    baseline = nps.mag(Rt01[3, :])
 
     if qrect0 is None:
-        W,H = models_rectified[0].imagersize()
-        if np.any(disparity.shape - np.array((H,W),dtype=int)):
-            raise Exception(f"qrect0 is None, so the given disparity and full rectified images MUST have the same dimensions. I have {disparity.shape=} and {models_rectified[0].imagersize()=}")
+        W, H = models_rectified[0].imagersize()
+        if np.any(disparity.shape - np.array((H, W), dtype=int)):
+            raise Exception(
+                f"qrect0 is None, so the given disparity and full rectified images MUST have the same dimensions. I have {disparity.shape=} and {models_rectified[0].imagersize()=}"
+            )
 
-        r =                                    \
-            mrcal._mrcal_npsp._stereo_range_dense \
-                ( disparity_scaled     = disparity.astype(np.uint16),
-                  disparity_scale      = np.uint16(disparity_scale),
-                  disparity_scaled_min = np.uint16(disparity_scaled_min),
-                  disparity_scaled_max = np.uint16(disparity_scaled_max),
-                  rectification_model_type = models_rectified[0].intrinsics()[0],
-                  fxycxy_rectified     = models_rectified[0].intrinsics()[1].astype(float),
-                  baseline             = baseline )
+        r = mrcal._mrcal_npsp._stereo_range_dense(
+            disparity_scaled=disparity.astype(np.uint16),
+            disparity_scale=np.uint16(disparity_scale),
+            disparity_scaled_min=np.uint16(disparity_scaled_min),
+            disparity_scaled_max=np.uint16(disparity_scaled_max),
+            rectification_model_type=models_rectified[0].intrinsics()[0],
+            fxycxy_rectified=models_rectified[0].intrinsics()[1].astype(float),
+            baseline=baseline,
+        )
 
     else:
-
-        r =                                     \
-            mrcal._mrcal_npsp._stereo_range_sparse \
-                ( disparity            = disparity.astype(float) / disparity_scale,
-                  qrect0               = qrect0.astype(float),
-                  disparity_min        = float(disparity_min),
-                  disparity_max        = float(disparity_max),
-                  rectification_model_type = models_rectified[0].intrinsics()[0],
-                  fxycxy_rectified     = models_rectified[0].intrinsics()[1].astype(float),
-                  baseline             = baseline )
+        r = mrcal._mrcal_npsp._stereo_range_sparse(
+            disparity=disparity.astype(float) / disparity_scale,
+            qrect0=qrect0.astype(float),
+            disparity_min=float(disparity_min),
+            disparity_max=float(disparity_max),
+            rectification_model_type=models_rectified[0].intrinsics()[0],
+            fxycxy_rectified=models_rectified[0].intrinsics()[1].astype(float),
+            baseline=baseline,
+        )
 
     if is_scalar:
         r = r[0]
     return r
 
 
-def _stereo_range_python(disparity,
-                         models_rectified,
-                         *,
-                         disparity_scale = 1,
-                         disparity_min        = None,
-                         disparity_scaled_min = None,
-                         disparity_max        = None,
-                         disparity_scaled_max = None,
-                         qrect0          = None):
+def _stereo_range_python(
+    disparity,
+    models_rectified,
+    *,
+    disparity_scale=1,
+    disparity_min=None,
+    disparity_scaled_min=None,
+    disparity_max=None,
+    disparity_scaled_max=None,
+    qrect0=None,
+):
+    r"""Reference implementation of mrcal.stereo_range() in python
 
-    r'''Reference implementation of mrcal.stereo_range() in python
+    The main implementation is written in C in stereo.c:
 
-The main implementation is written in C in stereo.c:
+      mrcal_stereo_range_sparse() and mrcal_stereo_range_dense()
 
-  mrcal_stereo_range_sparse() and mrcal_stereo_range_dense()
+    This should be identical to the stereo_range() function above. This is
+    checked by the test-stereo-range.py test.
 
-This should be identical to the stereo_range() function above. This is
-checked by the test-stereo-range.py test.
-
-    '''
+    """
 
     _validate_models_rectified(models_rectified)
 
-    if disparity_min is not None and disparity_scaled_min is not None and \
-       disparity_min != disparity_scaled_min:
+    if (
+        disparity_min is not None
+        and disparity_scaled_min is not None
+        and disparity_min != disparity_scaled_min
+    ):
         raise Exception("disparity_min and disparity_scaled_min may not both be given")
-    if disparity_max is not None and disparity_scaled_max is not None and \
-       disparity_max != disparity_scaled_max:
+    if (
+        disparity_max is not None
+        and disparity_scaled_max is not None
+        and disparity_max != disparity_scaled_max
+    ):
         raise Exception("disparity_max and disparity_scaled_max may not both be given")
 
     if qrect0 is None:
@@ -1337,7 +1426,6 @@ checked by the test-stereo-range.py test.
             else:
                 disparity_max = disparity_scaled_max / disparity_scale
 
-
     # I want to support scalar disparities. If one is given, I convert it into
     # an array of shape (1,), and then pull it out at the end
     is_scalar = False
@@ -1349,43 +1437,50 @@ checked by the test-stereo-range.py test.
         if len(s) == 0:
             is_scalar = True
     if is_scalar:
-        disparity = np.array((disparity,),)
+        disparity = np.array(
+            (disparity,),
+        )
 
-    W,H = models_rectified[0].imagersize()
-    if qrect0 is None and np.any(disparity.shape - np.array((H,W),dtype=int)):
-        raise Exception(f"qrect0 is None, so the disparity image must have the full dimensions of a rectified image")
+    W, H = models_rectified[0].imagersize()
+    if qrect0 is None and np.any(disparity.shape - np.array((H, W), dtype=int)):
+        raise Exception(
+            "qrect0 is None, so the disparity image must have the full dimensions of a rectified image"
+        )
 
     intrinsics = models_rectified[0].intrinsics()
 
     fx = intrinsics[1][0]
     cx = intrinsics[1][2]
 
-    Rt01 = mrcal.compose_Rt( models_rectified[0].extrinsics_Rt_fromref(),
-                             models_rectified[1].extrinsics_Rt_toref())
-    baseline = nps.mag(Rt01[3,:])
+    Rt01 = mrcal.compose_Rt(
+        models_rectified[0].extrinsics_Rt_fromref(),
+        models_rectified[1].extrinsics_Rt_toref(),
+    )
+    baseline = nps.mag(Rt01[3, :])
 
     if qrect0 is None:
-        mask_invalid = \
-            (disparity < disparity_scaled_min) + \
-            (disparity > disparity_scaled_max) + \
-            (disparity <= 0)
+        mask_invalid = (
+            (disparity < disparity_scaled_min)
+            + (disparity > disparity_scaled_max)
+            + (disparity <= 0)
+        )
     else:
-        mask_invalid = \
-            (disparity / disparity_scale < disparity_min) + \
-            (disparity / disparity_scale > disparity_max) + \
-            (disparity <= 0)
+        mask_invalid = (
+            (disparity / disparity_scale < disparity_min)
+            + (disparity / disparity_scale > disparity_max)
+            + (disparity <= 0)
+        )
 
-
-    if intrinsics[0] == 'LENSMODEL_LATLON':
+    if intrinsics[0] == "LENSMODEL_LATLON":
         if qrect0 is None:
-            az0 = (np.arange(W, dtype=float) - cx)/fx
+            az0 = (np.arange(W, dtype=float) - cx) / fx
         else:
-            az0 = (qrect0[...,0] - cx)/fx
+            az0 = (qrect0[..., 0] - cx) / fx
 
         disparity_rad = disparity.astype(np.float32) / (fx * disparity_scale)
 
         s = np.sin(disparity_rad)
-        s[mask_invalid] = 1 # to prevent division by 0
+        s[mask_invalid] = 1  # to prevent division by 0
 
         r = baseline * np.cos(az0 - disparity_rad) / s
 
@@ -1397,26 +1492,26 @@ checked by the test-stereo-range.py test.
 
         if qrect0 is None:
             # shape (W,)
-            tanaz0 = (np.arange(W, dtype=float) - cx)/fx
+            tanaz0 = (np.arange(W, dtype=float) - cx) / fx
 
             # shape (H,1)
-            tanel  = (np.arange(H, dtype=float) - cy)/fy
-            tanel  = nps.dummy(tanel, -1)
+            tanel = (np.arange(H, dtype=float) - cy) / fy
+            tanel = nps.dummy(tanel, -1)
         else:
-            tanaz0 = (qrect0[...,0] - cx) / fx
-            tanel  = (qrect0[...,1] - cy) / fy
-        s_sq_recip = tanel*tanel + 1.
-
+            tanaz0 = (qrect0[..., 0] - cx) / fx
+            tanel = (qrect0[..., 1] - cy) / fy
+        s_sq_recip = tanel * tanel + 1.0
 
         tanaz0_tanaz1 = disparity.astype(np.float32) / (fx * disparity_scale)
 
-        tanaz0_tanaz1[mask_invalid] = 1 # to prevent division by 0
+        tanaz0_tanaz1[mask_invalid] = 1  # to prevent division by 0
 
         tanaz1 = tanaz0 - tanaz0_tanaz1
-        r = baseline / \
-            np.sqrt(s_sq_recip + tanaz0*tanaz0) * \
-            ((s_sq_recip + tanaz0*tanaz1) / tanaz0_tanaz1 + \
-             tanaz0)
+        r = (
+            baseline
+            / np.sqrt(s_sq_recip + tanaz0 * tanaz0)
+            * ((s_sq_recip + tanaz0 * tanaz1) / tanaz0_tanaz1 + tanaz0)
+        )
 
         mask_invalid += ~np.isfinite(r)
 
@@ -1426,14 +1521,11 @@ checked by the test-stereo-range.py test.
         r = r[0]
     return r
 
-def stereo_unproject(disparity,
-                     models_rectified,
-                     *,
-                     ranges          = None,
-                     disparity_scale = 1,
-                     qrect0          = None):
 
-    r'''Compute a point cloud from observed disparities
+def stereo_unproject(
+    disparity, models_rectified, *, ranges=None, disparity_scale=1, qrect0=None
+):
+    r"""Compute a point cloud from observed disparities
 
 SYNOPSIS
 
@@ -1552,50 +1644,56 @@ RETURNED VALUES
   ranges) array. Contains floating-point data. Invalid or missing points are
   represented as (0,0,0).
 
-    '''
+    """
 
-    if (ranges is     None and disparity is     None) or \
-       (ranges is not None and disparity is not None):
+    if (ranges is None and disparity is None) or (
+        ranges is not None and disparity is not None
+    ):
         raise Exception("Exactly one of (disparity,ranges) must be non-None")
 
     if ranges is None:
-        ranges = stereo_range(disparity,
-                              models_rectified,
-                              disparity_scale = disparity_scale,
-                              qrect0          = qrect0)
+        ranges = stereo_range(
+            disparity, models_rectified, disparity_scale=disparity_scale, qrect0=qrect0
+        )
 
     if qrect0 is None:
-
-        W,H = models_rectified[0].imagersize()
+        W, H = models_rectified[0].imagersize()
 
         # shape (H,W,2)
-        qrect0 = np.ascontiguousarray( \
-               nps.mv( nps.cat( *np.meshgrid(np.arange(W,dtype=float),
-                                             np.arange(H,dtype=float))),
-                       0, -1))
+        qrect0 = np.ascontiguousarray(
+            nps.mv(
+                nps.cat(
+                    *np.meshgrid(np.arange(W, dtype=float), np.arange(H, dtype=float))
+                ),
+                0,
+                -1,
+            )
+        )
 
     # shape (..., 3)
-    vrect0 = mrcal.unproject(qrect0, *models_rectified[0].intrinsics(),
-                             normalize = True)
+    vrect0 = mrcal.unproject(qrect0, *models_rectified[0].intrinsics(), normalize=True)
     # shape (..., 3)
-    p_rect0 = vrect0 * nps.dummy(ranges, axis = -1)
+    p_rect0 = vrect0 * nps.dummy(ranges, axis=-1)
 
     return p_rect0
 
-def match_feature( image0, image1,
-                   q0,
-                   *,
-                   search_radius1,
-                   template_size1,
-                   q1_estimate      = None,
-                   H10              = None,
-                   method           = None,
-                   visualize        = False,
-                   extratitle       = None,
-                   return_plot_args = False,
-                   **kwargs):
 
-    r'''Find a pixel correspondence in a pair of images
+def match_feature(
+    image0,
+    image1,
+    q0,
+    *,
+    search_radius1,
+    template_size1,
+    q1_estimate=None,
+    H10=None,
+    method=None,
+    visualize=False,
+    extratitle=None,
+    return_plot_args=False,
+    **kwargs,
+):
+    r"""Find a pixel correspondence in a pair of images
 
 SYNOPSIS
 
@@ -1825,17 +1923,21 @@ If visualize and return_plot_args: we return two more elements in the tuple:
 data_tuples, plot_options. The plot can then be made with gp.plot(*data_tuples,
 **plot_options).
 
-    '''
+    """
     try:
         N = len(template_size1)
     except:
         N = 2
         template_size1 = (template_size1, template_size1)
     if N != 2:
-        raise Exception(f"template_size1 must be an interable of length 2 OR a scalar. Got an iterable of length {N}")
+        raise Exception(
+            f"template_size1 must be an interable of length 2 OR a scalar. Got an iterable of length {N}"
+        )
     for i in range(2):
         if not (isinstance(template_size1[i], int) and template_size1[i] > 0):
-            raise Exception(f"Each element of template_size1 must be an integer > 0. Got {template_size1[i]}")
+            raise Exception(
+                f"Each element of template_size1 must be an integer > 0. Got {template_size1[i]}"
+            )
 
     template_size1 = np.array(template_size1, dtype=int)
 
@@ -1845,16 +1947,22 @@ data_tuples, plot_options. The plot can then be made with gp.plot(*data_tuples,
     if image1.ndim != 2:
         raise Exception("match_feature() accepts ONLY grayscale images of shape (H,W)")
 
-    if (H10 is      None and q1_estimate is     None) or \
-       (H10 is not  None and q1_estimate is not None):
+    if (H10 is None and q1_estimate is None) or (
+        H10 is not None and q1_estimate is not None
+    ):
         raise Exception("Exactly one of (q1_estimate,H10) must be given")
 
     q0 = q0.astype(np.float32)
 
     if H10 is None:
-        H10 = np.array((( 1., 0., q1_estimate[0]-q0[0]),
-                        ( 0., 1., q1_estimate[1]-q0[1]),
-                        ( 0., 0., 1.)), dtype=np.float32)
+        H10 = np.array(
+            (
+                (1.0, 0.0, q1_estimate[0] - q0[0]),
+                (0.0, 1.0, q1_estimate[1] - q0[1]),
+                (0.0, 0.0, 1.0),
+            ),
+            dtype=np.float32,
+        )
         q1_estimate = q1_estimate.astype(np.float32)
     else:
         H10 = H10.astype(np.float32)
@@ -1864,6 +1972,7 @@ data_tuples, plot_options. The plot can then be made with gp.plot(*data_tuples,
     # instead of cv2.TM_CCORR_NORMED so that I don't need to import cv2, unless
     # the user actually calls this function
     import cv2
+
     if method is None:
         method = cv2.TM_CCORR_NORMED
 
@@ -1874,9 +1983,8 @@ data_tuples, plot_options. The plot can then be made with gp.plot(*data_tuples,
     # - remapped using the homography to correct for the geometric
     #   differences in the two images
 
-    q1_template_min = np.round(q1_estimate - (template_size1-1.)/2.).astype(int)
-    q1_template_max = q1_template_min + template_size1 - 1 # last pixel
-
+    q1_template_min = np.round(q1_estimate - (template_size1 - 1.0) / 2.0).astype(int)
+    q1_template_max = q1_template_min + template_size1 - 1  # last pixel
 
     def checkdims(image_shape, what, *qall):
         for q in qall:
@@ -1889,60 +1997,58 @@ data_tuples, plot_options. The plot can then be made with gp.plot(*data_tuples,
             if q[1] >= image_shape[0]:
                 raise Exception(f"Too close to the bottom edge in {what} ")
 
-    checkdims( image1.shape,
-               "image1",
-               q1_template_min,
-               q1_template_max)
+    checkdims(image1.shape, "image1", q1_template_min, q1_template_max)
 
     # shape (H,W,2)
-    q1 = nps.glue(*[ nps.dummy(arr, -1) for arr in \
-                     np.meshgrid( np.arange(q1_template_min[0], q1_template_max[0]+1),
-                                  np.arange(q1_template_min[1], q1_template_max[1]+1))],
-                  axis=-1).astype(np.float32)
+    q1 = nps.glue(
+        *[
+            nps.dummy(arr, -1)
+            for arr in np.meshgrid(
+                np.arange(q1_template_min[0], q1_template_max[0] + 1),
+                np.arange(q1_template_min[1], q1_template_max[1] + 1),
+            )
+        ],
+        axis=-1,
+    ).astype(np.float32)
 
     q0 = mrcal.apply_homography(np.linalg.inv(H10), q1)
-    checkdims( image0.shape,
-               "image0",
-               q0[ 0, 0],
-               q0[-1, 0],
-               q0[ 0,-1],
-               q0[-1,-1] )
+    checkdims(image0.shape, "image0", q0[0, 0], q0[-1, 0], q0[0, -1], q0[-1, -1])
 
     image0_template = mrcal.transform_image(image0, q0)
 
-
     ################### MATCH TEMPLATE
     q1_min = q1_template_min - search_radius1
-    q1_max = q1_template_min + search_radius1 + template_size1 - 1 # last pixel
+    q1_max = q1_template_min + search_radius1 + template_size1 - 1  # last pixel
 
     # Adjust the bounds in case the search radius pushes us past the bounds of
     # image1
-    if q1_min[0] < 0:                    q1_min[0] = 0
-    if q1_min[1] < 0:                    q1_min[1] = 0
-    if q1_max[0] > image1.shape[-1] - 1: q1_max[0] = image1.shape[-1] - 1
-    if q1_max[1] > image1.shape[-2] - 1: q1_max[1] = image1.shape[-2] - 1
+    if q1_min[0] < 0:
+        q1_min[0] = 0
+    if q1_min[1] < 0:
+        q1_min[1] = 0
+    if q1_max[0] > image1.shape[-1] - 1:
+        q1_max[0] = image1.shape[-1] - 1
+    if q1_max[1] > image1.shape[-2] - 1:
+        q1_max[1] = image1.shape[-2] - 1
 
     # q1_min, q1_max are now corners of image1 we should search
-    image1_cut = image1[ q1_min[1]:q1_max[1]+1, q1_min[0]:q1_max[0]+1 ]
+    image1_cut = image1[q1_min[1] : q1_max[1] + 1, q1_min[0] : q1_max[0] + 1]
 
-    template_size1_hw = np.array((template_size1[-1],template_size1[-2]))
-    matchoutput = np.zeros( image1_cut.shape - template_size1_hw+1, dtype=np.float32 )
+    template_size1_hw = np.array((template_size1[-1], template_size1[-2]))
+    matchoutput = np.zeros(image1_cut.shape - template_size1_hw + 1, dtype=np.float32)
 
-    cv2.matchTemplate(image1_cut,
-                      image0_template,
-                      method, matchoutput)
+    cv2.matchTemplate(image1_cut, image0_template, method, matchoutput)
 
     if method == cv2.TM_SQDIFF or method == cv2.TM_SQDIFF_NORMED:
-        matchoutput_optimum_flatindex = np.argmin( matchoutput.ravel() )
+        matchoutput_optimum_flatindex = np.argmin(matchoutput.ravel())
     else:
-        matchoutput_optimum_flatindex = np.argmax( matchoutput.ravel() )
-    matchoutput_optimum           = matchoutput.ravel()[matchoutput_optimum_flatindex]
+        matchoutput_optimum_flatindex = np.argmax(matchoutput.ravel())
+    matchoutput_optimum = matchoutput.ravel()[matchoutput_optimum_flatindex]
     # optimal, discrete-pixel q1 in image1_cut coords
-    q1_cut = \
-        np.array( np.unravel_index(matchoutput_optimum_flatindex,
-                                   matchoutput.shape) )[(-1,-2),]
-    diagnostics = \
-        dict(matchoutput_image = matchoutput)
+    q1_cut = np.array(
+        np.unravel_index(matchoutput_optimum_flatindex, matchoutput.shape)
+    )[(-1, -2),]
+    diagnostics = dict(matchoutput_image=matchoutput)
 
     ###################### SUBPIXEL INTERPOLATION
     # I fit a simple quadratic surface to the 3x3 points around the discrete
@@ -1958,46 +2064,66 @@ data_tuples, plot_options. The plot can then be made with gp.plot(*data_tuples,
     # -> xy = -1/(4 c20 c02 - c11^2) [ 2 c02   -c11 ] [c10]
     #                                [  -c11  2 c20 ] [c01]
 
-    default_plot_args = (None,None) if visualize and return_plot_args else ()
+    default_plot_args = (None, None) if visualize and return_plot_args else ()
 
-    if q1_cut[0] <= 0                        or \
-       q1_cut[1] <= 0                        or \
-       q1_cut[0] >= matchoutput.shape[-1]-1  or \
-       q1_cut[1] >= matchoutput.shape[-2]-1:
+    if (
+        q1_cut[0] <= 0
+        or q1_cut[1] <= 0
+        or q1_cut[0] >= matchoutput.shape[-1] - 1
+        or q1_cut[1] >= matchoutput.shape[-2] - 1
+    ):
         # discrete matchoutput peak at the edge. Cannot compute subpixel
         # interpolation
         return (None, diagnostics) + default_plot_args
 
-    x,y = np.meshgrid( np.arange(3) - 1, np.arange(3) - 1 )
+    x, y = np.meshgrid(np.arange(3) - 1, np.arange(3) - 1)
     x = x.ravel().astype(float)
     y = y.ravel().astype(float)
-    M = nps.transpose( nps.cat( np.ones(9,),
-                                x, y, x*x, x*y, y*y ))
-    z = matchoutput[ q1_cut[1]-1:q1_cut[1]+2,
-                     q1_cut[0]-1:q1_cut[0]+2 ].ravel()
+    M = nps.transpose(
+        nps.cat(
+            np.ones(
+                9,
+            ),
+            x,
+            y,
+            x * x,
+            x * y,
+            y * y,
+        )
+    )
+    z = matchoutput[
+        q1_cut[1] - 1 : q1_cut[1] + 2, q1_cut[0] - 1 : q1_cut[0] + 2
+    ].ravel()
 
     # I try rcond = -1 to work in an old numpy
     lsqsq_result = None
     if True:
-        try: lsqsq_result = np.linalg.lstsq( M, z, rcond = None)
-        except: pass
+        try:
+            lsqsq_result = np.linalg.lstsq(M, z, rcond=None)
+        except:
+            pass
     if lsqsq_result is None:
-        try: lsqsq_result = np.linalg.lstsq( M, z, rcond = -1)
-        except: pass
+        try:
+            lsqsq_result = np.linalg.lstsq(M, z, rcond=-1)
+        except:
+            pass
     if lsqsq_result is None:
         return (None, diagnostics) + default_plot_args
 
     c = lsqsq_result[0]
     (c00, c10, c01, c20, c11, c02) = c
-    det = 4.*c20*c02 - c11*c11
-    xy_subpixel = -np.array((2.*c10*c02 - c01*c11,
-                             2.*c01*c20 - c10*c11)) / det
-    x,y = xy_subpixel
-    matchoutput_optimum_subpixel = c00 + c10*x + c01*y + c20*x*x + c11*x*y + c02*y*y
+    det = 4.0 * c20 * c02 - c11 * c11
+    xy_subpixel = (
+        -np.array((2.0 * c10 * c02 - c01 * c11, 2.0 * c01 * c20 - c10 * c11)) / det
+    )
+    x, y = xy_subpixel
+    matchoutput_optimum_subpixel = (
+        c00 + c10 * x + c01 * y + c20 * x * x + c11 * x * y + c02 * y * y
+    )
     q1_cut = q1_cut.astype(float) + xy_subpixel
 
-    diagnostics['matchoutput_optimum_subpixel_at'] = q1_cut
-    diagnostics['matchoutput_optimum_subpixel']    = matchoutput_optimum_subpixel
+    diagnostics["matchoutput_optimum_subpixel_at"] = q1_cut
+    diagnostics["matchoutput_optimum_subpixel"] = matchoutput_optimum_subpixel
 
     # The translation to pixel coordinates
 
@@ -2005,11 +2131,8 @@ data_tuples, plot_options. The plot can then be made with gp.plot(*data_tuples,
     q1_aligned_template_topleft = q1_min + q1_cut
 
     # Shift for the best-fitting pixel of image1 of the template center
-    qshift_image1_matchoutput = \
-        q1_min +                \
-        q1_estimate -           \
-        q1_template_min
-    diagnostics['qshift_image1_matchoutput'] = qshift_image1_matchoutput
+    qshift_image1_matchoutput = q1_min + q1_estimate - q1_template_min
+    diagnostics["qshift_image1_matchoutput"] = qshift_image1_matchoutput
 
     # the best-fitting pixel of image1 of the template center
 
@@ -2025,43 +2148,48 @@ data_tuples, plot_options. The plot can then be made with gp.plot(*data_tuples,
 
     plot_options = dict(kwargs)
 
-    if 'title' not in plot_options:
-        title   = 'Feature-matching results'
+    if "title" not in plot_options:
+        title = "Feature-matching results"
         if extratitle is not None:
             title += ": " + extratitle
-        plot_options['title'] = title
+        plot_options["title"] = title
 
-    gp.add_plot_option(plot_options,
-                       _with     = 'image',
-                       ascii     = True,
-                       overwrite = True)
-    gp.add_plot_option(plot_options,
-                       square    = True,
-                       yinv      = True,
-                       _set      = 'palette gray',
-                       overwrite = False)
+    gp.add_plot_option(plot_options, _with="image", ascii=True, overwrite=True)
+    gp.add_plot_option(
+        plot_options, square=True, yinv=True, _set="palette gray", overwrite=False
+    )
 
-    data_tuples = \
-        ( ( image1_cut,
-            dict(legend='image',
-                 using = f'($1 + {q1_min[0]}):($2 + {q1_min[1]}):3',
-                 tuplesize = 3)),
-          ( image0_template,
-            dict(legend='template',
-                 using = \
-                 f'($1 + {q1_aligned_template_topleft[0]}):' + \
-                 f'($2 + {q1_aligned_template_topleft[1]}):3',
-                 tuplesize = 3)),
-          ( (matchoutput - matchoutput_min) /
-            (matchoutput_max - matchoutput_min) * 255,
-            dict(legend='matchoutput',
-                 using = \
-                 f'($1 + {qshift_image1_matchoutput[0]}):' + \
-                 f'($2 + {qshift_image1_matchoutput[1]}):3',
-                 tuplesize = 3)) )
+    data_tuples = (
+        (
+            image1_cut,
+            dict(
+                legend="image",
+                using=f"($1 + {q1_min[0]}):($2 + {q1_min[1]}):3",
+                tuplesize=3,
+            ),
+        ),
+        (
+            image0_template,
+            dict(
+                legend="template",
+                using=f"($1 + {q1_aligned_template_topleft[0]}):"
+                + f"($2 + {q1_aligned_template_topleft[1]}):3",
+                tuplesize=3,
+            ),
+        ),
+        (
+            (matchoutput - matchoutput_min) / (matchoutput_max - matchoutput_min) * 255,
+            dict(
+                legend="matchoutput",
+                using=f"($1 + {qshift_image1_matchoutput[0]}):"
+                + f"($2 + {qshift_image1_matchoutput[1]}):3",
+                tuplesize=3,
+            ),
+        ),
+    )
 
     if return_plot_args:
         return q1, diagnostics, data_tuples, plot_options
 
-    gp.plot( *data_tuples, **plot_options, wait=True)
+    gp.plot(*data_tuples, **plot_options, wait=True)
     return q1, diagnostics

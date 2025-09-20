@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-r'''Visualize noncentrality of a model
+r"""Visualize noncentrality of a model
 
 Given a model and query pixel this function
 
@@ -11,7 +11,7 @@ Given a model and query pixel this function
 As we get closer to the camera, stronger and stronger noncentral effects are
 observed
 
-'''
+"""
 
 import sys
 import numpy as np
@@ -21,18 +21,18 @@ import re
 import mrcal
 
 model_filename = sys.argv[1]
-qref = np.array((100,100), dtype=float)
+qref = np.array((100, 100), dtype=float)
 
 
 model = mrcal.cameramodel(model_filename)
 
-lensmodel,intrinsics_data = model.intrinsics()
+lensmodel, intrinsics_data = model.intrinsics()
 
-if not mrcal.lensmodel_metadata_and_config(lensmodel)['noncentral']:
+if not mrcal.lensmodel_metadata_and_config(lensmodel)["noncentral"]:
     print("The given model isn't noncentral. Nothing to do", file=sys.stderr)
     sys.exit(1)
 
-if not re.match('^LENSMODEL_CAHVORE_', lensmodel):
+if not re.match("^LENSMODEL_CAHVORE_", lensmodel):
     print("This is only implemented for CAHVORE today", file=sys.stderr)
     sys.exit(1)
 
@@ -40,11 +40,9 @@ if not re.match('^LENSMODEL_CAHVORE_', lensmodel):
 intrinsics_data_centralized = intrinsics_data.copy()
 intrinsics_data_centralized[-3:] = 0
 
-v_at_infinity = \
-    mrcal.unproject(qref,
-                    lensmodel, intrinsics_data_centralized,
-                    normalize = True)
-
+v_at_infinity = mrcal.unproject(
+    qref, lensmodel, intrinsics_data_centralized, normalize=True
+)
 
 
 if 0:
@@ -64,25 +62,22 @@ if 0:
 
     # p - k*pc = [0,0,dz]
 
+    d = 0.2
+    p = v_at_infinity * d
+    q = mrcal.project(p, lensmodel, intrinsics_data)
+    vc = mrcal.unproject(q, lensmodel, intrinsics_data_centralized, normalize=True)
 
-    d  = 0.2
-    p  = v_at_infinity*d
-    q  = mrcal.project  (p, lensmodel, intrinsics_data)
-    vc = mrcal.unproject(q, lensmodel, intrinsics_data_centralized, normalize = True)
-
-    k01 = p[:2]/vc[:2]
-    dz  = p[2] - k01*vc[2]
+    k01 = p[:2] / vc[:2]
+    dz = p[2] - k01 * vc[2]
 
     import IPython
+
     IPython.embed()
     sys.exit()
 
 
-
-
-
 Ndistances = 100
-d = np.linspace(0.01, 10., Ndistances)
+d = np.linspace(0.01, 10.0, Ndistances)
 
 # shape (Ndistances, 3)
 p = nps.dummy(d, -1) * v_at_infinity
@@ -93,8 +88,11 @@ q = mrcal.project(p, *model.intrinsics())
 # shape (Ndistances,)
 qshift = nps.mag(q - qref)
 
-gp.plot( d, qshift,
-         _with = 'linespoints',
-         xlabel = 'Distance (m)',
-         ylabel = 'Pixel shift (pixels)',
-         wait = True )
+gp.plot(
+    d,
+    qshift,
+    _with="linespoints",
+    xlabel="Distance (m)",
+    ylabel="Pixel shift (pixels)",
+    wait=True,
+)

@@ -9,7 +9,7 @@
 #     http://www.apache.org/licenses/LICENSE-2.0
 
 
-r'''Converts a camera model from one lens model to another
+r"""Converts a camera model from one lens model to another
 
 SYNOPSIS
 
@@ -108,36 +108,39 @@ inputs, the options are illegal.
 The output is written to a file on disk, with the same filename as the input
 model, but with the new lensmodel added to the filename.
 
-'''
-
-
+"""
 
 import sys
 import argparse
 import re
 import os
 
+
 def parse_args():
+    parser = argparse.ArgumentParser(
+        description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
+    )
 
-    parser = \
-        argparse.ArgumentParser(description = __doc__,
-                                formatter_class=argparse.RawDescriptionHelpFormatter)
-
-    parser.add_argument('--sampled',
-                        action='store_true',
-                        help='''Instead of solving the original calibration problem using the new lens model,
+    parser.add_argument(
+        "--sampled",
+        action="store_true",
+        help="""Instead of solving the original calibration problem using the new lens model,
                         use sampled imager points. This produces biased results,
                         but can be used even if the original optimization_inputs
-                        aren't available''')
-    parser.add_argument('--gridn',
-                        type=int,
-                        default = (30,20),
-                        nargs = 2,
-                        help='''Used if --sampled. How densely we should sample the imager. By default we use
-                        a 30x20 grid''')
-    parser.add_argument('--distance',
-                        type=str,
-                        help='''Required if --sampled and not --intrinsics-only.
+                        aren't available""",
+    )
+    parser.add_argument(
+        "--gridn",
+        type=int,
+        default=(30, 20),
+        nargs=2,
+        help="""Used if --sampled. How densely we should sample the imager. By default we use
+                        a 30x20 grid""",
+    )
+    parser.add_argument(
+        "--distance",
+        type=str,
+        help="""Required if --sampled and not --intrinsics-only.
                         A sampled solve fits the intrinsics and extrinsics to
                         match up reprojections of a grid of observed pixels. The
                         points being projected are set a particular distance
@@ -150,10 +153,12 @@ def parse_args():
                         distances are given, we fit the model using ALL the
                         distances, but --viz displays the difference for the
                         FIRST distance given. See the description above. Without
-                        --sampled, this is used for the visualization only''')
-    parser.add_argument('--intrinsics-only',
-                        action='store_true',
-                        help='''Used if --sampled. By default I optimize the
+                        --sampled, this is used for the visualization only""",
+    )
+    parser.add_argument(
+        "--intrinsics-only",
+        action="store_true",
+        help="""Used if --sampled. By default I optimize the
                         intrinsics and extrinsics to find the closest
                         reprojection. If for whatever reason we know that the
                         camera coordinate system was already right, or we need
@@ -162,18 +167,22 @@ def parse_args():
                         will not be as good. In many cases, optimizing
                         extrinsics is required to get a usable fit, so
                         --intrinsics-only may not be an option if accurate
-                        results are required.''')
+                        results are required.""",
+    )
 
-    parser.add_argument('--where',
-                        type=float,
-                        nargs=2,
-                        help='''Used with or without --sampled. I use a subset
+    parser.add_argument(
+        "--where",
+        type=float,
+        nargs=2,
+        help="""Used with or without --sampled. I use a subset
                         of the imager to compute the fit. The active region is a
                         circle centered on this point. If omitted, we will focus
-                        on the center of the imager''')
-    parser.add_argument('--radius',
-                        type=float,
-                        help='''Used with or without --sampled. I use a subset
+                        on the center of the imager""",
+    )
+    parser.add_argument(
+        "--radius",
+        type=float,
+        help="""Used with or without --sampled. I use a subset
                         of the imager to compute the fit. The active region is a
                         circle with a radius given by this parameter. If radius
                         == 0, I'll use the whole imager for the fit. If radius <
@@ -181,116 +190,143 @@ def parse_args():
                         the corners that I should ignore: I will use
                         sqrt(width^2 + height^2)/2. - abs(radius). This is valid
                         ONLY if we're focusing at the center of the imager. By
-                        default I ignore a large-ish chunk area at the corners.''')
+                        default I ignore a large-ish chunk area at the corners.""",
+    )
 
-    parser.add_argument('--monocular',
-                        action='store_true',
-                        help='''Used if not --sampled. By default we re-solve
+    parser.add_argument(
+        "--monocular",
+        action="store_true",
+        help="""Used if not --sampled. By default we re-solve
                         the full calibration problem that was used to originally
                         obtain the input model, even if it contained multiple
                         cameras. If --monocular, we re-solve only a subset of
                         the original problem, using ONLY the observations made
-                        by THIS camera''')
+                        by THIS camera""",
+    )
 
-    parser.add_argument('--viz',
-                        action='store_true',
-                        help='''Visualize the differences between the input and
+    parser.add_argument(
+        "--viz",
+        action="store_true",
+        help="""Visualize the differences between the input and
                         output models. If we have --distance, the FIRST given
-                        distance is used to display the fit error''')
-    parser.add_argument('--cbmax',
-                        type=float,
-                        default=4,
-                        help='''Maximum range of the colorbar''')
-    parser.add_argument('--title',
-                        type=str,
-                        default = None,
-                        help='''Used if --viz. Title string for the diff plot.
+                        distance is used to display the fit error""",
+    )
+    parser.add_argument(
+        "--cbmax", type=float, default=4, help="""Maximum range of the colorbar"""
+    )
+    parser.add_argument(
+        "--title",
+        type=str,
+        default=None,
+        help="""Used if --viz. Title string for the diff plot.
                         Overrides the default title. Exclusive with
-                        --extratitle''')
-    parser.add_argument('--extratitle',
-                        type=str,
-                        default = None,
-                        help='''Used if --viz. Additional string for the plot to
-                        append to the default title. Exclusive with --title''')
-    parser.add_argument('--hardcopy',
-                        type=str,
-                        help='''Used if --viz. Write the diff output to disk,
-                        instead of making an interactive plot''')
-    parser.add_argument('--terminal',
-                        type=str,
-                        help=r'''Used if --viz. gnuplotlib terminal. The default
+                        --extratitle""",
+    )
+    parser.add_argument(
+        "--extratitle",
+        type=str,
+        default=None,
+        help="""Used if --viz. Additional string for the plot to
+                        append to the default title. Exclusive with --title""",
+    )
+    parser.add_argument(
+        "--hardcopy",
+        type=str,
+        help="""Used if --viz. Write the diff output to disk,
+                        instead of making an interactive plot""",
+    )
+    parser.add_argument(
+        "--terminal",
+        type=str,
+        help=r"""Used if --viz. gnuplotlib terminal. The default
                         is good almost always, so most people don't need this
-                        option''')
-    parser.add_argument('--set',
-                        type=str,
-                        action='append',
-                        help='''Used if --viz. Extra 'set' directives to
-                        gnuplotlib. Can be given multiple times''')
-    parser.add_argument('--unset',
-                        type=str,
-                        action='append',
-                        help='''Used if --viz. Extra 'unset' directives to
-                        gnuplotlib. Can be given multiple times''')
+                        option""",
+    )
+    parser.add_argument(
+        "--set",
+        type=str,
+        action="append",
+        help="""Used if --viz. Extra 'set' directives to
+                        gnuplotlib. Can be given multiple times""",
+    )
+    parser.add_argument(
+        "--unset",
+        type=str,
+        action="append",
+        help="""Used if --viz. Extra 'unset' directives to
+                        gnuplotlib. Can be given multiple times""",
+    )
 
-    parser.add_argument('--force', '-f',
-                        action='store_true',
-                        default=False,
-                        help='''By default existing models on disk are not
+    parser.add_argument(
+        "--force",
+        "-f",
+        action="store_true",
+        default=False,
+        help="""By default existing models on disk are not
                         overwritten. Pass --force to overwrite them without
-                        complaint''')
-    parser.add_argument('--outdir',
-                        type=lambda d: d if os.path.isdir(d) else \
-                        parser.error(f"--outdir requires an existing directory as the arg, but got '{d}'"),
-                        help='''Directory to write the output into. If omitted,
-                        we use the directory of the input model''')
+                        complaint""",
+    )
+    parser.add_argument(
+        "--outdir",
+        type=lambda d: d
+        if os.path.isdir(d)
+        else parser.error(
+            f"--outdir requires an existing directory as the arg, but got '{d}'"
+        ),
+        help="""Directory to write the output into. If omitted,
+                        we use the directory of the input model""",
+    )
 
-    parser.add_argument('--num-trials',
-                        type    = int,
-                        default = 1,
-                        help='''If given, run the solve more than once. Useful
+    parser.add_argument(
+        "--num-trials",
+        type=int,
+        default=1,
+        help="""If given, run the solve more than once. Useful
                         in case random initialization produces noticeably
                         different results. By default we run just one trial,
-                        which is enough most of the time''')
+                        which is enough most of the time""",
+    )
 
-    parser.add_argument('to',
-                        type=str,
-                        help='The target lens model')
+    parser.add_argument("to", type=str, help="The target lens model")
 
-    parser.add_argument('model',
-                        default='-',
-                        nargs='?',
-                        type=str,
-                        help='''Input camera model. If omitted or "-", we read
-                        standard input and write to standard output''')
+    parser.add_argument(
+        "model",
+        default="-",
+        nargs="?",
+        type=str,
+        help="""Input camera model. If omitted or "-", we read
+                        standard input and write to standard output""",
+    )
 
     args = parser.parse_args()
 
-    if args.title      is not None and \
-       args.extratitle is not None:
+    if args.title is not None and args.extratitle is not None:
         print("Error: --title and --extratitle are exclusive", file=sys.stderr)
         sys.exit(1)
 
     if args.distance is not None:
         import math
+
         try:
-            args.distance = [float(d) for d in args.distance.split(',')]
+            args.distance = [float(d) for d in args.distance.split(",")]
         except:
-            print("Error: distances must be given a comma-separated list of floats in --distance",
-                  file=sys.stderr)
+            print(
+                "Error: distances must be given a comma-separated list of floats in --distance",
+                file=sys.stderr,
+            )
             sys.exit(1)
 
         if any(not math.isfinite(x) or x <= 0 for x in args.distance):
-            print("All values in --distances must be finite and > 0",
-                  file=sys.stderr)
+            print("All values in --distances must be finite and > 0", file=sys.stderr)
             sys.exit(1)
 
     return args
+
 
 args = parse_args()
 
 # arg-parsing is done before the imports so that --help works without building
 # stuff, so that I can generate the manpages and README
-
 
 
 import numpy as np
@@ -305,12 +341,16 @@ lensmodel_to = args.to
 try:
     meta = mrcal.lensmodel_metadata_and_config(lensmodel_to)
 except Exception as e:
-    print(f"Invalid lens model '{lensmodel_to}': couldn't get the metadata: {e}",
-          file=sys.stderr)
+    print(
+        f"Invalid lens model '{lensmodel_to}': couldn't get the metadata: {e}",
+        file=sys.stderr,
+    )
     sys.exit(1)
-if not meta['has_gradients']:
-    print(f"lens model {lensmodel_to} is not supported at this time: its gradients aren't implemented",
-          file=sys.stderr)
+if not meta["has_gradients"]:
+    print(
+        f"lens model {lensmodel_to} is not supported at this time: its gradients aren't implemented",
+        file=sys.stderr,
+    )
     sys.exit(1)
 
 try:
@@ -327,145 +367,153 @@ except Exception as e:
     sys.exit(1)
 
 
-if args.model == '-':
+if args.model == "-":
     # Input read from stdin. Write output to stdout
     file_output = sys.stdout
 else:
     if args.outdir is None:
-        filename_base,extension = os.path.splitext(args.model)
+        filename_base, extension = os.path.splitext(args.model)
         file_output = f"{filename_base}-{lensmodel_to}{extension}"
     else:
-        f,extension             = os.path.splitext(args.model)
-        directory,filename_base = os.path.split(f)
+        f, extension = os.path.splitext(args.model)
+        directory, filename_base = os.path.split(f)
         file_output = f"{args.outdir}/{filename_base}-{lensmodel_to}{extension}"
 
     if os.path.exists(file_output) and not args.force:
-        print(f"ERROR: '{file_output}' already exists. Not overwriting this file. Pass -f to overwrite",
-              file=sys.stderr)
+        print(
+            f"ERROR: '{file_output}' already exists. Not overwriting this file. Pass -f to overwrite",
+            file=sys.stderr,
+        )
         sys.exit(1)
 
 
 lensmodel_from = m.intrinsics()[0]
 
 if lensmodel_from == lensmodel_to:
-    print(f"Input and output have the same lens model {lensmodel_from}. Nothing to do", file=sys.stderr)
+    print(
+        f"Input and output have the same lens model {lensmodel_from}. Nothing to do",
+        file=sys.stderr,
+    )
     print("RMS error of the solution: 0 pixels.", file=sys.stderr)
     sys.exit(0)
 
 
 if not args.sampled:
-
     if args.intrinsics_only:
-        print("--intrinsics-only requires --sampled",
-              file=sys.stderr)
+        print("--intrinsics-only requires --sampled", file=sys.stderr)
         sys.exit(1)
-    if not (mrcal.lensmodel_metadata_and_config(lensmodel_from)['has_core'] and \
-            mrcal.lensmodel_metadata_and_config(lensmodel_to  )['has_core']):
-        print("Without --sampled, the TO and FROM models must support contain an intrinsics core. It COULD work otherwise, but somebody needs to implement it",
-              file=sys.stderr)
+    if not (
+        mrcal.lensmodel_metadata_and_config(lensmodel_from)["has_core"]
+        and mrcal.lensmodel_metadata_and_config(lensmodel_to)["has_core"]
+    ):
+        print(
+            "Without --sampled, the TO and FROM models must support contain an intrinsics core. It COULD work otherwise, but somebody needs to implement it",
+            file=sys.stderr,
+        )
         sys.exit(1)
 
     optimization_inputs = m.optimization_inputs()
     if optimization_inputs is None:
-        print("optimization_inputs not available in this model, so only sampled fits are possible. Pass --sampled",
-              file=sys.stderr)
+        print(
+            "optimization_inputs not available in this model, so only sampled fits are possible. Pass --sampled",
+            file=sys.stderr,
+        )
         sys.exit(1)
 
     icam_intrinsics = m.icam_intrinsics()
 
     if args.monocular:
-        if optimization_inputs['indices_point_camintrinsics_camextrinsics'] is not None and \
-           optimization_inputs['indices_point_camintrinsics_camextrinsics'].size > 0:
-            print("--monocular can be used ONLY to re-optimize vanilla calibration problems. This one has points",
-                  file=sys.stderr)
+        if (
+            optimization_inputs["indices_point_camintrinsics_camextrinsics"] is not None
+            and optimization_inputs["indices_point_camintrinsics_camextrinsics"].size
+            > 0
+        ):
+            print(
+                "--monocular can be used ONLY to re-optimize vanilla calibration problems. This one has points",
+                file=sys.stderr,
+            )
             sys.exit(1)
 
-        intrinsics = \
-            optimization_inputs['intrinsics']
-        imagersizes = \
-            optimization_inputs['imagersizes']
-        extrinsics_rt_fromref = \
-            optimization_inputs['extrinsics_rt_fromref']
-        frames_rt_toref = \
-            optimization_inputs['frames_rt_toref']
-        indices_frame_camintrinsics_camextrinsics = \
-            optimization_inputs['indices_frame_camintrinsics_camextrinsics']
-        observations_board = \
-            optimization_inputs['observations_board']
-        if 'imagepaths' in  optimization_inputs:
-            imagepaths = \
-                optimization_inputs['imagepaths']
+        intrinsics = optimization_inputs["intrinsics"]
+        imagersizes = optimization_inputs["imagersizes"]
+        extrinsics_rt_fromref = optimization_inputs["extrinsics_rt_fromref"]
+        frames_rt_toref = optimization_inputs["frames_rt_toref"]
+        indices_frame_camintrinsics_camextrinsics = optimization_inputs[
+            "indices_frame_camintrinsics_camextrinsics"
+        ]
+        observations_board = optimization_inputs["observations_board"]
+        if "imagepaths" in optimization_inputs:
+            imagepaths = optimization_inputs["imagepaths"]
 
-        mask_observations = indices_frame_camintrinsics_camextrinsics[:,1] == icam_intrinsics
-        indices_frame_camintrinsics_camextrinsics = \
+        mask_observations = (
+            indices_frame_camintrinsics_camextrinsics[:, 1] == icam_intrinsics
+        )
+        indices_frame_camintrinsics_camextrinsics = (
             indices_frame_camintrinsics_camextrinsics[mask_observations]
-        observations_board = \
-            observations_board[mask_observations]
-        if 'imagepaths' in  optimization_inputs:
-            imagepaths = \
-                imagepaths[mask_observations]
+        )
+        observations_board = observations_board[mask_observations]
+        if "imagepaths" in optimization_inputs:
+            imagepaths = imagepaths[mask_observations]
 
         ### Now I must cull the extrinsics and frames to only use these
         ### observations
 
         # intrinsics
-        indices_frame_camintrinsics_camextrinsics[:,1] = 0
-        intrinsics  = intrinsics [(icam_intrinsics,), :]
+        indices_frame_camintrinsics_camextrinsics[:, 1] = 0
+        intrinsics = intrinsics[(icam_intrinsics,), :]
         imagersizes = imagersizes[(icam_intrinsics,), :]
 
         # extrinsics
-        icam_extrinsics = \
-            indices_frame_camintrinsics_camextrinsics[0,2]
-        if not np.all(indices_frame_camintrinsics_camextrinsics[:,2] == icam_extrinsics):
-            print("Error: --monocular can work ONLY if the calibration-time cameras are stationary. Here the requested camera was moving",
-                  file=sys.stderr)
+        icam_extrinsics = indices_frame_camintrinsics_camextrinsics[0, 2]
+        if not np.all(
+            indices_frame_camintrinsics_camextrinsics[:, 2] == icam_extrinsics
+        ):
+            print(
+                "Error: --monocular can work ONLY if the calibration-time cameras are stationary. Here the requested camera was moving",
+                file=sys.stderr,
+            )
             sys.exit(1)
-        indices_frame_camintrinsics_camextrinsics[:,2] = -1
+        indices_frame_camintrinsics_camextrinsics[:, 2] = -1
         if icam_extrinsics >= 0:
             # I'm moving the reference to lie at this one new camera. Transform
             # everything
             rt_cam_reforig = extrinsics_rt_fromref[icam_extrinsics]
             rt_refnew_reforig = rt_cam_reforig
 
-            frames_rt_toref = mrcal.compose_rt( rt_refnew_reforig, frames_rt_toref )
-            extrinsics_rt_fromref = np.empty((0,6), dtype=float)
+            frames_rt_toref = mrcal.compose_rt(rt_refnew_reforig, frames_rt_toref)
+            extrinsics_rt_fromref = np.empty((0, 6), dtype=float)
 
         # frames
-        frames_rt_toref = frames_rt_toref[indices_frame_camintrinsics_camextrinsics[:,0], :]
+        frames_rt_toref = frames_rt_toref[
+            indices_frame_camintrinsics_camextrinsics[:, 0], :
+        ]
         Nframes = len(indices_frame_camintrinsics_camextrinsics)
-        indices_frame_camintrinsics_camextrinsics[:,0] = np.arange(Nframes)
+        indices_frame_camintrinsics_camextrinsics[:, 0] = np.arange(Nframes)
 
         # store everythin back into the inputs
-        optimization_inputs['intrinsics'] = \
-            intrinsics
-        optimization_inputs['imagersizes'] = \
-            imagersizes
-        optimization_inputs['extrinsics_rt_fromref'] = \
-            extrinsics_rt_fromref
-        optimization_inputs['frames_rt_toref'] = \
-            frames_rt_toref
-        optimization_inputs['indices_frame_camintrinsics_camextrinsics'] = \
+        optimization_inputs["intrinsics"] = intrinsics
+        optimization_inputs["imagersizes"] = imagersizes
+        optimization_inputs["extrinsics_rt_fromref"] = extrinsics_rt_fromref
+        optimization_inputs["frames_rt_toref"] = frames_rt_toref
+        optimization_inputs["indices_frame_camintrinsics_camextrinsics"] = (
             indices_frame_camintrinsics_camextrinsics
-        optimization_inputs['observations_board'] = \
-            observations_board
-        if 'imagepaths' in  optimization_inputs:
-            optimization_inputs['imagepaths'] = \
-                imagepaths
+        )
+        optimization_inputs["observations_board"] = observations_board
+        if "imagepaths" in optimization_inputs:
+            optimization_inputs["imagepaths"] = imagepaths
 
         icam_intrinsics = 0
 
-
     optimization_inputs_before = copy.deepcopy(optimization_inputs)
 
-    intrinsics_from      = optimization_inputs['intrinsics']
+    intrinsics_from = optimization_inputs["intrinsics"]
     intrinsics_from_core = intrinsics_from[..., :4]
-    Ncameras             = len(intrinsics_from)
+    Ncameras = len(intrinsics_from)
 
     # Ignore observations in the corners, as requested
     if not (args.radius is None or args.radius == 0):
         for icam in range(Ncameras):
-
-            dims = optimization_inputs['imagersizes'][icam].astype(float)
+            dims = optimization_inputs["imagersizes"][icam].astype(float)
 
             if args.where is None:
                 focus_center = (dims - 1) / 2
@@ -475,52 +523,58 @@ if not args.sampled:
             if args.radius > 0:
                 r = args.radius
             else:
-                if nps.norm2(focus_center - (dims - 1.) / 2) > 1e-3:
-                    print("A radius <0 is only implemented if we're focusing on the imager center", file=sys.stderr)
+                if nps.norm2(focus_center - (dims - 1.0) / 2) > 1e-3:
+                    print(
+                        "A radius <0 is only implemented if we're focusing on the imager center",
+                        file=sys.stderr,
+                    )
                     sys.exit(1)
-                r = nps.mag(dims)/2. + args.radius
+                r = nps.mag(dims) / 2.0 + args.radius
 
+            indices_cam = optimization_inputs[
+                "indices_frame_camintrinsics_camextrinsics"
+            ][:, 1]
+            observations = optimization_inputs["observations_board"]
 
-            indices_cam  = optimization_inputs['indices_frame_camintrinsics_camextrinsics'][:,1]
-            observations = optimization_inputs['observations_board']
-
-            mask_thiscam     = indices_cam == icam
-            mask_past_radius = nps.norm2(observations[...,:2] - focus_center) > r*r
+            mask_thiscam = indices_cam == icam
+            mask_past_radius = nps.norm2(observations[..., :2] - focus_center) > r * r
 
             observations[nps.mv(mask_thiscam, -1, -3) * mask_past_radius, 2] = -1
 
+    optimization_inputs["verbose"] = False
 
-    optimization_inputs['verbose']          = False
-
-    optimization_inputs['lensmodel']        = lensmodel_to
-    optimization_inputs['intrinsics']       = np.zeros((Ncameras,Ndistortions+4), dtype=float)
-    optimization_inputs['intrinsics'][:,:4] = intrinsics_from_core
+    optimization_inputs["lensmodel"] = lensmodel_to
+    optimization_inputs["intrinsics"] = np.zeros(
+        (Ncameras, Ndistortions + 4), dtype=float
+    )
+    optimization_inputs["intrinsics"][:, :4] = intrinsics_from_core
 
     # I do this in stages, similar to how mrcal-calibrate-cameras does it. First
     # just the frames and extrinsics. Assuming a core-only intrinsics
-    optimization_inputs['do_optimize_intrinsics_core']       = False
-    optimization_inputs['do_optimize_intrinsics_distortions']= False
-    optimization_inputs['do_optimize_calobject_warp']        = False
-    optimization_inputs['do_apply_outlier_rejection']        = False
-    optimization_inputs['do_apply_regularization']           = False
+    optimization_inputs["do_optimize_intrinsics_core"] = False
+    optimization_inputs["do_optimize_intrinsics_distortions"] = False
+    optimization_inputs["do_optimize_calobject_warp"] = False
+    optimization_inputs["do_apply_outlier_rejection"] = False
+    optimization_inputs["do_apply_regularization"] = False
     stats = mrcal.optimize(**optimization_inputs)
 
     # Then I optimize the core also
-    optimization_inputs['do_optimize_intrinsics_core']       = True
+    optimization_inputs["do_optimize_intrinsics_core"] = True
     stats = mrcal.optimize(**optimization_inputs)
 
     # Then the intrinsics too
-    optimization_inputs['do_optimize_intrinsics_distortions']= True
-    optimization_inputs['do_apply_outlier_rejection']        = True
-    optimization_inputs['do_apply_regularization']           = True
+    optimization_inputs["do_optimize_intrinsics_distortions"] = True
+    optimization_inputs["do_apply_outlier_rejection"] = True
+    optimization_inputs["do_apply_regularization"] = True
     if re.match("LENSMODEL_SPLINED_STEREOGRAPHIC_", lensmodel_to):
         # splined models have a core, but those variables are largely redundant
         # with the spline parameters. So I lock down the core when targeting
         # splined models
-        optimization_inputs['do_optimize_intrinsics_core'] = False
+        optimization_inputs["do_optimize_intrinsics_core"] = False
     # stolen expand_intrinsics() in mrcal-calibrate-extrinsics. Please consolidate
-    optimization_inputs['intrinsics'][:,4:] = \
-        (np.random.random((Ncameras, Ndistortions)) - 0.5)*2. *1e-6
+    optimization_inputs["intrinsics"][:, 4:] = (
+        (np.random.random((Ncameras, Ndistortions)) - 0.5) * 2.0 * 1e-6
+    )
     modelmatch = re.search("OPENCV([0-9]+)", lensmodel_to)
     if modelmatch:
         Nd = int(modelmatch.group(1))
@@ -539,34 +593,32 @@ if not args.sampled:
             # have very poorly behaved derivatives. If all the rational coefficients
             # are ~0, then the denominator is always ~1, and this problematic case
             # can't happen. I favor that.
-            optimization_inputs['intrinsics'][:,4:][:,5:8] *= 1e-3
+            optimization_inputs["intrinsics"][:, 4:][:, 5:8] *= 1e-3
     stats = mrcal.optimize(**optimization_inputs)
 
     # And finally I do the calobject_warp too
-    optimization_inputs['do_optimize_calobject_warp'] = True
+    optimization_inputs["do_optimize_calobject_warp"] = True
     stats = mrcal.optimize(**optimization_inputs)
-
 
     # I pick the inlier set using the post-solve inliers/outliers. The solve
     # could add some outliers, but it won't take any away, so the union of the
     # before/after inlier sets is just the post-solve set
-    idx_inliers_after = optimization_inputs['observations_board'][...,2] > 0
+    idx_inliers_after = optimization_inputs["observations_board"][..., 2] > 0
 
-    calobject_camframe_before = \
-        mrcal.hypothesis_board_corner_positions(icam_intrinsics,
-                                                **optimization_inputs_before,
-                                                idx_inliers = idx_inliers_after )[-2]
-    calobject_camframe_after = \
-        mrcal.hypothesis_board_corner_positions(icam_intrinsics,
-                                                **optimization_inputs,
-                                                idx_inliers = idx_inliers_after )[-2]
+    calobject_camframe_before = mrcal.hypothesis_board_corner_positions(
+        icam_intrinsics, **optimization_inputs_before, idx_inliers=idx_inliers_after
+    )[-2]
+    calobject_camframe_after = mrcal.hypothesis_board_corner_positions(
+        icam_intrinsics, **optimization_inputs, idx_inliers=idx_inliers_after
+    )[-2]
 
     # This is a procrustes-based transformation. This transform is usable, but
     # isn't based on camera observations, and often produces poor diffs if used
     # directly. Let mrcal.projection_diff() figure out the implied_Rt10 instead
     # of using this
-    implied_Rt10 = mrcal.align_procrustes_points_Rt01(calobject_camframe_after,
-                                                      calobject_camframe_before)
+    implied_Rt10 = mrcal.align_procrustes_points_Rt01(
+        calobject_camframe_after, calobject_camframe_before
+    )
 
     # For the purposes of visualization I use what I was given. Or the mean
     # observation distance if I was given nothing
@@ -575,14 +627,15 @@ if not args.sampled:
     else:
         distance_for_diff = np.array(args.distance)
 
-
-    print(f"RMS error of the solution: {stats['rms_reproj_error__pixels']} pixels.",
-          file=sys.stderr)
-    m_to = mrcal.cameramodel( optimization_inputs = optimization_inputs,
-                              icam_intrinsics     = icam_intrinsics )
+    print(
+        f"RMS error of the solution: {stats['rms_reproj_error__pixels']} pixels.",
+        file=sys.stderr,
+    )
+    m_to = mrcal.cameramodel(
+        optimization_inputs=optimization_inputs, icam_intrinsics=icam_intrinsics
+    )
 
 else:
-
     # Sampled solve. I grid the imager, unproject and fit
 
     intrinsics_from = m.intrinsics()
@@ -591,34 +644,38 @@ else:
         if args.intrinsics_only:
             # We're only looking at the intrinsics, so the distance doesn't
             # matter. I pick an arbitrary value
-            args.distance = [10.]
+            args.distance = [10.0]
         else:
-            print("--sampled without --intrinsics-only REQUIRES --distance",
-                  file=sys.stderr)
+            print(
+                "--sampled without --intrinsics-only REQUIRES --distance",
+                file=sys.stderr,
+            )
             sys.exit(1)
 
     if args.monocular:
-        print("--monocular doesn't work with --sampled",
-              file=sys.stderr)
+        print("--monocular doesn't work with --sampled", file=sys.stderr)
         sys.exit(1)
 
     dims = m.imagersize()
     if dims is None:
-        print("Warning: imager size not available. Using centerpixel*2",
-              file=sys.stderr)
+        print(
+            "Warning: imager size not available. Using centerpixel*2", file=sys.stderr
+        )
         dims = intrinsics_from[1][2:4] * 2
 
     if args.radius is None:
         # By default use 1/4 of the smallest dimension
         args.radius = -np.min(m.imagersize()) // 4
-        print(f"Default radius: {args.radius}. We're ignoring the regions {-args.radius} pixels from each corner",
-              file=sys.stderr)
-        if args.where is not None and \
-           nps.norm2(args.where - (dims - 1.) / 2) > 1e-3:
-            print("A radius <0 is only implemented if we're focusing on the imager center: use an explicit --radius, or omit --where",
-                  file=sys.stderr)
+        print(
+            f"Default radius: {args.radius}. We're ignoring the regions {-args.radius} pixels from each corner",
+            file=sys.stderr,
+        )
+        if args.where is not None and nps.norm2(args.where - (dims - 1.0) / 2) > 1e-3:
+            print(
+                "A radius <0 is only implemented if we're focusing on the imager center: use an explicit --radius, or omit --where",
+                file=sys.stderr,
+            )
             sys.exit(1)
-
 
     # Alrighty. Let's actually do the work. I do this:
     #
@@ -628,33 +685,36 @@ else:
     #    using the new model
 
     ### I sample the pixels in an NxN grid
-    Nx,Ny = args.gridn
+    Nx, Ny = args.gridn
 
-    qx = np.linspace(0, dims[0]-1, Nx)
-    qy = np.linspace(0, dims[1]-1, Ny)
+    qx = np.linspace(0, dims[0] - 1, Nx)
+    qy = np.linspace(0, dims[1] - 1, Ny)
 
     # q is (Ny*Nx, 2). Each slice of q[:] is an (x,y) pixel coord
-    q = np.ascontiguousarray( nps.transpose(nps.clump( nps.cat(*np.meshgrid(qx,qy)), n=-2)) )
+    q = np.ascontiguousarray(
+        nps.transpose(nps.clump(nps.cat(*np.meshgrid(qx, qy)), n=-2))
+    )
     if args.radius != 0:
         # we use a subset of the input data for the fit
         if args.where is None:
-            focus_center = (dims - 1.) / 2.
+            focus_center = (dims - 1.0) / 2.0
         else:
             focus_center = args.where
 
         if args.radius > 0:
             r = args.radius
         else:
-            if nps.norm2(focus_center - (dims - 1.) / 2) > 1e-3:
-                print("A radius <0 is only implemented if we're focusing on the imager center",
-                      file=sys.stderr)
+            if nps.norm2(focus_center - (dims - 1.0) / 2) > 1e-3:
+                print(
+                    "A radius <0 is only implemented if we're focusing on the imager center",
+                    file=sys.stderr,
+                )
                 sys.exit(1)
-            r = nps.mag(dims)/2. + args.radius
+            r = nps.mag(dims) / 2.0 + args.radius
 
         grid_off_center = q - focus_center
-        i = nps.norm2(grid_off_center) < r*r
+        i = nps.norm2(grid_off_center) < r * r
         q = q[i, ...]
-
 
     # To visualize the sample grid:
     # import gnuplotlib as gp
@@ -667,10 +727,9 @@ else:
     # shape (Ndistances,)
     d = np.array(args.distance)
     # shape (Ndistances, Ny*Nx, 2)
-    q = q * np.ones((d.size,1,1))
+    q = q * np.ones((d.size, 1, 1))
     # shape (Ndistances, Ny*Nx, 3)
-    p = mrcal.unproject( q, *intrinsics_from, normalize = True ) * \
-        nps.mv(d, -1, -3)
+    p = mrcal.unproject(q, *intrinsics_from, normalize=True) * nps.mv(d, -1, -3)
 
     # shape (Ndistances*Ny*Nx, 2)
     q = nps.clump(q, n=2)
@@ -682,7 +741,7 @@ else:
     distance_for_diff = d
 
     # Ignore any failed unprojections
-    i_finite = np.isfinite(p[:,0])
+    i_finite = np.isfinite(p[:, 0])
     p = p[i_finite]
     q = q[i_finite]
     Npoints = len(q)
@@ -693,102 +752,113 @@ else:
     ### I solve the optimization a number of times with different random seed
     ### values, taking the best-fitting results. This is required for the richer
     ### models such as LENSMODEL_OPENCV8
-    err_rms_best               = 1e10
-    intrinsics_data_best       = None
+    err_rms_best = 1e10
+    intrinsics_data_best = None
     extrinsics_rt_fromref_best = None
 
     for i in range(args.num_trials):
         # random seed for the new intrinsics
         intrinsics_core = intrinsics_from[1][:4]
-        distortions     = (np.random.rand(Ndistortions) - 0.5) * 1e-3 # random initial seed
-        intrinsics_to_values = nps.dummy(nps.glue(intrinsics_core, distortions, axis=-1),
-                                         axis=-2)
+        distortions = (np.random.rand(Ndistortions) - 0.5) * 1e-3  # random initial seed
+        intrinsics_to_values = nps.dummy(
+            nps.glue(intrinsics_core, distortions, axis=-1), axis=-2
+        )
         # each point has weight 1.0
         observations_points = nps.glue(q, nps.transpose(weights), axis=-1)
-        observations_points = np.ascontiguousarray(observations_points) # must be contiguous. mrcal.optimize() should really be more lax here
+        observations_points = np.ascontiguousarray(
+            observations_points
+        )  # must be contiguous. mrcal.optimize() should really be more lax here
 
         # Which points we're observing. This is dense and kinda silly for this
         # application. Each slice is (i_point,i_camera,i_camera-1). Initially O
         # do everything in camera-0 coordinates, and I do not move the
         # extrinsics
-        indices_point_camintrinsics_camextrinsics = np.zeros((Npoints,3), dtype=np.int32)
-        indices_point_camintrinsics_camextrinsics[:,0] = \
-            np.arange(Npoints,    dtype=np.int32)
-        indices_point_camintrinsics_camextrinsics[:,1] = 0
-        indices_point_camintrinsics_camextrinsics[:,2] = -1
+        indices_point_camintrinsics_camextrinsics = np.zeros(
+            (Npoints, 3), dtype=np.int32
+        )
+        indices_point_camintrinsics_camextrinsics[:, 0] = np.arange(
+            Npoints, dtype=np.int32
+        )
+        indices_point_camintrinsics_camextrinsics[:, 1] = 0
+        indices_point_camintrinsics_camextrinsics[:, 2] = -1
 
-        optimization_inputs = \
-            dict(intrinsics                                = intrinsics_to_values,
-                 extrinsics_rt_fromref                     = None,
-                 frames_rt_toref                           = None, # no frames. Just points
-                 points                                    = p,
-                 observations_board                        = None, # no board observations
-                 indices_frame_camintrinsics_camextrinsics = None, # no board observations
-                 observations_point                        = observations_points,
-                 indices_point_camintrinsics_camextrinsics = indices_point_camintrinsics_camextrinsics,
-                 lensmodel                                 = lensmodel_to,
-
-                 imagersizes                               = nps.atleast_dims(dims, -2),
-
-                 # I'm not optimizing the point positions (frames), so these
-                 # need to be set to be inactive, and to include the ranges I do
-                 # have
-                 point_min_range                           = np.min(d) * 0.9,
-                 point_max_range                           = np.max(d) * 1.1,
-
-                 # I optimize the lens parameters. That's the whole point
-                 do_optimize_intrinsics_core               = True,
-                 do_optimize_intrinsics_distortions        = True,
-
-                 do_optimize_extrinsics                    = False,
-
-                 # NOT optimizing the observed point positions
-                 do_optimize_frames                        = False )
+        optimization_inputs = dict(
+            intrinsics=intrinsics_to_values,
+            extrinsics_rt_fromref=None,
+            frames_rt_toref=None,  # no frames. Just points
+            points=p,
+            observations_board=None,  # no board observations
+            indices_frame_camintrinsics_camextrinsics=None,  # no board observations
+            observations_point=observations_points,
+            indices_point_camintrinsics_camextrinsics=indices_point_camintrinsics_camextrinsics,
+            lensmodel=lensmodel_to,
+            imagersizes=nps.atleast_dims(dims, -2),
+            # I'm not optimizing the point positions (frames), so these
+            # need to be set to be inactive, and to include the ranges I do
+            # have
+            point_min_range=np.min(d) * 0.9,
+            point_max_range=np.max(d) * 1.1,
+            # I optimize the lens parameters. That's the whole point
+            do_optimize_intrinsics_core=True,
+            do_optimize_intrinsics_distortions=True,
+            do_optimize_extrinsics=False,
+            # NOT optimizing the observed point positions
+            do_optimize_frames=False,
+        )
 
         if re.match("LENSMODEL_SPLINED_STEREOGRAPHIC_", lensmodel_to):
             # splined models have a core, but those variables are largely redundant
             # with the spline parameters. So I lock down the core when targetting
             # splined models
-            optimization_inputs['do_optimize_intrinsics_core'] = False
+            optimization_inputs["do_optimize_intrinsics_core"] = False
 
-        stats = mrcal.optimize(**optimization_inputs,
-                               # No outliers. I have the points that I have
-                               do_apply_outlier_rejection        = False,
-                               verbose                           = False)
+        stats = mrcal.optimize(
+            **optimization_inputs,
+            # No outliers. I have the points that I have
+            do_apply_outlier_rejection=False,
+            verbose=False,
+        )
 
         if not args.intrinsics_only:
-
             # go again, but refine this solution, allowing us to fit the
             # extrinsics too
-            optimization_inputs['indices_point_camintrinsics_camextrinsics'][:,2] = \
-                np.zeros ((Npoints,), dtype = np.int32)
-            optimization_inputs['extrinsics_rt_fromref']  = (np.random.rand(1,6) - 0.5) * 1e-6
-            optimization_inputs['do_optimize_extrinsics'] = True
+            optimization_inputs["indices_point_camintrinsics_camextrinsics"][:, 2] = (
+                np.zeros((Npoints,), dtype=np.int32)
+            )
+            optimization_inputs["extrinsics_rt_fromref"] = (
+                np.random.rand(1, 6) - 0.5
+            ) * 1e-6
+            optimization_inputs["do_optimize_extrinsics"] = True
 
-            stats = mrcal.optimize(**optimization_inputs,
-                                   # No outliers. I have the points that I have
-                                   do_apply_outlier_rejection        = False,
-                                   verbose                           = False)
+            stats = mrcal.optimize(
+                **optimization_inputs,
+                # No outliers. I have the points that I have
+                do_apply_outlier_rejection=False,
+                verbose=False,
+            )
 
-        err_rms = stats['rms_reproj_error__pixels']
-        print(f"RMS error of this solution: {err_rms} pixels.",
-              file=sys.stderr)
+        err_rms = stats["rms_reproj_error__pixels"]
+        print(f"RMS error of this solution: {err_rms} pixels.", file=sys.stderr)
         if err_rms < err_rms_best:
             err_rms_best = err_rms
-            intrinsics_data_best  = optimization_inputs['intrinsics'][0,:].copy()
+            intrinsics_data_best = optimization_inputs["intrinsics"][0, :].copy()
             if not args.intrinsics_only:
-                extrinsics_rt_fromref_best = optimization_inputs['extrinsics_rt_fromref'][0,:].copy()
+                extrinsics_rt_fromref_best = optimization_inputs[
+                    "extrinsics_rt_fromref"
+                ][0, :].copy()
 
     if intrinsics_data_best is None:
         print("No valid intrinsics found!", file=sys.stderr)
         sys.exit(1)
 
     if args.num_trials > 1:
-        print(f"RMS error of the BEST solution: {err_rms_best} pixels.",
-              file=sys.stderr)
+        print(
+            f"RMS error of the BEST solution: {err_rms_best} pixels.", file=sys.stderr
+        )
 
-    m_to = mrcal.cameramodel( intrinsics = (lensmodel_to, intrinsics_data_best.ravel()),
-                              imagersize = dims )
+    m_to = mrcal.cameramodel(
+        intrinsics=(lensmodel_to, intrinsics_data_best.ravel()), imagersize=dims
+    )
 
     if args.intrinsics_only:
         implied_Rt10 = mrcal.identity_Rt()
@@ -797,45 +867,44 @@ else:
 
 if not (args.sampled and args.intrinsics_only):
     implied_rt10 = mrcal.rt_from_Rt(implied_Rt10)
-    print(f"Transformation cam_fitted <-- cam_input:  rotation: {nps.mag(implied_rt10[:3])*180./np.pi:.03f} degrees, translation: {np.array2string(implied_rt10[3:], precision=2)} m",
-          file=sys.stderr)
+    print(
+        f"Transformation cam_fitted <-- cam_input:  rotation: {nps.mag(implied_rt10[:3]) * 180.0 / np.pi:.03f} degrees, translation: {np.array2string(implied_rt10[3:], precision=2)} m",
+        file=sys.stderr,
+    )
 
     dist_shift = nps.mag(implied_rt10[3:])
     if dist_shift > 0.01:
         msg = f"## WARNING: fitted camera moved by {dist_shift:.03f}m. This is probably aphysically high, and something is wrong."
         if args.distance is not None and args.sampled:
-            print(msg + " Pass both a high and a low --distance?",
-                  file=sys.stderr)
+            print(msg + " Pass both a high and a low --distance?", file=sys.stderr)
         else:
             print(msg, file=sys.stderr)
 
 
-note = \
-    "generated on {} with   {}\n". \
-    format(time.strftime("%Y-%m-%d %H:%M:%S"),
-           ' '.join(mrcal.shellquote(s) for s in sys.argv))
+note = "generated on {} with   {}\n".format(
+    time.strftime("%Y-%m-%d %H:%M:%S"), " ".join(mrcal.shellquote(s) for s in sys.argv)
+)
 
-m_to.extrinsics_Rt_fromref( mrcal.compose_Rt( implied_Rt10,
-                                              mrcal.Rt_from_rt( m.extrinsics_rt_fromref())))
+m_to.extrinsics_Rt_fromref(
+    mrcal.compose_Rt(implied_Rt10, mrcal.Rt_from_rt(m.extrinsics_rt_fromref()))
+)
 m_to.write(file_output, note=note)
 
 if isinstance(file_output, str):
-    print(f"Wrote '{file_output}'",
-          file=sys.stderr)
+    print(f"Wrote '{file_output}'", file=sys.stderr)
 
 
 if args.viz:
-
     plotkwargs_extra = {}
     if args.set is not None:
-        plotkwargs_extra['set'] = args.set
+        plotkwargs_extra["set"] = args.set
     if args.unset is not None:
-        plotkwargs_extra['unset'] = args.unset
+        plotkwargs_extra["unset"] = args.unset
 
     if args.title is not None:
-        plotkwargs_extra['title'] = args.title
+        plotkwargs_extra["title"] = args.title
     if args.extratitle is not None:
-        plotkwargs_extra['extratitle'] = args.extratitle
+        plotkwargs_extra["extratitle"] = args.extratitle
 
     # If this is a sampled solve, we don't have projection uncertainties. But we
     # do have an implied_Rt10 based on observations, and we can feed that to the
@@ -848,22 +917,23 @@ if args.viz:
     if args.sampled:
         use_uncertainties = False
     else:
-        implied_Rt10      = None
+        implied_Rt10 = None
         use_uncertainties = True
 
-    plot,_ = mrcal.show_projection_diff( (m, m_to),
-                                         implied_Rt10      = implied_Rt10,
-                                         distance          = distance_for_diff,
-                                         cbmax             = args.cbmax,
-                                         gridn_width       = None if args.gridn is None else args.gridn[0],
-                                         gridn_height      = None if args.gridn is None else args.gridn[1],
-                                         use_uncertainties = use_uncertainties,
-                                         hardcopy          = args.hardcopy,
-                                         terminal          = args.terminal,
-                                         **plotkwargs_extra)
+    plot, _ = mrcal.show_projection_diff(
+        (m, m_to),
+        implied_Rt10=implied_Rt10,
+        distance=distance_for_diff,
+        cbmax=args.cbmax,
+        gridn_width=None if args.gridn is None else args.gridn[0],
+        gridn_height=None if args.gridn is None else args.gridn[1],
+        use_uncertainties=use_uncertainties,
+        hardcopy=args.hardcopy,
+        terminal=args.terminal,
+        **plotkwargs_extra,
+    )
     if args.hardcopy is None:
         plot.wait()
-
 
 
 # not sampled should laet you save ALL the models

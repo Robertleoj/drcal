@@ -8,7 +8,7 @@
 #
 #     http://www.apache.org/licenses/LICENSE-2.0
 
-r'''Reprojects pixel observations from one model to another
+r"""Reprojects pixel observations from one model to another
 
 SYNOPSIS
 
@@ -32,43 +32,40 @@ The input data comes in on standard input, and the output data is written to
 standard output. Both are vnlog data: human-readable text with 2 columns: x and
 y pixel coords. Comments are allowed, and start with the '#' character.
 
-'''
-
+"""
 
 import sys
 import argparse
-import re
-import os
+
 
 def parse_args():
+    parser = argparse.ArgumentParser(
+        description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
+    )
 
-    parser = \
-        argparse.ArgumentParser(description = __doc__,
-                                formatter_class=argparse.RawDescriptionHelpFormatter)
-
-    parser.add_argument('--intrinsics-only',
-                        action='store_true',
-                        help='''By default, the relative camera rotation is used in the transformation. If we
+    parser.add_argument(
+        "--intrinsics-only",
+        action="store_true",
+        help="""By default, the relative camera rotation is used in the transformation. If we
                         want to use the intrinsics ONLY, pass --intrinsics-only.
-                        Note that relative translation is ALWAYS ignored''')
+                        Note that relative translation is ALWAYS ignored""",
+    )
 
-    parser.add_argument('model-from',
-                        type=str,
-                        help='''Camera model for the input points.''')
+    parser.add_argument(
+        "model-from", type=str, help="""Camera model for the input points."""
+    )
 
-    parser.add_argument('model-to',
-                        type=str,
-                        help='''Camera model for the output points.''')
+    parser.add_argument(
+        "model-to", type=str, help="""Camera model for the output points."""
+    )
 
     return parser.parse_args()
+
 
 args = parse_args()
 
 # arg-parsing is done before the imports so that --help works without building
 # stuff, so that I can generate the manpages and README
-
-
-
 
 
 import numpy as np
@@ -77,24 +74,30 @@ import numpysane as nps
 import mrcal
 import time
 
-model_from = mrcal.cameramodel(getattr(args, 'model-from'))
-model_to   = mrcal.cameramodel(getattr(args, 'model-to'))
+model_from = mrcal.cameramodel(getattr(args, "model-from"))
+model_to = mrcal.cameramodel(getattr(args, "model-to"))
 
 
 p = nps.atleast_dims(np.genfromtxt(sys.stdin), -2)
 v = mrcal.unproject(p, *model_from.intrinsics())
 
-print( "## generated on {} with   {}".format(time.strftime("%Y-%m-%d %H:%M:%S"),
-                                             ' '.join(mrcal.shellquote(s) for s in sys.argv)) )
+print(
+    "## generated on {} with   {}".format(
+        time.strftime("%Y-%m-%d %H:%M:%S"),
+        " ".join(mrcal.shellquote(s) for s in sys.argv),
+    )
+)
 if not args.intrinsics_only:
-    Rt_to_from = \
-        mrcal.compose_Rt( model_to.  extrinsics_Rt_fromref(),
-                          model_from.extrinsics_Rt_toref  () )
+    Rt_to_from = mrcal.compose_Rt(
+        model_to.extrinsics_Rt_fromref(), model_from.extrinsics_Rt_toref()
+    )
 
-    if nps.norm2(Rt_to_from[3,:]) > 1e-6:
-        print(f"## WARNING: {sys.argv[0]} ignores relative translations, which were non-zero here. t_to_from = {Rt_to_from[3,:]}")
+    if nps.norm2(Rt_to_from[3, :]) > 1e-6:
+        print(
+            f"## WARNING: {sys.argv[0]} ignores relative translations, which were non-zero here. t_to_from = {Rt_to_from[3, :]}"
+        )
 
-    v = nps.matmult(Rt_to_from[:3,:], nps.dummy(v, -1))[..., 0]
+    v = nps.matmult(Rt_to_from[:3, :], nps.dummy(v, -1))[..., 0]
 
-p = mrcal.project  (v, *model_to.intrinsics())
-np.savetxt(sys.stdout, p, fmt='%f', header='x y')
+p = mrcal.project(v, *model_to.intrinsics())
+np.savetxt(sys.stdout, p, fmt="%f", header="x y")

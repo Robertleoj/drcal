@@ -8,20 +8,14 @@
 #
 #     http://www.apache.org/licenses/LICENSE-2.0
 
-r'''Python-wrap the libelas stereo matching
-
-'''
-
-import sys
-import os
+r"""Python-wrap the libelas stereo matching"""
 
 import numpy as np
-import numpysane as nps
 
 import numpysane_pywrap as npsp
 
 
-docstring_module = '''libelas stereo matching
+docstring_module = """libelas stereo matching
 
 This is the written-in-C Python extension module that wraps the stereo matching
 routine in libelas.
@@ -29,14 +23,17 @@ routine in libelas.
 All functions are exported into the mrcal module. So you can call these via
 mrcal._elas_npsp.fff() or mrcal.fff(). The latter is preferred.
 
-'''
+"""
 
-m = npsp.module( name      = "_elas_npsp",
-                 header    = '#include "stereo-matching-libelas.h"',
-                 docstring = docstring_module )
+m = npsp.module(
+    name="_elas_npsp",
+    header='#include "stereo-matching-libelas.h"',
+    docstring=docstring_module,
+)
 
-m.function( "stereo_matching_libelas",
-            r'''Compute a stereo disparity map using libelas
+m.function(
+    "stereo_matching_libelas",
+    r"""Compute a stereo disparity map using libelas
 
 SYNOPSIS
 
@@ -126,45 +123,43 @@ RETURNED VALUE
 A length-2 tuple containing the left and right disparity images. Each one is a
 numpy array with the same shape as the input images, but with dtype.np=float32
 
-    ''',
-            args_input       = ('image0', 'image1'),
-            prototype_input  = (('H','W'), ('H','W')),
-            prototype_output = (('H','W'), ('H','W')),
-
-            # default values are the "ROBOTICS" setting, as defined in elas.h
-            extra_args = (("int",   "disparity_min",         "0",    "i"),
-                          ("int",   "disparity_max",         "255",  "i"),
-                          ("float", "support_threshold",     "0.85", "f"),
-                          ("int",   "support_texture",       "10",   "i"),
-                          ("int",   "candidate_stepsize",    "5",    "i"),
-                          ("int",   "incon_window_size",     "5",    "i"),
-                          ("int",   "incon_threshold",       "5",    "i"),
-                          ("int",   "incon_min_support",     "5",    "i"),
-                          ("bool",  "add_corners",           "0",    "p"),
-                          ("int",   "grid_size",             "20",   "i"),
-                          ("float", "beta",                  "0.02", "f"),
-                          ("float", "gamma",                 "3",    "f"),
-                          ("float", "sigma",                 "1",    "f"),
-                          ("float", "sradius",               "2",    "f"),
-                          ("int",   "match_texture",         "1",    "i"),
-                          ("int",   "lr_threshold",          "2",    "i"),
-                          ("float", "speckle_sim_threshold", "1",    "f"),
-                          ("int",   "speckle_size",          "200",  "i"),
-                          ("int",   "ipol_gap_width",        "3",    "i"),
-                          ("bool",  "filter_median",         "0",    "p"),
-                          ("bool",  "filter_adaptive_mean",  "1",    "p"),
-                          ("bool",  "postprocess_only_left", "1",    "p"),
-                          ("bool",  "subsampling",           "0",    "p" )),
-
-            Ccode_validate = r'''return CHECK_CONTIGUOUS_AND_SETERROR__output0() &&
+    """,
+    args_input=("image0", "image1"),
+    prototype_input=(("H", "W"), ("H", "W")),
+    prototype_output=(("H", "W"), ("H", "W")),
+    # default values are the "ROBOTICS" setting, as defined in elas.h
+    extra_args=(
+        ("int", "disparity_min", "0", "i"),
+        ("int", "disparity_max", "255", "i"),
+        ("float", "support_threshold", "0.85", "f"),
+        ("int", "support_texture", "10", "i"),
+        ("int", "candidate_stepsize", "5", "i"),
+        ("int", "incon_window_size", "5", "i"),
+        ("int", "incon_threshold", "5", "i"),
+        ("int", "incon_min_support", "5", "i"),
+        ("bool", "add_corners", "0", "p"),
+        ("int", "grid_size", "20", "i"),
+        ("float", "beta", "0.02", "f"),
+        ("float", "gamma", "3", "f"),
+        ("float", "sigma", "1", "f"),
+        ("float", "sradius", "2", "f"),
+        ("int", "match_texture", "1", "i"),
+        ("int", "lr_threshold", "2", "i"),
+        ("float", "speckle_sim_threshold", "1", "f"),
+        ("int", "speckle_size", "200", "i"),
+        ("int", "ipol_gap_width", "3", "i"),
+        ("bool", "filter_median", "0", "p"),
+        ("bool", "filter_adaptive_mean", "1", "p"),
+        ("bool", "postprocess_only_left", "1", "p"),
+        ("bool", "subsampling", "0", "p"),
+    ),
+    Ccode_validate=r"""return CHECK_CONTIGUOUS_AND_SETERROR__output0() &&
                                         CHECK_CONTIGUOUS_AND_SETERROR__output1() &&
                                         strides_slice__image0[1] == 1            &&
                                         strides_slice__image1[1] == 1            &&
-                                        strides_slice__image0[0] == strides_slice__image1[0];''',
-
-            Ccode_slice_eval = \
-                { (np.uint8,np.uint8,  np.float32, np.float32):
-                 r'''
+                                        strides_slice__image0[0] == strides_slice__image1[0];""",
+    Ccode_slice_eval={
+        (np.uint8, np.uint8, np.float32, np.float32): r"""
                  mrcal_stereo_matching_libelas( (float*)data_slice__output0,
                                                 (float*)data_slice__output1,
                                                 (const uint8_t*)data_slice__image0,
@@ -194,7 +189,8 @@ numpy array with the same shape as the input images, but with dtype.np=float32
                                                 *postprocess_only_left,
                                                 *subsampling );
                  return true;
-                 '''},
+                 """
+    },
 )
 
 m.write()

@@ -8,7 +8,7 @@
 #
 #     http://www.apache.org/licenses/LICENSE-2.0
 
-r'''Visualize the difference in projection between N models
+r"""Visualize the difference in projection between N models
 
 SYNOPSIS
 
@@ -45,108 +45,131 @@ The top-level operation of this tool:
 The details of how the comparison is computed, and the meaning of the arguments
 controlling this, are in the docstring of mrcal.stereo_pair_diff().
 
-'''
+"""
 
 import sys
 import argparse
-import re
-import os
+
 
 def parse_args():
+    parser = argparse.ArgumentParser(
+        description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
+    )
 
-    parser = \
-        argparse.ArgumentParser(description = __doc__,
-                                formatter_class=argparse.RawDescriptionHelpFormatter)
-
-    parser.add_argument('--gridn',
-                        type=int,
-                        default = (60,40),
-                        nargs = 2,
-                        help='''How densely we should sample the imager. By default we use a 60x40 grid''')
-    parser.add_argument('--distance',
-                        type=float,
-                        help='''The projection difference varies depending on
+    parser.add_argument(
+        "--gridn",
+        type=int,
+        default=(60, 40),
+        nargs=2,
+        help="""How densely we should sample the imager. By default we use a 60x40 grid""",
+    )
+    parser.add_argument(
+        "--distance",
+        type=float,
+        help="""The projection difference varies depending on
                         the range to the observed world points, with the queried
                         range set in this argument. If omitted we look out to
-                        infinity.''')
+                        infinity.""",
+    )
 
-    parser.add_argument('--observations',
-                        action='store_true',
-                        default=False,
-                        help='''If given, I show where the chessboard corners were observed at calibration
-                        time. These should correspond to the low-diff regions.''')
-    parser.add_argument('--valid-intrinsics-region',
-                        action='store_true',
-                        default=False,
-                        help='''If given, I overlay the valid-intrinsics regions onto the plot''')
-    parser.add_argument('--cbmax',
-                        type=float,
-                        default=4,
-                        help='''Maximum range of the colorbar''')
+    parser.add_argument(
+        "--observations",
+        action="store_true",
+        default=False,
+        help="""If given, I show where the chessboard corners were observed at calibration
+                        time. These should correspond to the low-diff regions.""",
+    )
+    parser.add_argument(
+        "--valid-intrinsics-region",
+        action="store_true",
+        default=False,
+        help="""If given, I overlay the valid-intrinsics regions onto the plot""",
+    )
+    parser.add_argument(
+        "--cbmax", type=float, default=4, help="""Maximum range of the colorbar"""
+    )
 
-    parser.add_argument('--title',
-                        type=str,
-                        default = None,
-                        help='''Title string for the plot. Overrides the default
-                        title. Exclusive with --extratitle''')
-    parser.add_argument('--extratitle',
-                        type=str,
-                        default = None,
-                        help='''Additional string for the plot to append to the
-                        default title. Exclusive with --title''')
+    parser.add_argument(
+        "--title",
+        type=str,
+        default=None,
+        help="""Title string for the plot. Overrides the default
+                        title. Exclusive with --extratitle""",
+    )
+    parser.add_argument(
+        "--extratitle",
+        type=str,
+        default=None,
+        help="""Additional string for the plot to append to the
+                        default title. Exclusive with --title""",
+    )
 
-    parser.add_argument('--vectorfield',
-                        action = 'store_true',
-                        default = False,
-                        help='''Plot the diff as a vector field instead of as a heat map. The vector field
+    parser.add_argument(
+        "--vectorfield",
+        action="store_true",
+        default=False,
+        help="""Plot the diff as a vector field instead of as a heat map. The vector field
                         contains more information (magnitude AND direction), but
-                        is less clear at a glance''')
+                        is less clear at a glance""",
+    )
 
-    parser.add_argument('--vectorscale',
-                        type = float,
-                        default = 1.0,
-                        help='''If plotting a vectorfield, scale all the vectors by this factor. Useful to
+    parser.add_argument(
+        "--vectorscale",
+        type=float,
+        default=1.0,
+        help="""If plotting a vectorfield, scale all the vectors by this factor. Useful to
                         improve legibility if the vectors are too small to
-                        see''')
+                        see""",
+    )
 
-    parser.add_argument('--directions',
-                        action = 'store_true',
-                        help='''If given, the plots are color-coded by the direction of the error, instead of
-                        the magnitude''')
+    parser.add_argument(
+        "--directions",
+        action="store_true",
+        help="""If given, the plots are color-coded by the direction of the error, instead of
+                        the magnitude""",
+    )
 
-    parser.add_argument('--hardcopy',
-                        type=str,
-                        help='''Write the output to disk, instead of making an interactive plot''')
-    parser.add_argument('--terminal',
-                        type=str,
-                        help=r'''gnuplotlib terminal. The default is good almost always, so most people don't
-                        need this option''')
-    parser.add_argument('--set',
-                        type=str,
-                        action='append',
-                        help='''Extra 'set' directives to gnuplotlib. Can be given multiple times''')
-    parser.add_argument('--unset',
-                        type=str,
-                        action='append',
-                        help='''Extra 'unset' directives to gnuplotlib. Can be given multiple times''')
+    parser.add_argument(
+        "--hardcopy",
+        type=str,
+        help="""Write the output to disk, instead of making an interactive plot""",
+    )
+    parser.add_argument(
+        "--terminal",
+        type=str,
+        help=r"""gnuplotlib terminal. The default is good almost always, so most people don't
+                        need this option""",
+    )
+    parser.add_argument(
+        "--set",
+        type=str,
+        action="append",
+        help="""Extra 'set' directives to gnuplotlib. Can be given multiple times""",
+    )
+    parser.add_argument(
+        "--unset",
+        type=str,
+        action="append",
+        help="""Extra 'unset' directives to gnuplotlib. Can be given multiple times""",
+    )
 
-    parser.add_argument('models',
-                        type=str,
-                        nargs=4,
-                        help='''Camera models to diff''')
+    parser.add_argument("models", type=str, nargs=4, help="""Camera models to diff""")
 
     args = parser.parse_args()
 
     if len(args.models) < 4:
-        print(f"I need at least 4 models to diff. Instead got '{args.models}'", file=sys.stderr)
+        print(
+            f"I need at least 4 models to diff. Instead got '{args.models}'",
+            file=sys.stderr,
+        )
         sys.exit(1)
 
-    if args.title      is not None and \
-       args.extratitle is not None:
+    if args.title is not None and args.extratitle is not None:
         print("--title and --extratitle are exclusive", file=sys.stderr)
         sys.exit(1)
 
     return args
+
 
 args = parse_args()
 
@@ -154,8 +177,7 @@ args = parse_args()
 # stuff, so that I can generate the manpages and README
 
 if args.vectorscale != 1.0 and not args.vectorfield:
-    print("Error: --vectorscale only makes sense with --vectorfield",
-          file = sys.stderr)
+    print("Error: --vectorscale only makes sense with --vectorfield", file=sys.stderr)
     sys.exit(1)
 
 # if len(args.models) > 2:
@@ -170,33 +192,31 @@ if args.vectorscale != 1.0 and not args.vectorfield:
 
 
 import mrcal
-import numpy as np
-import numpysane as nps
 
 
 plotkwargs_extra = {}
 if args.set is not None:
-    plotkwargs_extra['set'] = args.set
+    plotkwargs_extra["set"] = args.set
 if args.unset is not None:
-    plotkwargs_extra['unset'] = args.unset
+    plotkwargs_extra["unset"] = args.unset
 
 if args.title is not None:
-    plotkwargs_extra['title'] = args.title
+    plotkwargs_extra["title"] = args.title
 if args.extratitle is not None:
-    plotkwargs_extra['extratitle'] = args.extratitle
+    plotkwargs_extra["extratitle"] = args.extratitle
+
 
 def openmodel(f):
     try:
         return mrcal.cameramodel(f)
     except Exception as e:
-        print(f"Couldn't load camera model '{f}': {e}",
-              file=sys.stderr)
+        print(f"Couldn't load camera model '{f}': {e}", file=sys.stderr)
         sys.exit(1)
+
 
 models = [openmodel(modelfilename) for modelfilename in args.models]
 
-model_pairs = [ (models[i0], models[i0+1]) \
-                for i0 in range(0,len(models),2)]
+model_pairs = [(models[i0], models[i0 + 1]) for i0 in range(0, len(models), 2)]
 
 
 # if args.observations:
@@ -206,18 +226,20 @@ model_pairs = [ (models[i0], models[i0+1]) \
 #               file=sys.stderr)
 #         sys.exit(1)
 
-plot = mrcal.show_stereo_pair_diff(model_pairs,
-                                   gridn_width             = args.gridn[0],
-                                   gridn_height            = args.gridn[1],
-                                   observations            = args.observations,
-                                   valid_intrinsics_region = args.valid_intrinsics_region,
-                                   distance                = args.distance,
-                                   vectorfield             = args.vectorfield,
-                                   vectorscale             = args.vectorscale,
-                                   hardcopy                = args.hardcopy,
-                                   terminal                = args.terminal,
-                                   cbmax                   = args.cbmax,
-                                   **plotkwargs_extra)
+plot = mrcal.show_stereo_pair_diff(
+    model_pairs,
+    gridn_width=args.gridn[0],
+    gridn_height=args.gridn[1],
+    observations=args.observations,
+    valid_intrinsics_region=args.valid_intrinsics_region,
+    distance=args.distance,
+    vectorfield=args.vectorfield,
+    vectorscale=args.vectorscale,
+    hardcopy=args.hardcopy,
+    terminal=args.terminal,
+    cbmax=args.cbmax,
+    **plotkwargs_extra,
+)
 
 if args.hardcopy is None:
     plot.wait()

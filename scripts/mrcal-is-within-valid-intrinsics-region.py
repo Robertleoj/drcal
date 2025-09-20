@@ -8,7 +8,7 @@
 #
 #     http://www.apache.org/licenses/LICENSE-2.0
 
-r'''Reports which input points lie within the valid-intrinsics region
+r"""Reports which input points lie within the valid-intrinsics region
 
 SYNOPSIS
 
@@ -32,44 +32,43 @@ column appended at the end, containing the results. The name of this column can
 be specified with --col-output, but this can be omitted if the default
 'is-within-valid-intrinsics-region' is acceptable.
 
-'''
+"""
 
 import sys
 import argparse
-import re
 import os
 
+
 def parse_args():
+    parser = argparse.ArgumentParser(
+        description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
+    )
+    parser.add_argument(
+        "--cols-xy",
+        required=True,
+        type=str,
+        nargs=2,
+        help="""The names of the columns in the input containing the x and y pixel
+                        coordinates respectively. This is required""",
+    )
+    parser.add_argument(
+        "--col-output",
+        required=False,
+        type=str,
+        default="is-within-valid-intrinsics-region",
+        help="""The name of the column to append in the output. This is optional; a
+                        reasonable default will be used if omitted""",
+    )
 
-    parser = \
-        argparse.ArgumentParser(description = __doc__,
-                                formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument('--cols-xy',
-                        required=True,
-                        type=str,
-                        nargs=2,
-                        help='''The names of the columns in the input containing the x and y pixel
-                        coordinates respectively. This is required''')
-    parser.add_argument('--col-output',
-                        required=False,
-                        type=str,
-                        default='is-within-valid-intrinsics-region',
-                        help='''The name of the column to append in the output. This is optional; a
-                        reasonable default will be used if omitted''')
-
-    parser.add_argument('model',
-                        type=str,
-                        help='''Camera model''')
+    parser.add_argument("model", type=str, help="""Camera model""")
 
     return parser.parse_args()
+
 
 args = parse_args()
 
 # arg-parsing is done before the imports so that --help works without building
 # stuff, so that I can generate the manpages and README
-
-
-
 
 
 import numpy as np
@@ -85,30 +84,35 @@ except Exception as e:
     sys.exit(1)
 
 if model.valid_intrinsics_region() is None:
-    print("The given model has no valid-intrinsics region defined!",
-          file=sys.stderr)
+    print("The given model has no valid-intrinsics region defined!", file=sys.stderr)
     sys.exit(1)
 
 # I want to be able to add to any arbitrary existing columns, so I slurp.
 # Good-enough for now.
 in_file = sys.stdin.read()
 
-cmd = ('vnl-filter', '-p', '__linenumber=NR', '-p', f'^{args.cols_xy[0]}$', '-p', f'^{args.cols_xy[1]}$')
+cmd = (
+    "vnl-filter",
+    "-p",
+    "__linenumber=NR",
+    "-p",
+    f"^{args.cols_xy[0]}$",
+    "-p",
+    f"^{args.cols_xy[1]}$",
+)
 try:
-    ixy_text = subprocess.check_output(cmd,
-                                       shell    = False,
-                                       encoding = 'ascii',
-                                       input    = in_file)
+    ixy_text = subprocess.check_output(
+        cmd, shell=False, encoding="ascii", input=in_file
+    )
 except:
-    print(f"Couldn't read columns {args.cols_xy} from the input",
-          file = sys.stderr)
+    print(f"Couldn't read columns {args.cols_xy} from the input", file=sys.stderr)
     sys.exit(1)
 
 ixy = nps.atleast_dims(np.loadtxt(io.StringIO(ixy_text)), -2)
 mask = mrcal.is_within_valid_intrinsics_region(ixy[..., 1:], model)
 
 
-fd_read,fd_write = os.pipe()
+fd_read, fd_write = os.pipe()
 os.set_inheritable(fd_read, True)
 
 pid = os.fork()
@@ -117,11 +121,13 @@ if pid == 0:
     # Child. I write the mask back to the pipe. The parent will join it
     os.close(fd_read)
 
-    with open(f"/dev/fd/{fd_write}", 'w') as f:
-        np.savetxt(f,
-                   nps.transpose(nps.cat(ixy[...,0], mask)),
-                   fmt='%06d %d',
-                   header=f'__linenumber {args.col_output}')
+    with open(f"/dev/fd/{fd_write}", "w") as f:
+        np.savetxt(
+            f,
+            nps.transpose(nps.cat(ixy[..., 0], mask)),
+            fmt="%06d %d",
+            header=f"__linenumber {args.col_output}",
+        )
     os.close(fd_write)
     sys.exit(0)
 
@@ -131,10 +137,6 @@ os.close(fd_write)
 
 # I don't re-sort the input. NR was printed with %06d so it's already sorted.
 cmd = f"vnl-filter --skipcomments -p __linenumber='sprintf(\"%06d\",NR)',. | vnl-join -j __linenumber - /dev/fd/{fd_read} | vnl-filter -p \\!__linenumber"
-subprocess.run( cmd,
-                shell = True,
-                close_fds = False,
-                encoding = 'ascii',
-                input = in_file )
+subprocess.run(cmd, shell=True, close_fds=False, encoding="ascii", input=in_file)
 
 os.close(fd_read)

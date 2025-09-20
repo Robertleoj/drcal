@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-r'''Studies the 2d surface b-spline interpolation
+r"""Studies the 2d surface b-spline interpolation
 
 The expressions for the interpolated surface I need aren't entirely clear, so I
 want to study this somewhat. This script does that.
@@ -41,70 +41,73 @@ from EvalUniformCubicBSpline() in
 camera_calibration/applications/camera_calibration/scripts/derive_jacobians.py.
 translated to [0,1] from [3,4]
 
-'''
+"""
 
-import sys
 import numpy as np
 import numpysane as nps
 import gnuplotlib as gp
 
 
-
 skip_plots = False
 
 
-
 import scipy.interpolate
-from scipy.interpolate import _fitpack
 
-def sample_segment_cubic(x, a,b,c,d):
-    A =  (-x**3 + 3*x**2 - 3*x + 1)/6
-    B = (3 * x**3/2 - 3*x**2 + 2)/3
-    C = (-3 * x**3 + 3*x**2 + 3*x + 1)/6
+
+def sample_segment_cubic(x, a, b, c, d):
+    A = (-(x**3) + 3 * x**2 - 3 * x + 1) / 6
+    B = (3 * x**3 / 2 - 3 * x**2 + 2) / 3
+    C = (-3 * x**3 + 3 * x**2 + 3 * x + 1) / 6
     D = (x * x * x) / 6
 
-    return A*a + B*b + C*c + D*d
+    return A * a + B * b + C * c + D * d
+
 
 def splev_local(x, t, c, k, der=0, ext=0):
-    y = scipy.interpolate.splev(x, (t,c,k), der, ext)
+    y = scipy.interpolate.splev(x, (t, c, k), der, ext)
     return y.reshape(x.shape)
 
-def splev_translated(x, t, c, k, l):
 
+def splev_translated(x, t, c, k, l):
     # assumes that t[l] <= x <= t[l+1]
 
     # print(f"l = {l}")
     # print((t[l], x, t[l+1]))
 
-    l += 1 # l is now a fortran-style index
+    l += 1  # l is now a fortran-style index
 
-    hh  = [0] * 19
+    hh = [0] * 19
     h__ = [0] * 19
 
     h__[-1 + 1] = 1
     i__1 = k
-    for j in range(1,i__1+1):
+    for j in range(1, i__1 + 1):
         i__2 = j
-        for i__ in range(1,i__2+1):
+        for i__ in range(1, i__2 + 1):
             hh[-1 + i__] = h__[-1 + i__]
         h__[-1 + 1] = 0
         i__2 = j
-        for i__ in range(1,i__2+1):
+        for i__ in range(1, i__2 + 1):
             li = l + i__
             lj = li - j
             if t[-1 + li] != t[-1 + lj]:
-                h__[-1 + i__]    += (t[-1 + li] - x) * hh[-1 + i__] / (t[-1 + li] - t[-1 + lj])
-                h__[-1 + i__ + 1] = (x - t[-1 + lj]) * hh[-1 + i__] / (t[-1 + li] - t[-1 + lj])
+                h__[-1 + i__] += (
+                    (t[-1 + li] - x) * hh[-1 + i__] / (t[-1 + li] - t[-1 + lj])
+                )
+                h__[-1 + i__ + 1] = (
+                    (x - t[-1 + lj]) * hh[-1 + i__] / (t[-1 + li] - t[-1 + lj])
+                )
             else:
                 h__[-1 + i__ + 1] = 0
 
     sp = 0
-    ll = l - (k+1)
-    i__2 = (k+1)
-    for j in range(1,i__2+1):
+    ll = l - (k + 1)
+    i__2 = k + 1
+    for j in range(1, i__2 + 1):
         ll += 1
         sp += c[-1 + ll] * h__[-1 + j]
     return sp
+
 
 # from https://en.wikipedia.org/wiki/De_Boor%27s_algorithm
 def splev_wikipedia(k: int, x: int, t, c, p: int):
@@ -120,14 +123,16 @@ def splev_wikipedia(k: int, x: int, t, c, p: int):
     p: Degree of B-spline.
     """
     # make sure I never reference c out of bounds
-    if k-p < 0: raise Exception("c referenced out of min bounds")
-    if k >= len(c): raise Exception("c referenced out of max bounds")
-    d = [c[j + k - p] for j in range(0, p+1)]
+    if k - p < 0:
+        raise Exception("c referenced out of min bounds")
+    if k >= len(c):
+        raise Exception("c referenced out of max bounds")
+    d = [c[j + k - p] for j in range(0, p + 1)]
 
-    for r in range(1, p+1):
-        for j in range(p, r-1, -1):
-            alpha = (x - t[j+k-p]) / (t[j+1+k-r] - t[j+k-p])
-            d[j] = (1 - alpha) * d[j-1] + alpha * d[j]
+    for r in range(1, p + 1):
+        for j in range(p, r - 1, -1):
+            alpha = (x - t[j + k - p]) / (t[j + 1 + k - r] - t[j + k - p])
+            d[j] = (1 - alpha) * d[j - 1] + alpha * d[j]
 
     return d[p]
 
@@ -138,21 +143,20 @@ def splev_wikipedia(k: int, x: int, t, c, p: int):
 # point
 
 N = 30
-t = np.arange( N, dtype=int)
+t = np.arange(N, dtype=int)
 k = 3
 c = np.random.rand(len(t))
 
-x  = 4.3
+x = 4.3
 # may have trouble exactly AT the knots. the edge logic isn't quite what I want
-l = np.searchsorted(np.array(t), x)-1
-y0 = splev_local(np.array((x,)),t,c,k)[0]
+l = np.searchsorted(np.array(t), x) - 1
+y0 = splev_local(np.array((x,)), t, c, k)[0]
 y1 = splev_translated(x, t, c, k, l)
 y2 = splev_wikipedia(l, x, t, c, k)
 
 print(f"These should all match: {y0} {y1} {y2}")
-print(f"  err1 = {y1-y0}")
-print(f"  err2 = {y2-y0}")
-
+print(f"  err1 = {y1 - y0}")
+print(f"  err2 = {y2 - y0}")
 
 
 ##############################################################################
@@ -160,72 +164,98 @@ print(f"  err2 = {y2-y0}")
 # defined by the control points. There should be no x offset or anything of that
 # sort
 N = 30
-t = np.arange( N, dtype=int)
+t = np.arange(N, dtype=int)
 k = 3
 c = np.random.rand(len(t))
 Npad = 10
-x = np.linspace(Npad, N-Npad, 1000)
+x = np.linspace(Npad, N - Npad, 1000)
+
 
 ########### sample_segment_cubic()
 @nps.broadcast_define(((),), ())
 def sample_cubic(x, cp):
-    i = int(x//1)
-    q = x-i
-    try:    return sample_segment_cubic(q, *cp[i-1:i+3])
-    except: return 0
+    i = int(x // 1)
+    q = x - i
+    try:
+        return sample_segment_cubic(q, *cp[i - 1 : i + 3])
+    except:
+        return 0
+
 
 y = sample_cubic(x, c)
 c2 = c.copy()
-c2[int(N//2)] *= 1.1
+c2[int(N // 2)] *= 1.1
 y2 = sample_cubic(x, c2)
 
 if not skip_plots:
-    plot1 = gp.gnuplotlib(title = 'Cubic splines: response to control point perturbation',
-                          # hardcopy = '/tmp/cubic-spline-perturbations.svg',
-                          # terminal = 'svg size 800,600 noenhanced solid dynamic font ",12"'
-                          )
-    plot1.plot( (x, nps.cat(y,y2),
-                 dict(_with = np.array(('lines lc "blue"',
-                                        'lines lc "sea-green"')),
-                      legend = np.array(('Spline: baseline',
-                                         'Spline: tweaked one control point')))),
-                (t[:len(c)], nps.cat(c,c2),
-                 dict(_with = np.array(('points pt 1 ps 1 lc "blue"',
-                                        'points pt 2 ps 1 lc "sea-green"')),
-                      legend= np.array(('Control points: baseline',
-                                        'Control points: tweaked one control point')))),
-                (x, y-y2,
-                 dict(_with  = 'lines lc "red"',
-                      legend = 'Difference',
-                      y2     = 1)),
-                _xrange = (10.5,19.5),
-                y2max   = 0.01,
-                ylabel   = 'Spline value',
-                y2label  = 'Difference due to perturbation',)
+    plot1 = gp.gnuplotlib(
+        title="Cubic splines: response to control point perturbation",
+        # hardcopy = '/tmp/cubic-spline-perturbations.svg',
+        # terminal = 'svg size 800,600 noenhanced solid dynamic font ",12"'
+    )
+    plot1.plot(
+        (
+            x,
+            nps.cat(y, y2),
+            dict(
+                _with=np.array(('lines lc "blue"', 'lines lc "sea-green"')),
+                legend=np.array(
+                    ("Spline: baseline", "Spline: tweaked one control point")
+                ),
+            ),
+        ),
+        (
+            t[: len(c)],
+            nps.cat(c, c2),
+            dict(
+                _with=np.array(
+                    ('points pt 1 ps 1 lc "blue"', 'points pt 2 ps 1 lc "sea-green"')
+                ),
+                legend=np.array(
+                    (
+                        "Control points: baseline",
+                        "Control points: tweaked one control point",
+                    )
+                ),
+            ),
+        ),
+        (x, y - y2, dict(_with='lines lc "red"', legend="Difference", y2=1)),
+        _xrange=(10.5, 19.5),
+        y2max=0.01,
+        ylabel="Spline value",
+        y2label="Difference due to perturbation",
+    )
+
 
 ########### sample_wikipedia()
 @nps.broadcast_define(((),), ())
 def sample_wikipedia(x, t, c, k):
-    return splev_wikipedia(np.searchsorted(np.array(t), x)-1,x,t,c,k)
+    return splev_wikipedia(np.searchsorted(np.array(t), x) - 1, x, t, c, k)
+
 
 @nps.broadcast_define(((),), ())
 def sample_wikipedia_integer_knots(x, c, k):
     t = np.arange(len(c) + k, dtype=int)
-    l = int(x//1)
-    offset = int((k+1)//2)
-    return splev_wikipedia(l,x,t,c[offset:],k)
+    l = int(x // 1)
+    offset = int((k + 1) // 2)
+    return splev_wikipedia(l, x, t, c[offset:], k)
+
 
 if 1:
-    y = sample_wikipedia_integer_knots(x,c,k)
+    y = sample_wikipedia_integer_knots(x, c, k)
 else:
-    offset = int((k+1)//2)
-    y = sample_wikipedia(x,t, c[offset:], k)
+    offset = int((k + 1) // 2)
+    y = sample_wikipedia(x, t, c[offset:], k)
 
 if not skip_plots:
-    plot2 = gp.gnuplotlib(title = 'sample_wikipedia')
-    plot2.plot( (x, y, dict(_with='lines')),
-                (t[:len(c)], c,  dict(_with='linespoints pt 7 ps 2')) )
-    print("these two plots should look the same: we're using two implementation of the same algorithm to interpolate the same data")
+    plot2 = gp.gnuplotlib(title="sample_wikipedia")
+    plot2.plot(
+        (x, y, dict(_with="lines")),
+        (t[: len(c)], c, dict(_with="linespoints pt 7 ps 2")),
+    )
+    print(
+        "these two plots should look the same: we're using two implementation of the same algorithm to interpolate the same data"
+    )
     plot2.wait()
     plot1.wait()
 
@@ -234,27 +264,36 @@ if not skip_plots:
 # These should match the ones in sample_segment_cubic()
 
 import sympy
-c = sympy.symbols(f'c:{len(c)}')
-x = sympy.symbols('x')
+
+c = sympy.symbols(f"c:{len(c)}")
+x = sympy.symbols("x")
 
 # Which interval we're in. Arbitrary. In the middle somewhere
-l = int(N//2)
+l = int(N // 2)
 print("Should match A,B,C,D coefficients in sample_segment_cubic()")
-s = splev_wikipedia(l,
-                    # I want 'x' to be [0,1] within the interval, but this
-                    # function wants x in the whole domain
-                    x+l,
-                    np.arange( N, dtype=int), c, k).expand()
+s = splev_wikipedia(
+    l,
+    # I want 'x' to be [0,1] within the interval, but this
+    # function wants x in the whole domain
+    x + l,
+    np.arange(N, dtype=int),
+    c,
+    k,
+).expand()
 print(s.coeff(c[12]))
 print(s.coeff(c[13]))
 print(s.coeff(c[14]))
 print(s.coeff(c[15]))
 
 print("Should also match A,B,C,D coefficients in sample_segment_cubic()")
-s = splev_translated(# I want 'x' to be [0,1] within the interval, but this
-                     # function wants x in the whole domain
-                     x+l,
-                     np.arange( N, dtype=int), c, k, l).expand()
+s = splev_translated(  # I want 'x' to be [0,1] within the interval, but this
+    # function wants x in the whole domain
+    x + l,
+    np.arange(N, dtype=int),
+    c,
+    k,
+    l,
+).expand()
 print(s.coeff(c[12]))
 print(s.coeff(c[13]))
 print(s.coeff(c[14]))
@@ -271,20 +310,20 @@ print(s.coeff(c[15]))
 # region [-0.5..0.5] off the center control point
 print("======================== k = 2")
 N = 30
-t = np.arange( N, dtype=int)
+t = np.arange(N, dtype=int)
 k = 2
 # c[0,1,2] corresponds to is t[-0.5 0.5 1.5 2.5 ...
 c = np.random.rand(len(t))
 
-x  = 4.3
+x = 4.3
 # may have trouble exactly AT the knots. the edge logic isn't quite what I want
-l = np.searchsorted(np.array(t), x)-1
-y0 = splev_local(np.array((x,)),t,c,k)[0]
+l = np.searchsorted(np.array(t), x) - 1
+y0 = splev_local(np.array((x,)), t, c, k)[0]
 y1 = splev_translated(x, t, c, k, l)
 y2 = splev_wikipedia(l, x, t, c, k)
 print(f"These should all match: {y0} {y1} {y2}")
-print(f"  err1 = {y1-y0}")
-print(f"  err2 = {y2-y0}")
+print(f"  err1 = {y1 - y0}")
+print(f"  err2 = {y2 - y0}")
 
 
 ##############################################################################
@@ -293,61 +332,73 @@ print(f"  err2 = {y2-y0}")
 # sort
 if not skip_plots:
     N = 30
-    t = np.arange( N, dtype=int)
+    t = np.arange(N, dtype=int)
     k = 2
     c = np.random.rand(len(t))
     Npad = 10
-    x = np.linspace(Npad, N-Npad, 1000)
-    offset = int((k+1)//2)
+    x = np.linspace(Npad, N - Npad, 1000)
+    offset = int((k + 1) // 2)
 
-    y = sample_wikipedia(x,t-0.5, c[offset:], k)
+    y = sample_wikipedia(x, t - 0.5, c[offset:], k)
 
-    xm = (x[1:] + x[:-1]) / 2.
+    xm = (x[1:] + x[:-1]) / 2.0
     d = np.diff(y) / np.diff(x)
-    plot1 = gp.gnuplotlib(title = 'k==2; sample_wikipedia')
-    plot1.plot( (x, y, dict(_with='lines', legend='spline')),
-                (xm, d, dict(_with='lines', y2=1, legend='diff')),
-                (t[:len(c)], c,  dict(_with='linespoints pt 7 ps 2', legend='control points')))
+    plot1 = gp.gnuplotlib(title="k==2; sample_wikipedia")
+    plot1.plot(
+        (x, y, dict(_with="lines", legend="spline")),
+        (xm, d, dict(_with="lines", y2=1, legend="diff")),
+        (t[: len(c)], c, dict(_with="linespoints pt 7 ps 2", legend="control points")),
+    )
 
     @nps.broadcast_define(((),), ())
     def sample_splev_translated(x, t, c, k):
-        l = np.searchsorted(np.array(t), x)-1
-        return splev_translated(x,t,c,k,l)
-    y = sample_splev_translated(x,t-0.5, c[offset:], k)
-    xm = (x[1:] + x[:-1]) / 2.
-    d = np.diff(y) / np.diff(x)
-    plot2 = gp.gnuplotlib(title = 'k==2; splev_translated')
-    plot2.plot( (x, y, dict(_with='lines', legend='spline')),
-                (xm, d, dict(_with='lines', y2=1, legend='diff')),
-                (t[:len(c)], c,  dict(_with='linespoints pt 7 ps 2', legend='control points')))
+        l = np.searchsorted(np.array(t), x) - 1
+        return splev_translated(x, t, c, k, l)
 
+    y = sample_splev_translated(x, t - 0.5, c[offset:], k)
+    xm = (x[1:] + x[:-1]) / 2.0
+    d = np.diff(y) / np.diff(x)
+    plot2 = gp.gnuplotlib(title="k==2; splev_translated")
+    plot2.plot(
+        (x, y, dict(_with="lines", legend="spline")),
+        (xm, d, dict(_with="lines", y2=1, legend="diff")),
+        (t[: len(c)], c, dict(_with="linespoints pt 7 ps 2", legend="control points")),
+    )
 
     # These are the functions I'm going to use. Derived by the sympy steps
     # immediately after this
-    def sample_segment_quadratic(x, a,b,c):
-        A = (4*x**2 - 4*x + 1)/8
-        B = (3 - 4*x**2)/4
-        C = (4*x**2 + 4*x + 1)/8
-        return A*a + B*b + C*c
+    def sample_segment_quadratic(x, a, b, c):
+        A = (4 * x**2 - 4 * x + 1) / 8
+        B = (3 - 4 * x**2) / 4
+        C = (4 * x**2 + 4 * x + 1) / 8
+        return A * a + B * b + C * c
+
     @nps.broadcast_define(((),), ())
     def sample_quadratic(x, cp):
-        i = int((x+0.5)//1)
-        q = x-i
-        try:    return sample_segment_quadratic(q, *cp[i-1:i+2])
-        except: return 0
+        i = int((x + 0.5) // 1)
+        q = x - i
+        try:
+            return sample_segment_quadratic(q, *cp[i - 1 : i + 2])
+        except:
+            return 0
+
     y = sample_quadratic(x, c)
-    xm = (x[1:] + x[:-1]) / 2.
+    xm = (x[1:] + x[:-1]) / 2.0
     d = np.diff(y) / np.diff(x)
-    plot3 = gp.gnuplotlib(title = 'k==2; sample_quadratic')
-    plot3.plot( (x, y, dict(_with='lines', legend='spline')),
-                (xm, d, dict(_with='lines', y2=1, legend='diff')),
-                (t[:len(c)], c,  dict(_with='linespoints pt 7 ps 2', legend='control points')))
+    plot3 = gp.gnuplotlib(title="k==2; sample_quadratic")
+    plot3.plot(
+        (x, y, dict(_with="lines", legend="spline")),
+        (xm, d, dict(_with="lines", y2=1, legend="diff")),
+        (t[: len(c)], c, dict(_with="linespoints pt 7 ps 2", legend="control points")),
+    )
 
     plot3.wait()
     plot2.wait()
     plot1.wait()
 
-    print("these 3 plots should look the same: we're using different implementation of the same algorithm to interpolate the same data")
+    print(
+        "these 3 plots should look the same: we're using different implementation of the same algorithm to interpolate the same data"
+    )
 
 
 # ##################################
@@ -378,22 +429,25 @@ if not skip_plots:
 # C1 continuous, but the cubic interpolation is C2 continuous too. How much do I
 # care? Let's at least compare them visually
 N = 30
-t = np.arange( N, dtype=int)
+t = np.arange(N, dtype=int)
 c = np.random.rand(len(t))
 Npad = 10
-x = np.linspace(Npad, N-Npad, 1000)
+x = np.linspace(Npad, N - Npad, 1000)
 
-y2 = sample_quadratic(x,c)
-y3 = sample_cubic(    x,c)
+y2 = sample_quadratic(x, c)
+y3 = sample_cubic(x, c)
 
 if not skip_plots:
-    gp.plot( (x, nps.cat(y2,y3), dict(_with='lines',
-                                      legend=np.array(('quadratic',
-                                                       'cubic')))),
-             (t[:len(c)], c, dict(_with='linespoints pt 7 ps 2',
-                                  legend='control points')),
-             title = "Comparing quadratic and cubic b-spline interpolation",
-             wait = True)
+    gp.plot(
+        (
+            x,
+            nps.cat(y2, y3),
+            dict(_with="lines", legend=np.array(("quadratic", "cubic"))),
+        ),
+        (t[: len(c)], c, dict(_with="linespoints pt 7 ps 2", legend="control points")),
+        title="Comparing quadratic and cubic b-spline interpolation",
+        wait=True,
+    )
     # Visually, neither looks better than the other. The quadratic spline follows
     # the control points closer. Looks like it's trying to match the slope at the
     # halfway point. Maybe that's bad, and the quadratic curve is too wiggly? We'll
@@ -413,26 +467,27 @@ if not skip_plots:
 #
 # ############### x-y or y-x?
 import sympy
-from sympy.abc import x,y
-cp = sympy.symbols('cp:4(:4)')
+from sympy.abc import x, y
+
+cp = sympy.symbols("cp:4(:4)")
 
 # x then y
-xs = [sample_segment_cubic( x,
-                            cp[i*4 + 0],
-                            cp[i*4 + 1],
-                            cp[i*4 + 2],
-                            cp[i*4 + 3] ) for i in range(4)]
+xs = [
+    sample_segment_cubic(x, cp[i * 4 + 0], cp[i * 4 + 1], cp[i * 4 + 2], cp[i * 4 + 3])
+    for i in range(4)
+]
 yxs = sample_segment_cubic(y, *xs)
 
 # y then x
-ys = [sample_segment_cubic( y,
-                            cp[0*4 + i],
-                            cp[1*4 + i],
-                            cp[2*4 + i],
-                            cp[3*4 + i] ) for i in range(4)]
+ys = [
+    sample_segment_cubic(y, cp[0 * 4 + i], cp[1 * 4 + i], cp[2 * 4 + i], cp[3 * 4 + i])
+    for i in range(4)
+]
 xys = sample_segment_cubic(x, *ys)
 
-print(f"Bicubic interpolation. x-then-y and y-then-x difference: {(xys - yxs).expand()}")
+print(
+    f"Bicubic interpolation. x-then-y and y-then-x difference: {(xys - yxs).expand()}"
+)
 
 ########### Alright. Apparently either order is ok. Does scipy do something
 ########### different for 2d interpolation? I compare the 1d-then-1d
@@ -441,15 +496,15 @@ print(f"Bicubic interpolation. x-then-y and y-then-x difference: {(xys - yxs).ex
 from fpbisp import fpbisp_
 
 N = 30
-t = np.arange( N, dtype=int)
+t = np.arange(N, dtype=int)
 k = 3
 
-cp = np.array(sympy.symbols('cp:40(:40)'), dtype=np.object).reshape(40,40)
+cp = np.array(sympy.symbols("cp:40(:40)"), dtype=np.object).reshape(40, 40)
 
 lx = 3
 ly = 5
 
-z   = fpbisp_(t, t, k, cp, x+lx, lx, y+ly, ly)
+z = fpbisp_(t, t, k, cp, x + lx, lx, y + ly, ly)
 err = z - yxs
 
 print(f"Bicubic interpolation. difference(1d-then-1d, FITPACK): {err.expand()}")

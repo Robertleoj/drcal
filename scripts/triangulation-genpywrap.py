@@ -8,20 +8,14 @@
 #
 #     http://www.apache.org/licenses/LICENSE-2.0
 
-r'''Python-wrap the triangulation routines
-
-'''
-
-import sys
-import os
+r"""Python-wrap the triangulation routines"""
 
 import numpy as np
-import numpysane as nps
 
 import numpysane_pywrap as npsp
 
 
-docstring_module = '''Internal triangulation routines
+docstring_module = """Internal triangulation routines
 
 This is the written-in-C Python extension module that underlies the
 triangulation routines. The user-facing functions are available in
@@ -30,14 +24,15 @@ mrcal.triangulation module in mrcal/triangulation.py
 All functions are exported into the mrcal module. So you can call these via
 mrcal._triangulation_npsp.fff() or mrcal.fff(). The latter is preferred.
 
-'''
+"""
 
-m = npsp.module( name      = "_triangulation_npsp",
-                 docstring = docstring_module,
-                 header    = r'''
+m = npsp.module(
+    name="_triangulation_npsp",
+    docstring=docstring_module,
+    header=r"""
 #include "mrcal.h"
-''')
-
+""",
+)
 
 
 # All the triangulation routines except Lindstrom have an identical structure.
@@ -71,7 +66,7 @@ A higher-level function mrcal.triangulate() is also available for higher-level
 analysis.
 
 """
-BODY_SLICE =  r'''
+BODY_SLICE = r"""
                 const mrcal_point3_t* v0  = (const mrcal_point3_t*)data_slice__v0;
                 const mrcal_point3_t* v1  = (const mrcal_point3_t*)data_slice__v1;
                 const mrcal_point3_t* t01 = (const mrcal_point3_t*)data_slice__t01;
@@ -80,8 +75,8 @@ BODY_SLICE =  r'''
                   mrcal_triangulate_{WHAT}(NULL, NULL, NULL,
                                            v0, v1, t01);
                 return true;
-'''
-BODY_SLICE_WITHGRAD =  r'''
+"""
+BODY_SLICE_WITHGRAD = r"""
                 const mrcal_point3_t* v0  = (const mrcal_point3_t*)data_slice__v0;
                 const mrcal_point3_t* v1  = (const mrcal_point3_t*)data_slice__v1;
                 const mrcal_point3_t* t01 = (const mrcal_point3_t*)data_slice__t01;
@@ -94,49 +89,64 @@ BODY_SLICE_WITHGRAD =  r'''
                   mrcal_triangulate_{WHAT}( dm_dv0, dm_dv1, dm_dt01,
                                             v0, v1, t01);
                 return true;
-'''
-common_kwargs = dict( args_input       = ('v0', 'v1', 't01'),
-                      prototype_input  = ((3,), (3,), (3,)),
-                      prototype_output = (3,),
-                      Ccode_validate = r'''
-                      return CHECK_CONTIGUOUS_AND_SETERROR_ALL();''' )
+"""
+common_kwargs = dict(
+    args_input=("v0", "v1", "t01"),
+    prototype_input=((3,), (3,), (3,)),
+    prototype_output=(3,),
+    Ccode_validate=r"""
+                      return CHECK_CONTIGUOUS_AND_SETERROR_ALL();""",
+)
 
-common_kwargs_withgrad = dict( args_input       = ('v0', 'v1', 't01'),
-                               prototype_input  = ((3,), (3,), (3,)),
-                               prototype_output = ((3,), (3,3), (3,3), (3,3)),
-                               Ccode_validate = r'''
-                               return CHECK_CONTIGUOUS_AND_SETERROR_ALL();''')
+common_kwargs_withgrad = dict(
+    args_input=("v0", "v1", "t01"),
+    prototype_input=((3,), (3,), (3,)),
+    prototype_output=((3,), (3, 3), (3, 3), (3, 3)),
+    Ccode_validate=r"""
+                               return CHECK_CONTIGUOUS_AND_SETERROR_ALL();""",
+)
 
-for WHAT,LONGNAME in (('geometric',       'geometric'),
-                      ('leecivera_l1',    'Lee-Civera L1'),
-                      ('leecivera_linf',  'Lee-Civera L-infinity'),
-                      ('leecivera_mid2',  'Lee-Civera Mid2'),
-                      ('leecivera_wmid2', 'Lee-Civera wMid2')):
-
-    m.function( NAME.format(WHAT     = WHAT),
-                DOCS.format(WHAT     = WHAT,
-                            LONGNAME = LONGNAME),
-                Ccode_slice_eval = { (np.float64,np.float64,np.float64,
-                                      np.float64):
-                                     BODY_SLICE.format(WHAT = WHAT) },
-                **common_kwargs
+for WHAT, LONGNAME in (
+    ("geometric", "geometric"),
+    ("leecivera_l1", "Lee-Civera L1"),
+    ("leecivera_linf", "Lee-Civera L-infinity"),
+    ("leecivera_mid2", "Lee-Civera Mid2"),
+    ("leecivera_wmid2", "Lee-Civera wMid2"),
+):
+    m.function(
+        NAME.format(WHAT=WHAT),
+        DOCS.format(WHAT=WHAT, LONGNAME=LONGNAME),
+        Ccode_slice_eval={
+            (np.float64, np.float64, np.float64, np.float64): BODY_SLICE.format(
+                WHAT=WHAT
+            )
+        },
+        **common_kwargs,
     )
 
-    m.function( NAME.format(         WHAT     = WHAT) + "_withgrad",
-                DOCS_WITHGRAD.format(WHAT     = WHAT,
-                                     LONGNAME = LONGNAME),
-                Ccode_slice_eval = { (np.float64,np.float64,np.float64,
-                                      np.float64,np.float64,np.float64,np.float64):
-                                     BODY_SLICE_WITHGRAD.format(WHAT = WHAT) },
-                **common_kwargs_withgrad
+    m.function(
+        NAME.format(WHAT=WHAT) + "_withgrad",
+        DOCS_WITHGRAD.format(WHAT=WHAT, LONGNAME=LONGNAME),
+        Ccode_slice_eval={
+            (
+                np.float64,
+                np.float64,
+                np.float64,
+                np.float64,
+                np.float64,
+                np.float64,
+                np.float64,
+            ): BODY_SLICE_WITHGRAD.format(WHAT=WHAT)
+        },
+        **common_kwargs_withgrad,
     )
-
 
 
 # Lindstrom's triangulation. Takes a local v1, so the arguments are a bit
 # different
-m.function( "_triangulate_lindstrom",
-            f"""Internal lindstrom's triangulation routine
+m.function(
+    "_triangulate_lindstrom",
+    """Internal lindstrom's triangulation routine
 
 This is the internals for mrcal.triangulate_lindstrom(). As a user, please call
 THAT function, and see the docs for that function. The differences:
@@ -145,17 +155,17 @@ THAT function, and see the docs for that function. The differences:
   gradients is _triangulate_lindstrom_withgrad
 
 """,
-
-            args_input       = ('v0_local', 'v1_local', 'Rt01'),
-            prototype_input  = ((3,), (3,), (4,3),),
-            prototype_output = ((3,) ),
-
-            Ccode_validate = r'''
-            return CHECK_CONTIGUOUS_AND_SETERROR_ALL();''',
-
-            Ccode_slice_eval = { (np.float64,np.float64,np.float64,
-                                  np.float64):
-                                 r'''
+    args_input=("v0_local", "v1_local", "Rt01"),
+    prototype_input=(
+        (3,),
+        (3,),
+        (4, 3),
+    ),
+    prototype_output=((3,)),
+    Ccode_validate=r"""
+            return CHECK_CONTIGUOUS_AND_SETERROR_ALL();""",
+    Ccode_slice_eval={
+        (np.float64, np.float64, np.float64, np.float64): r"""
                 const mrcal_point3_t* v0  = (const mrcal_point3_t*)data_slice__v0_local;
                 const mrcal_point3_t* v1  = (const mrcal_point3_t*)data_slice__v1_local;
                 const mrcal_point3_t* Rt01= (const mrcal_point3_t*)data_slice__Rt01;
@@ -164,11 +174,13 @@ THAT function, and see the docs for that function. The differences:
                   mrcal_triangulate_lindstrom(NULL,NULL,NULL,
                                               v0, v1, Rt01);
                 return true;
-'''},
+"""
+    },
 )
 
-m.function( "_triangulate_lindstrom_withgrad",
-            f"""Internal lindstrom's triangulation routine
+m.function(
+    "_triangulate_lindstrom_withgrad",
+    """Internal lindstrom's triangulation routine
 
 This is the internals for mrcal.triangulate_lindstrom(). As a user, please call
 THAT function, and see the docs for that function. The differences:
@@ -177,17 +189,25 @@ THAT function, and see the docs for that function. The differences:
   is _triangulate_lindstrom
 
 """,
-
-            args_input       = ('v0_local', 'v1_local', 'Rt01'),
-            prototype_input  = ((3,), (3,), (4,3),),
-            prototype_output = ((3,), (3,3), (3,3), (3,4,3) ),
-
-            Ccode_validate = r'''
-            return CHECK_CONTIGUOUS_AND_SETERROR_ALL();''',
-
-            Ccode_slice_eval = { (np.float64,np.float64,np.float64,
-                                  np.float64,np.float64,np.float64,np.float64):
-                  r'''
+    args_input=("v0_local", "v1_local", "Rt01"),
+    prototype_input=(
+        (3,),
+        (3,),
+        (4, 3),
+    ),
+    prototype_output=((3,), (3, 3), (3, 3), (3, 4, 3)),
+    Ccode_validate=r"""
+            return CHECK_CONTIGUOUS_AND_SETERROR_ALL();""",
+    Ccode_slice_eval={
+        (
+            np.float64,
+            np.float64,
+            np.float64,
+            np.float64,
+            np.float64,
+            np.float64,
+            np.float64,
+        ): r"""
                 const mrcal_point3_t* v0  = (const mrcal_point3_t*)data_slice__v0_local;
                 const mrcal_point3_t* v1  = (const mrcal_point3_t*)data_slice__v1_local;
                 const mrcal_point3_t* Rt01= (const mrcal_point3_t*)data_slice__Rt01;
@@ -200,14 +220,16 @@ THAT function, and see the docs for that function. The differences:
                   mrcal_triangulate_lindstrom(dm_dv0, dm_dv1, dm_dRt01,
                                               v0, v1, Rt01);
                 return true;
-''' },
+"""
+    },
 )
 
 
 # The triangulation function used inside the optimization loop. Returns an
 # "error" scalar instead of a triangulated point
-m.function( "_triangulated_error",
-            f"""Internal triangulation routine used in the optimization loop
+m.function(
+    "_triangulated_error",
+    """Internal triangulation routine used in the optimization loop
 
 This is the internals for mrcal.triangulated_error(). As a user, please call
 THAT function, and see the docs for that function. The differences:
@@ -216,17 +238,17 @@ THAT function, and see the docs for that function. The differences:
   gradients is _triangulated_error_withgrad
 
 """,
-
-            args_input       = ('v0', 'v1', 't01'),
-            prototype_input  = ((3,), (3,), (3,),),
-            prototype_output = (),
-
-            Ccode_validate = r'''
-            return CHECK_CONTIGUOUS_AND_SETERROR_ALL();''',
-
-            Ccode_slice_eval = { (np.float64,np.float64,np.float64,
-                                  np.float64):
-                                 r'''
+    args_input=("v0", "v1", "t01"),
+    prototype_input=(
+        (3,),
+        (3,),
+        (3,),
+    ),
+    prototype_output=(),
+    Ccode_validate=r"""
+            return CHECK_CONTIGUOUS_AND_SETERROR_ALL();""",
+    Ccode_slice_eval={
+        (np.float64, np.float64, np.float64, np.float64): r"""
                 const mrcal_point3_t* v0  = (const mrcal_point3_t*)data_slice__v0;
                 const mrcal_point3_t* v1  = (const mrcal_point3_t*)data_slice__v1;
                 const mrcal_point3_t* t01 = (const mrcal_point3_t*)data_slice__t01;
@@ -235,11 +257,13 @@ THAT function, and see the docs for that function. The differences:
                   _mrcal_triangulated_error(NULL,NULL,
                                             v0, v1, t01);
                 return true;
-'''},
+"""
+    },
 )
 
-m.function( "_triangulated_error_withgrad",
-            f"""Internal triangulation routine used in the optimization loop
+m.function(
+    "_triangulated_error_withgrad",
+    """Internal triangulation routine used in the optimization loop
 
 This is the internals for mrcal.triangulated_error(). As a user, please call
 THAT function, and see the docs for that function. The differences:
@@ -248,17 +272,17 @@ THAT function, and see the docs for that function. The differences:
   is _triangulated_error
 
 """,
-
-            args_input       = ('v0', 'v1', 't01'),
-            prototype_input  = ((3,), (3,),  (3,),),
-            prototype_output = ((), (3,),  (3,) ),
-
-            Ccode_validate = r'''
-            return CHECK_CONTIGUOUS_AND_SETERROR_ALL();''',
-
-            Ccode_slice_eval = { (np.float64,np.float64,np.float64,
-                                  np.float64,np.float64,np.float64):
-                  r'''
+    args_input=("v0", "v1", "t01"),
+    prototype_input=(
+        (3,),
+        (3,),
+        (3,),
+    ),
+    prototype_output=((), (3,), (3,)),
+    Ccode_validate=r"""
+            return CHECK_CONTIGUOUS_AND_SETERROR_ALL();""",
+    Ccode_slice_eval={
+        (np.float64, np.float64, np.float64, np.float64, np.float64, np.float64): r"""
                 const mrcal_point3_t* v0  = (const mrcal_point3_t*)data_slice__v0;
                 const mrcal_point3_t* v1  = (const mrcal_point3_t*)data_slice__v1;
                 const mrcal_point3_t* t01 = (const mrcal_point3_t*)data_slice__t01;
@@ -270,7 +294,8 @@ THAT function, and see the docs for that function. The differences:
                   _mrcal_triangulated_error(derr_dv1, derr_dt01,
                                             v0, v1, t01);
                 return true;
-''' },
+"""
+    },
 )
 
 

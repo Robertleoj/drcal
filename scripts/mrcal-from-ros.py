@@ -10,7 +10,7 @@
 
 ### THIS IS LARGELY A COPY OF mrcal-from-cahvor. Please consolidate
 
-r'''Converts a ROS/OpenCV-formatted camera model to the .cameramodel file format
+r"""Converts a ROS/OpenCV-formatted camera model to the .cameramodel file format
 
 SYNOPSIS
 
@@ -40,53 +40,61 @@ Note: there's no corresponding mrcal-to-ros tool at this time, because the
 behavior of such a tool isn't well-defined. Talk to me if this would be useful
 to you, to clarify what it should do, exactly.
 
-'''
-
+"""
 
 import sys
 import argparse
-import re
 import os
 
+
 def parse_args():
+    parser = argparse.ArgumentParser(
+        description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
+    )
 
-    parser = \
-        argparse.ArgumentParser(description = __doc__,
-                                formatter_class=argparse.RawDescriptionHelpFormatter)
-
-    parser.add_argument('--force', '-f',
-                        action='store_true',
-                        default=False,
-                        help='''By default existing files are not overwritten. Pass --force to overwrite them
-                        without complaint''')
-    parser.add_argument('--outdir',
-                        required=False,
-                        type=lambda d: d if os.path.isdir(d) else \
-                                parser.error("--outdir requires an existing directory as the arg, but got '{}'".format(d)),
-                        help='''Directory to write the output models into. If omitted, we write the output
-                        models to the same directory as the input models''')
-    parser.add_argument('model',
-                        default=['-'],
-                        nargs='*',
-                        type=str,
-                        help='''Input camera model''')
+    parser.add_argument(
+        "--force",
+        "-f",
+        action="store_true",
+        default=False,
+        help="""By default existing files are not overwritten. Pass --force to overwrite them
+                        without complaint""",
+    )
+    parser.add_argument(
+        "--outdir",
+        required=False,
+        type=lambda d: d
+        if os.path.isdir(d)
+        else parser.error(
+            "--outdir requires an existing directory as the arg, but got '{}'".format(d)
+        ),
+        help="""Directory to write the output models into. If omitted, we write the output
+                        models to the same directory as the input models""",
+    )
+    parser.add_argument(
+        "model", default=["-"], nargs="*", type=str, help="""Input camera model"""
+    )
 
     return parser.parse_args()
+
 
 args = parse_args()
 
 # arg-parsing is done before the imports so that --help works without building
 # stuff, so that I can generate the manpages and README
 
-Nstdin = sum(1 for m in args.model if m=='-')
+Nstdin = sum(1 for m in args.model if m == "-")
 if Nstdin > 1:
-    print(f"At most one model can be read from standard input ('-'), but I got {Nstdin}", file=sys.stderr)
+    print(
+        f"At most one model can be read from standard input ('-'), but I got {Nstdin}",
+        file=sys.stderr,
+    )
     sys.exit(1)
 
 import mrcal
 
 for model in args.model:
-    if model == '-':
+    if model == "-":
         try:
             m = mrcal.cameramodel(model)
         except KeyboardInterrupt:
@@ -96,18 +104,22 @@ for model in args.model:
             sys.exit(1)
         m.write(sys.stdout)
     else:
-        base,extension = os.path.splitext(model)
-        if extension.lower() == '.cameramodel':
-            print("Input file is already in the cameramodel format (judging from the filename). Doing nothing",
-                  file=sys.stderr)
+        base, extension = os.path.splitext(model)
+        if extension.lower() == ".cameramodel":
+            print(
+                "Input file is already in the cameramodel format (judging from the filename). Doing nothing",
+                file=sys.stderr,
+            )
             sys.exit(0)
 
         if args.outdir is not None:
-            base = args.outdir + '/' + os.path.split(base)[1]
-        filename_out = base + '.cameramodel'
+            base = args.outdir + "/" + os.path.split(base)[1]
+        filename_out = base + ".cameramodel"
         if not args.force and os.path.exists(filename_out):
-            print(f"Target model '{filename_out}' already exists. Doing nothing with this model. Pass -f to overwrite",
-                  file=sys.stderr)
+            print(
+                f"Target model '{filename_out}' already exists. Doing nothing with this model. Pass -f to overwrite",
+                file=sys.stderr,
+            )
         else:
             m = mrcal.cameramodel(model)
             m.write(filename_out)

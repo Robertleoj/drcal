@@ -8,21 +8,14 @@
 #
 #     http://www.apache.org/licenses/LICENSE-2.0
 
-r'''Python-wrap the mrcal geometry routines
-
-'''
-
-import sys
-import os
+r"""Python-wrap the mrcal geometry routines"""
 
 import numpy as np
-import numpysane as nps
 
 import numpysane_pywrap as npsp
 
 
-
-docstring_module = '''Low-level routines to manipulate poses, transformations and points
+docstring_module = """Low-level routines to manipulate poses, transformations and points
 
 This is the written-in-C Python extension module. Most of the time you want to
 use the mrcal.poseutils wrapper module instead of this module directly. Any
@@ -32,18 +25,21 @@ wrapper.
 All functions are exported into the mrcal module. So you can call these via
 mrcal._poseutils.fff() or mrcal.fff(). The latter is preferred.
 
-'''
+"""
 
 
-m = npsp.module( name      = "_poseutils_npsp",
-                 docstring = docstring_module,
-                 header    = r'''
+m = npsp.module(
+    name="_poseutils_npsp",
+    docstring=docstring_module,
+    header=r"""
 #include "poseutils.h"
 #include <string.h>
-''')
+""",
+)
 
-m.function( "identity_R",
-            """Return an identity rotation matrix
+m.function(
+    "identity_R",
+    """Return an identity rotation matrix
 
 SYNOPSIS
 
@@ -56,22 +52,22 @@ SYNOPSIS
 As with all the poseutils functions, the output can be written directly into a
 (possibly-non-contiguous) array, by specifying the destination in the 'out'
 kwarg """,
-
-            args_input       = (),
-            prototype_input  = (),
-            prototype_output = (3,3),
-
-            Ccode_slice_eval = \
-                {np.float64:
-                 r'''
+    args_input=(),
+    prototype_input=(),
+    prototype_output=(3, 3),
+    Ccode_slice_eval={
+        np.float64: r"""
     mrcal_identity_R_full( (double*)data_slice__output,
                            strides_slice__output[0],
                            strides_slice__output[1] );
     return true;
-'''})
+"""
+    },
+)
 
-m.function( "identity_r",
-            """Return an identity Rodrigues rotation
+m.function(
+    "identity_r",
+    """Return an identity Rodrigues rotation
 
 SYNOPSIS
 
@@ -82,21 +78,21 @@ SYNOPSIS
 As with all the poseutils functions, the output can be written directly into a
 (possibly-non-contiguous) array, by specifying the destination in the 'out'
 kwarg""",
-
-            args_input       = (),
-            prototype_input  = (),
-            prototype_output = (3,),
-
-            Ccode_slice_eval = \
-                {np.float64:
-                 r'''
+    args_input=(),
+    prototype_input=(),
+    prototype_output=(3,),
+    Ccode_slice_eval={
+        np.float64: r"""
     mrcal_identity_r_full( (double*)data_slice__output,
                            strides_slice__output[0] );
     return true;
-'''})
+"""
+    },
+)
 
-m.function( "identity_Rt",
-            """Return an identity Rt transformation
+m.function(
+    "identity_Rt",
+    """Return an identity Rt transformation
 
 SYNOPSIS
 
@@ -110,22 +106,22 @@ SYNOPSIS
 As with all the poseutils functions, the output can be written directly into a
 (possibly-non-contiguous) array, by specifying the destination in the 'out'
 kwarg""",
-
-            args_input       = (),
-            prototype_input  = (),
-            prototype_output = (4,3),
-
-            Ccode_slice_eval = \
-                {np.float64:
-                 r'''
+    args_input=(),
+    prototype_input=(),
+    prototype_output=(4, 3),
+    Ccode_slice_eval={
+        np.float64: r"""
     mrcal_identity_Rt_full( (double*)data_slice__output,
                             strides_slice__output[0],
                             strides_slice__output[1] );
     return true;
-'''})
+"""
+    },
+)
 
-m.function( "identity_rt",
-            """Return an identity rt transformation
+m.function(
+    "identity_rt",
+    """Return an identity rt transformation
 
 SYNOPSIS
 
@@ -136,34 +132,32 @@ SYNOPSIS
 As with all the poseutils functions, the output can be written directly into a
 (possibly-non-contiguous) array, by specifying the destination in the 'out'
 kwarg""",
-
-            args_input       = (),
-            prototype_input  = (),
-            prototype_output = (6,),
-
-            Ccode_slice_eval = \
-                {np.float64:
-                 r'''
+    args_input=(),
+    prototype_input=(),
+    prototype_output=(6,),
+    Ccode_slice_eval={
+        np.float64: r"""
     mrcal_identity_rt_full( (double*)data_slice__output,
                             strides_slice__output[0] );
     return true;
-'''})
+"""
+    },
+)
 
-m.function( "_rotate_point_R",
-            """Rotate a point using a rotation matrix
+m.function(
+    "_rotate_point_R",
+    """Rotate a point using a rotation matrix
 
 This is an internal function. You probably want mrcal.rotate_point_R(). See the
 docs for that function for details.
 
 """,
-            args_input       = ('R', 'x'),
-            prototype_input  = ((3,3), (3,)),
-            prototype_output = (3,),
-            extra_args = (("int", "inverted", "false", "p"),),
-
-            Ccode_slice_eval = \
-                {np.float64:
-                 r'''
+    args_input=("R", "x"),
+    prototype_input=((3, 3), (3,)),
+    prototype_output=(3,),
+    extra_args=(("int", "inverted", "false", "p"),),
+    Ccode_slice_eval={
+        np.float64: r"""
     mrcal_rotate_point_R_full( (double*)data_slice__output,
                                strides_slice__output[0],
                                NULL,0,0,0,
@@ -175,24 +169,23 @@ docs for that function for details.
                                strides_slice__x[0],
                                *inverted );
     return true;
-'''},
+"""
+    },
 )
 
-m.function( "_rotate_point_R_withgrad",
-            """Rotate a point using a rotation matrix; report the result and gradients
+m.function(
+    "_rotate_point_R_withgrad",
+    """Rotate a point using a rotation matrix; report the result and gradients
 
 This is an internal function. You probably want mrcal.rotate_point_R(). See the
 docs for that function for details.
 """,
-
-            args_input       = ('R', 'x'),
-            prototype_input  = ((3,3), (3,)),
-            prototype_output = ((3,), (3,3,3), (3,3)),
-            extra_args = (("int", "inverted", "false", "p"),),
-
-            Ccode_slice_eval = \
-                {np.float64:
-                 r'''
+    args_input=("R", "x"),
+    prototype_input=((3, 3), (3,)),
+    prototype_output=((3,), (3, 3, 3), (3, 3)),
+    extra_args=(("int", "inverted", "false", "p"),),
+    Ccode_slice_eval={
+        np.float64: r"""
     mrcal_rotate_point_R_full( (double*)data_slice__output0,
                                strides_slice__output0[0],
                                (double*)data_slice__output1,
@@ -209,23 +202,23 @@ docs for that function for details.
                                strides_slice__x[0],
                                *inverted );
     return true;
-'''},
+"""
+    },
 )
 
-m.function( "_rotate_point_r",
-            """Rotate a point using a Rodrigues vector
+m.function(
+    "_rotate_point_r",
+    """Rotate a point using a Rodrigues vector
 
 This is an internal function. You probably want mrcal.rotate_point_r(). See the
 docs for that function for details.
 """,
-            args_input       = ('r', 'x'),
-            prototype_input  = ((3,), (3,)),
-            prototype_output = (3,),
-            extra_args = (("int", "inverted", "false", "p"),),
-
-            Ccode_slice_eval = \
-                {np.float64:
-                 r'''
+    args_input=("r", "x"),
+    prototype_input=((3,), (3,)),
+    prototype_output=(3,),
+    extra_args=(("int", "inverted", "false", "p"),),
+    Ccode_slice_eval={
+        np.float64: r"""
     mrcal_rotate_point_r_full( (double*)data_slice__output,
                                strides_slice__output[0],
                                NULL,0,0,
@@ -236,23 +229,23 @@ docs for that function for details.
                                strides_slice__x[0],
                                *inverted);
     return true;
-'''},
+"""
+    },
 )
 
-m.function( "_rotate_point_r_withgrad",
-            """Rotate a point using a Rodrigues vector; report the result and gradients
+m.function(
+    "_rotate_point_r_withgrad",
+    """Rotate a point using a Rodrigues vector; report the result and gradients
 
 This is an internal function. You probably want mrcal.rotate_point_r(). See the
 docs for that function for details.
 """,
-            args_input       = ('r', 'x'),
-            prototype_input  = ((3,), (3,)),
-            prototype_output = ((3,), (3,3), (3,3)),
-            extra_args = (("int", "inverted", "false", "p"),),
-
-            Ccode_slice_eval = \
-                {np.float64:
-                 r'''
+    args_input=("r", "x"),
+    prototype_input=((3,), (3,)),
+    prototype_output=((3,), (3, 3), (3, 3)),
+    extra_args=(("int", "inverted", "false", "p"),),
+    Ccode_slice_eval={
+        np.float64: r"""
     mrcal_rotate_point_r_full( (double*)data_slice__output0,
                                strides_slice__output0[0],
                                (double*)data_slice__output1,
@@ -267,23 +260,23 @@ docs for that function for details.
                                strides_slice__x[0],
                                *inverted);
     return true;
-'''},
+"""
+    },
 )
 
-m.function( "_transform_point_Rt",
-            """Transform a point using an Rt transformation
+m.function(
+    "_transform_point_Rt",
+    """Transform a point using an Rt transformation
 
 This is an internal function. You probably want mrcal.transform_point_Rt(). See
 the docs for that function for details.
 """,
-            args_input       = ('Rt', 'x'),
-            prototype_input  = ((4,3), (3,)),
-            prototype_output = (3,),
-            extra_args = (("int", "inverted", "false", "p"),),
-
-            Ccode_slice_eval = \
-                {np.float64:
-                 r'''
+    args_input=("Rt", "x"),
+    prototype_input=((4, 3), (3,)),
+    prototype_output=(3,),
+    extra_args=(("int", "inverted", "false", "p"),),
+    Ccode_slice_eval={
+        np.float64: r"""
     mrcal_transform_point_Rt_full( (double*)data_slice__output,
                                    strides_slice__output[0],
                                    NULL,0,0,0,
@@ -295,23 +288,23 @@ the docs for that function for details.
                                    strides_slice__x[0],
                                    *inverted );
     return true;
-'''},
+"""
+    },
 )
 
-m.function( "_transform_point_Rt_withgrad",
-            """Transform a point using an Rt transformation; report the result and gradients
+m.function(
+    "_transform_point_Rt_withgrad",
+    """Transform a point using an Rt transformation; report the result and gradients
 
 This is an internal function. You probably want mrcal.transform_point_Rt(). See
 the docs for that function for details.
 """,
-            args_input       = ('Rt', 'x'),
-            prototype_input  = ((4,3), (3,)),
-            prototype_output = ((3,), (3,4,3), (3,3)),
-            extra_args = (("int", "inverted", "false", "p"),),
-
-            Ccode_slice_eval = \
-                {np.float64:
-                 r'''
+    args_input=("Rt", "x"),
+    prototype_input=((4, 3), (3,)),
+    prototype_output=((3,), (3, 4, 3), (3, 3)),
+    extra_args=(("int", "inverted", "false", "p"),),
+    Ccode_slice_eval={
+        np.float64: r"""
     mrcal_transform_point_Rt_full( (double*)data_slice__output0,
                                    strides_slice__output0[0],
                                    (double*)data_slice__output1,
@@ -328,23 +321,23 @@ the docs for that function for details.
                                    strides_slice__x[0],
                                    *inverted );
     return true;
-'''},
+"""
+    },
 )
 
-m.function( "_transform_point_rt",
-            """Transform a point using an rt transformation
+m.function(
+    "_transform_point_rt",
+    """Transform a point using an rt transformation
 
 This is an internal function. You probably want mrcal.transform_point_rt(). See
 the docs for that function for details.
 """,
-            args_input       = ('rt', 'x'),
-            prototype_input  = ((6,), (3,)),
-            prototype_output = (3,),
-            extra_args = (("int", "inverted", "false", "p"),),
-
-            Ccode_slice_eval = \
-                {np.float64:
-                 r'''
+    args_input=("rt", "x"),
+    prototype_input=((6,), (3,)),
+    prototype_output=(3,),
+    extra_args=(("int", "inverted", "false", "p"),),
+    Ccode_slice_eval={
+        np.float64: r"""
     mrcal_transform_point_rt_full( (double*)data_slice__output,
                                    strides_slice__output[0],
                                    NULL,0,0,
@@ -355,23 +348,23 @@ the docs for that function for details.
                                    strides_slice__x[0],
                                    *inverted );
     return true;
-'''},
+"""
+    },
 )
 
-m.function( "_transform_point_rt_withgrad",
-            """Transform a point using an rt transformation; report the result and gradients
+m.function(
+    "_transform_point_rt_withgrad",
+    """Transform a point using an rt transformation; report the result and gradients
 
 This is an internal function. You probably want mrcal.transform_point_rt(). See
 the docs for that function for details.
 """,
-            args_input       = ('rt', 'x'),
-            prototype_input  = ((6,), (3,)),
-            prototype_output = ((3,), (3,6), (3,3)),
-            extra_args = (("int", "inverted", "false", "p"),),
-
-            Ccode_slice_eval = \
-                {np.float64:
-                 r'''
+    args_input=("rt", "x"),
+    prototype_input=((6,), (3,)),
+    prototype_output=((3,), (3, 6), (3, 3)),
+    extra_args=(("int", "inverted", "false", "p"),),
+    Ccode_slice_eval={
+        np.float64: r"""
     mrcal_transform_point_rt_full( (double*)data_slice__output0,
                                    strides_slice__output0[0],
                                    (double*)data_slice__output1,
@@ -386,232 +379,232 @@ the docs for that function for details.
                                    strides_slice__x[0],
                                    *inverted );
     return true;
-'''},
+"""
+    },
 )
 
-m.function( "_r_from_R",
-            """Compute a Rodrigues vector from a rotation matrix
+m.function(
+    "_r_from_R",
+    """Compute a Rodrigues vector from a rotation matrix
 
 This is an internal function. You probably want mrcal.r_from_R(). See the docs
 for that function for details.
 """,
-            args_input       = ('R',),
-            prototype_input  = ((3,3),),
-            prototype_output = (3,),
-
-            Ccode_slice_eval = \
-                {np.float64:
-                 r'''
+    args_input=("R",),
+    prototype_input=((3, 3),),
+    prototype_output=(3,),
+    Ccode_slice_eval={
+        np.float64: r"""
     mrcal_r_from_R_full(
         (double*)data_slice__output,strides_slice__output[0],
         NULL,0,0,0,
         (const double*)data_slice__R,strides_slice__R[0], strides_slice__R[1] );
     return true;
-'''}
+"""
+    },
 )
 
-m.function( "_r_from_R_withgrad",
-            """Compute a Rodrigues vector from a rotation matrix
+m.function(
+    "_r_from_R_withgrad",
+    """Compute a Rodrigues vector from a rotation matrix
 
 This is an internal function. You probably want mrcal.r_from_R(). See the docs
 for that function for details.
 """,
-            args_input       = ('R',),
-            prototype_input  = ((3,3),),
-            prototype_output = ((3,),(3,3,3)),
-
-            Ccode_slice_eval = \
-                {np.float64:
-                 r'''
+    args_input=("R",),
+    prototype_input=((3, 3),),
+    prototype_output=((3,), (3, 3, 3)),
+    Ccode_slice_eval={
+        np.float64: r"""
     mrcal_r_from_R_full(
         (double*)data_slice__output0,strides_slice__output0[0],
         (double*)data_slice__output1,strides_slice__output1[0], strides_slice__output1[1],strides_slice__output1[2],
         (const double*)data_slice__R,strides_slice__R[0], strides_slice__R[1] );
     return true;
-'''}
+"""
+    },
 )
 
-m.function( "_R_from_r",
-            """Compute a rotation matrix from a Rodrigues vector
+m.function(
+    "_R_from_r",
+    """Compute a rotation matrix from a Rodrigues vector
 
 This is an internal function. You probably want mrcal.R_from_r(). See the docs
 for that function for details.
 """,
-            args_input       = ('r',),
-            prototype_input  = ((3,),),
-            prototype_output = (3,3),
-
-            Ccode_slice_eval = \
-                {np.float64:
-                 r'''
+    args_input=("r",),
+    prototype_input=((3,),),
+    prototype_output=(3, 3),
+    Ccode_slice_eval={
+        np.float64: r"""
     mrcal_R_from_r_full(
         (double*)data_slice__output, strides_slice__output[0], strides_slice__output[1],
         NULL,0,0,0,
         (const double*)data_slice__r, strides_slice__r[0] );
     return true;
-'''}
+"""
+    },
 )
 
-m.function( "_R_from_r_withgrad",
-            """Compute a rotation matrix from a Rodrigues vector
+m.function(
+    "_R_from_r_withgrad",
+    """Compute a rotation matrix from a Rodrigues vector
 
 This is an internal function. You probably want mrcal.R_from_r(). See the docs
 for that function for details.
 """,
-            args_input       = ('r',),
-            prototype_input  = ((3,),),
-            prototype_output = ((3,3), (3,3,3)),
-
-            Ccode_slice_eval = \
-                {np.float64:
-                 r'''
+    args_input=("r",),
+    prototype_input=((3,),),
+    prototype_output=((3, 3), (3, 3, 3)),
+    Ccode_slice_eval={
+        np.float64: r"""
     mrcal_R_from_r_full(
         (double*)data_slice__output0,strides_slice__output0[0], strides_slice__output0[1],
         (double*)data_slice__output1,strides_slice__output1[0], strides_slice__output1[1],strides_slice__output1[2],
         (const double*)data_slice__r, strides_slice__r[0] );
     return true;
-'''}
+"""
+    },
 )
 
-m.function( "_invert_R",
-            """Invert a rotation matrix
+m.function(
+    "_invert_R",
+    """Invert a rotation matrix
 
 This is an internal function. You probably want mrcal.invert_R(). See the docs
 for that function for details.
 """,
-            args_input       = ('R',),
-            prototype_input  = ((3,3),),
-            prototype_output = (3,3),
-
-            Ccode_slice_eval = \
-                {np.float64:
-                 r'''
+    args_input=("R",),
+    prototype_input=((3, 3),),
+    prototype_output=(3, 3),
+    Ccode_slice_eval={
+        np.float64: r"""
     mrcal_invert_R_full( (double*)data_slice__output,
                          strides_slice__output[0], strides_slice__output[1],
                          (const double*)data_slice__R,
                          strides_slice__R[0], strides_slice__R[1] );
     return true;
-'''},
+"""
+    },
 )
 
-m.function( "_rt_from_Rt",
-            """Compute an rt transformation from a Rt transformation
+m.function(
+    "_rt_from_Rt",
+    """Compute an rt transformation from a Rt transformation
 
 This is an internal function. You probably want mrcal.rt_from_Rt(). See the docs
 for that function for details.
 """,
-            args_input       = ('Rt',),
-            prototype_input  = ((4,3),),
-            prototype_output = (6,),
-
-            Ccode_slice_eval = \
-                {np.float64:
-                 r'''
+    args_input=("Rt",),
+    prototype_input=((4, 3),),
+    prototype_output=(6,),
+    Ccode_slice_eval={
+        np.float64: r"""
     mrcal_rt_from_Rt_full(
         (double*)data_slice__output,strides_slice__output[0],
         NULL,0,0,0,
         (const double*)data_slice__Rt,strides_slice__Rt[0], strides_slice__Rt[1] );
     return true;
-'''}
+"""
+    },
 )
 
-m.function( "_rt_from_Rt_withgrad",
-            """Compute an rt transformation from a Rt transformation
+m.function(
+    "_rt_from_Rt_withgrad",
+    """Compute an rt transformation from a Rt transformation
 
 This is an internal function. You probably want mrcal.rt_from_Rt(). See the docs
 for that function for details.
 """,
-            args_input       = ('Rt',),
-            prototype_input  = ((4,3),),
-            prototype_output = ((6,), (3,3,3)),
-
-            Ccode_slice_eval = \
-                {np.float64:
-                 r'''
+    args_input=("Rt",),
+    prototype_input=((4, 3),),
+    prototype_output=((6,), (3, 3, 3)),
+    Ccode_slice_eval={
+        np.float64: r"""
     mrcal_rt_from_Rt_full(
         (double*)data_slice__output0,strides_slice__output0[0],
         (double*)data_slice__output1,strides_slice__output1[0], strides_slice__output1[1],strides_slice__output1[2],
         (const double*)data_slice__Rt,strides_slice__Rt[0], strides_slice__Rt[1] );
     return true;
-'''}
+"""
+    },
 )
 
-m.function( "_Rt_from_rt",
-            """Compute an Rt transformation from a rt transformation
+m.function(
+    "_Rt_from_rt",
+    """Compute an Rt transformation from a rt transformation
 
 This is an internal function. You probably want mrcal.Rt_from_rt(). See the docs
 for that function for details.
 """,
-            args_input       = ('rt',),
-            prototype_input  = ((6,),),
-            prototype_output = (4,3),
-
-            Ccode_slice_eval = \
-                {np.float64:
-                 r'''
+    args_input=("rt",),
+    prototype_input=((6,),),
+    prototype_output=(4, 3),
+    Ccode_slice_eval={
+        np.float64: r"""
     mrcal_Rt_from_rt_full(
         (double*)data_slice__output, strides_slice__output[0],strides_slice__output[1],
         NULL,0,0,0,
         (const double*)data_slice__rt, strides_slice__rt[0] );
     return true;
-'''}
+"""
+    },
 )
 
-m.function( "_Rt_from_rt_withgrad",
-            """Compute an Rt transformation from a rt transformation
+m.function(
+    "_Rt_from_rt_withgrad",
+    """Compute an Rt transformation from a rt transformation
 
 This is an internal function. You probably want mrcal.Rt_from_rt(). See the docs
 for that function for details.
 """,
-            args_input       = ('rt',),
-            prototype_input  = ((6,),),
-            prototype_output = ((4,3), (3,3,3)),
-
-            Ccode_slice_eval = \
-                {np.float64:
-                 r'''
+    args_input=("rt",),
+    prototype_input=((6,),),
+    prototype_output=((4, 3), (3, 3, 3)),
+    Ccode_slice_eval={
+        np.float64: r"""
     mrcal_Rt_from_rt_full(
         (double*)data_slice__output0, strides_slice__output0[0],strides_slice__output0[1],
         (double*)data_slice__output1,strides_slice__output1[0], strides_slice__output1[1],strides_slice__output1[2],
         (const double*)data_slice__rt, strides_slice__rt[0] );
     return true;
-'''}
+"""
+    },
 )
 
-m.function( "_invert_Rt",
-            """Invert an Rt transformation
+m.function(
+    "_invert_Rt",
+    """Invert an Rt transformation
 
 This is an internal function. You probably want mrcal.invert_Rt(). See the docs
 for that function for details.
 """,
-            args_input       = ('Rt',),
-            prototype_input  = ((4,3),),
-            prototype_output = (4,3),
-
-            Ccode_slice_eval = \
-                {np.float64:
-                 r'''
+    args_input=("Rt",),
+    prototype_input=((4, 3),),
+    prototype_output=(4, 3),
+    Ccode_slice_eval={
+        np.float64: r"""
     mrcal_invert_Rt_full( (double*)data_slice__output,
                           strides_slice__output[0], strides_slice__output[1],
                           (const double*)data_slice__Rt,
                           strides_slice__Rt[0], strides_slice__Rt[1] );
     return true;
-'''},
+"""
+    },
 )
 
-m.function( "_invert_rt",
-            """Invert an rt transformation
+m.function(
+    "_invert_rt",
+    """Invert an rt transformation
 
 This is an internal function. You probably want mrcal.invert_rt(). See the docs
 for that function for details.
 """,
-            args_input       = ('rt',),
-            prototype_input  = ((6,),),
-            prototype_output = (6,),
-
-            Ccode_slice_eval = \
-                {np.float64:
-                 r'''
+    args_input=("rt",),
+    prototype_input=((6,),),
+    prototype_output=(6,),
+    Ccode_slice_eval={
+        np.float64: r"""
     mrcal_invert_rt_full( (double*)data_slice__output,
                           strides_slice__output[0],
                           NULL,0,0,
@@ -619,11 +612,13 @@ for that function for details.
                           (const double*)data_slice__rt,
                           strides_slice__rt[0] );
     return true;
-'''},
+"""
+    },
 )
 
-m.function( "_invert_rt_withgrad",
-            """Invert an rt transformation
+m.function(
+    "_invert_rt_withgrad",
+    """Invert an rt transformation
 
 This is an internal function. You probably want mrcal.invert_rt(). See the docs
 for that function for details.
@@ -638,18 +633,16 @@ Note that the C library returns limited gradients:
 THIS function combines these into a full drtout_drtin array
 
 """,
-            args_input       = ('rt',),
-            prototype_input  = ((6,),),
-            prototype_output = ((6,), (6,6)),
-
-            # output1 is drtout/drtin = [ drout/drin drout/dtin ]
-            #                           [ dtout/drin dtout/dtin ]
-            #
-            #                         = [     -I        0       ]
-            #                           [ dtout/drin dtout/dtin ]
-            Ccode_slice_eval = \
-                {np.float64:
-                 r'''
+    args_input=("rt",),
+    prototype_input=((6,),),
+    prototype_output=((6,), (6, 6)),
+    # output1 is drtout/drtin = [ drout/drin drout/dtin ]
+    #                           [ dtout/drin dtout/dtin ]
+    #
+    #                         = [     -I        0       ]
+    #                           [ dtout/drin dtout/dtin ]
+    Ccode_slice_eval={
+        np.float64: r"""
     mrcal_invert_rt_full( (double*)data_slice__output0,
                           strides_slice__output0[0],
 
@@ -669,11 +662,13 @@ THIS function combines these into a full drtout_drtin array
     item__output1(2,2) = -1.;
 
     return true;
-'''},
+"""
+    },
 )
 
-m.function( "_compose_Rt",
-            """Composes two Rt transformations
+m.function(
+    "_compose_Rt",
+    """Composes two Rt transformations
 
 This is an internal function. You probably want mrcal.compose_Rt(). See the docs
 for that function for details. This internal function differs from compose_Rt():
@@ -681,16 +676,24 @@ for that function for details. This internal function differs from compose_Rt():
 - It supports exactly two arguments, while compose_Rt() can compose N
   transformations
 """,
-
-            args_input       = ('Rt0', 'Rt1'),
-            prototype_input  = ((4,3,), (4,3,)),
-            prototype_output = (4,3),
-            extra_args = (("int", "inverted0", "false", "p"),
-                          ("int", "inverted1", "false", "p"),),
-
-            Ccode_slice_eval = \
-                {np.float64:
-                 r'''
+    args_input=("Rt0", "Rt1"),
+    prototype_input=(
+        (
+            4,
+            3,
+        ),
+        (
+            4,
+            3,
+        ),
+    ),
+    prototype_output=(4, 3),
+    extra_args=(
+        ("int", "inverted0", "false", "p"),
+        ("int", "inverted1", "false", "p"),
+    ),
+    Ccode_slice_eval={
+        np.float64: r"""
     mrcal_compose_Rt_full( (double*)data_slice__output,
                            strides_slice__output[0], strides_slice__output[1],
                            (const double*)data_slice__Rt0,
@@ -699,11 +702,13 @@ for that function for details. This internal function differs from compose_Rt():
                            strides_slice__Rt1[0], strides_slice__Rt1[1],
                            *inverted0, *inverted1);
     return true;
-'''},
+"""
+    },
 )
 
-m.function( "_compose_r",
-            """Compose two angle-axis rotations
+m.function(
+    "_compose_r",
+    """Compose two angle-axis rotations
 
 This is an internal function. You probably want mrcal.compose_r(). See the docs
 for that function for details. This internal function differs from compose_r():
@@ -712,16 +717,15 @@ for that function for details. This internal function differs from compose_r():
 
 - It never reports gradients
 """,
-
-            args_input       = ('r0', 'r1'),
-            prototype_input  = ((3,), (3,)),
-            prototype_output = (3,),
-            extra_args = (("int", "inverted0", "false", "p"),
-                          ("int", "inverted1", "false", "p"),),
-
-            Ccode_slice_eval = \
-                {np.float64:
-                 r'''
+    args_input=("r0", "r1"),
+    prototype_input=((3,), (3,)),
+    prototype_output=(3,),
+    extra_args=(
+        ("int", "inverted0", "false", "p"),
+        ("int", "inverted1", "false", "p"),
+    ),
+    Ccode_slice_eval={
+        np.float64: r"""
     mrcal_compose_r_full( (double*)data_slice__output,
                            strides_slice__output[0],
                            NULL,0,0,
@@ -732,11 +736,13 @@ for that function for details. This internal function differs from compose_r():
                            strides_slice__r1[0],
                            *inverted0, *inverted1);
     return true;
-'''},
+"""
+    },
 )
 
-m.function( "_compose_r_withgrad",
-            """Compose two angle-axis rotations; return (r,dr/dr0,dr/dr1)
+m.function(
+    "_compose_r_withgrad",
+    """Compose two angle-axis rotations; return (r,dr/dr0,dr/dr1)
 
 This is an internal function. You probably want mrcal.compose_r(). See the docs
 for that function for details. This internal function differs from compose_r():
@@ -746,16 +752,15 @@ for that function for details. This internal function differs from compose_r():
 - It always reports gradients
 
 """,
-
-            args_input       = ('r0', 'r1'),
-            prototype_input  = ((3,), (3,)),
-            prototype_output = ((3,), (3,3),(3,3)),
-            extra_args = (("int", "inverted0", "false", "p"),
-                          ("int", "inverted1", "false", "p"),),
-
-            Ccode_slice_eval = \
-                {np.float64:
-                 r'''
+    args_input=("r0", "r1"),
+    prototype_input=((3,), (3,)),
+    prototype_output=((3,), (3, 3), (3, 3)),
+    extra_args=(
+        ("int", "inverted0", "false", "p"),
+        ("int", "inverted1", "false", "p"),
+    ),
+    Ccode_slice_eval={
+        np.float64: r"""
     mrcal_compose_r_full( (double*)data_slice__output0,
                            strides_slice__output0[0],
 
@@ -774,10 +779,12 @@ for that function for details. This internal function differs from compose_r():
                            *inverted0, *inverted1);
 
     return true;
-'''},
+"""
+    },
 )
 
-m.function( "compose_r_tinyr0_gradientr0",
+m.function(
+    "compose_r_tinyr0_gradientr0",
     r"""Special-case rotation composition for the uncertainty computation
 
 SYNOPSIS
@@ -817,14 +824,11 @@ RETURNED VALUE
 We return a single array of shape (...,3,3): dr01/dr0
 
 """,
-
-            args_input       = ('r1',),
-            prototype_input  = ((3,),),
-            prototype_output = (3,3),
-
-            Ccode_slice_eval = \
-                {np.float64:
-                 r'''
+    args_input=("r1",),
+    prototype_input=((3,),),
+    prototype_output=(3, 3),
+    Ccode_slice_eval={
+        np.float64: r"""
     mrcal_compose_r_tinyr0_gradientr0_full(
         // dr/dr0
         &item__output(0,0),
@@ -833,10 +837,12 @@ We return a single array of shape (...,3,3): dr01/dr0
         strides_slice__r1[0] );
 
     return true;
-'''},
+"""
+    },
 )
 
-m.function( "compose_r_tinyr1_gradientr1",
+m.function(
+    "compose_r_tinyr1_gradientr1",
     r"""Special-case rotation composition for the uncertainty computation
 
 SYNOPSIS
@@ -876,14 +882,11 @@ RETURNED VALUE
 We return a single array of shape (...,3,3): dr01/dr1
 
 """,
-
-            args_input       = ('r0',),
-            prototype_input  = ((3,),),
-            prototype_output = (3,3),
-
-            Ccode_slice_eval = \
-                {np.float64:
-                 r'''
+    args_input=("r0",),
+    prototype_input=((3,),),
+    prototype_output=(3, 3),
+    Ccode_slice_eval={
+        np.float64: r"""
     mrcal_compose_r_tinyr1_gradientr1_full(
         // dr/dr1
         &item__output(0,0),
@@ -892,11 +895,13 @@ We return a single array of shape (...,3,3): dr01/dr1
         strides_slice__r0[0] );
 
     return true;
-'''},
+"""
+    },
 )
 
-m.function( "_compose_rt",
-            """Compose two rt transformations
+m.function(
+    "_compose_rt",
+    """Compose two rt transformations
 
 This is an internal function. You probably want mrcal.compose_rt(). See the docs
 for that function for details. This internal function differs from compose_rt():
@@ -906,16 +911,15 @@ for that function for details. This internal function differs from compose_rt():
 
 - It never reports gradients
 """,
-
-            args_input       = ('rt0', 'rt1'),
-            prototype_input  = ((6,), (6,)),
-            prototype_output = (6,),
-            extra_args = (("int", "inverted0", "false", "p"),
-                          ("int", "inverted1", "false", "p"),),
-
-            Ccode_slice_eval = \
-                {np.float64:
-                 r'''
+    args_input=("rt0", "rt1"),
+    prototype_input=((6,), (6,)),
+    prototype_output=(6,),
+    extra_args=(
+        ("int", "inverted0", "false", "p"),
+        ("int", "inverted1", "false", "p"),
+    ),
+    Ccode_slice_eval={
+        np.float64: r"""
     mrcal_compose_rt_full( (double*)data_slice__output,
                            strides_slice__output[0],
                            NULL,0,0,
@@ -930,11 +934,13 @@ for that function for details. This internal function differs from compose_rt():
                            strides_slice__rt1[0],
                            *inverted0, *inverted1);
     return true;
-'''},
+"""
+    },
 )
 
-m.function( "_compose_rt_withgrad",
-            """Compose two rt transformations; return (rt,drt/drt0,drt/drt1)
+m.function(
+    "_compose_rt_withgrad",
+    """Compose two rt transformations; return (rt,drt/drt0,drt/drt1)
 
 This is an internal function. You probably want mrcal.compose_rt(). See the docs
 for that function for details. This internal function differs from compose_rt():
@@ -952,28 +958,26 @@ Note that the C library returns limited gradients:
 THIS function combines these into the full drtout_drt0,drtout_drt1 arrays
 
 """,
-
-            args_input       = ('rt0', 'rt1'),
-            prototype_input  = ((6,), (6,)),
-            prototype_output = ((6,), (6,6),(6,6)),
-            extra_args = (("int", "inverted0", "false", "p"),
-                          ("int", "inverted1", "false", "p"),),
-
-            # output1 is drt/drt0 = [ dr/dr0 dr/dt0 ]
-            #                       [ dt/dr0 dt/dt0 ]
-            #
-            #                     = [ dr/dr0   0    ]
-            #                       [ dt/dr0   I    ]
-            #
-            # output2 is drt/drt1 = [ dr/dr1 dr/dt1 ]
-            #                       [ dt/dr1 dt/dt1 ]
-            #
-            #                     = [ dr/dr1   0    ]
-            #                       [   0    dt/dt1 ]
-
-            Ccode_slice_eval = \
-                {np.float64:
-                 r'''
+    args_input=("rt0", "rt1"),
+    prototype_input=((6,), (6,)),
+    prototype_output=((6,), (6, 6), (6, 6)),
+    extra_args=(
+        ("int", "inverted0", "false", "p"),
+        ("int", "inverted1", "false", "p"),
+    ),
+    # output1 is drt/drt0 = [ dr/dr0 dr/dt0 ]
+    #                       [ dt/dr0 dt/dt0 ]
+    #
+    #                     = [ dr/dr0   0    ]
+    #                       [ dt/dr0   I    ]
+    #
+    # output2 is drt/drt1 = [ dr/dr1 dr/dt1 ]
+    #                       [ dt/dr1 dt/dt1 ]
+    #
+    #                     = [ dr/dr1   0    ]
+    #                       [   0    dt/dt1 ]
+    Ccode_slice_eval={
+        np.float64: r"""
     mrcal_compose_rt_full( (double*)data_slice__output0,
                            strides_slice__output0[0],
 
@@ -1014,11 +1018,13 @@ THIS function combines these into the full drtout_drt0,drtout_drt1 arrays
         }
 
     return true;
-'''},
+"""
+    },
 )
 
-m.function( "R_from_quat",
-            r"""Convert a rotation defined as a unit quaternion rotation to a rotation matrix
+m.function(
+    "R_from_quat",
+    r"""Convert a rotation defined as a unit quaternion rotation to a rotation matrix
 
 SYNOPSIS
 
@@ -1057,13 +1063,11 @@ RETURNED VALUE
 We return an array of rotation matrices. Each broadcasted slice has shape (3,3)
 
     """,
-            args_input       = ('q',),
-            prototype_input  = ((4,),),
-            prototype_output = (3,3),
-
-            Ccode_slice_eval = \
-                {np.float64:
-                 r'''
+    args_input=("q",),
+    prototype_input=((4,),),
+    prototype_output=(3, 3),
+    Ccode_slice_eval={
+        np.float64: r"""
     // From the expression in wikipedia
     const double r = item__q(0);
     const double i = item__q(1);
@@ -1093,11 +1097,13 @@ We return an array of rotation matrices. Each broadcasted slice has shape (3,3)
     item__output(2,2) = 1. - 2.*(ii+jj);
 
     return true;
-'''}
+"""
+    },
 )
 
-m.function( "skew_symmetric",
-            r"""Return the skew-symmetric matrix used in a cross product
+m.function(
+    "skew_symmetric",
+    r"""Return the skew-symmetric matrix used in a cross product
 
 SYNOPSIS
 
@@ -1135,13 +1141,11 @@ RETURNED VALUE
 We return the matrix A in a (3,3) numpy array
 
     """,
-            args_input       = ('a',),
-            prototype_input  = ((3,),),
-            prototype_output = (3,3),
-
-            Ccode_slice_eval = \
-                {np.float64:
-                 r'''
+    args_input=("a",),
+    prototype_input=((3,),),
+    prototype_output=(3, 3),
+    Ccode_slice_eval={
+        np.float64: r"""
     // diagonal is zero
     item__output(0,0) = 0.0;
     item__output(1,1) = 0.0;
@@ -1155,31 +1159,51 @@ We return the matrix A in a (3,3) numpy array
     item__output(2,1) =  item__a(0);
 
     return true;
-'''}
+"""
+    },
 )
 
-for w in ('weights', 'noweights'):
-    for kind in ('R01', 'Rt01'):
-
-        if w == 'weights':
-            args_input      = ('v0','v1','weights')
-            prototype_input = (('N',3,), ('N',3,), ('N',))
+for w in ("weights", "noweights"):
+    for kind in ("R01", "Rt01"):
+        if w == "weights":
+            args_input = ("v0", "v1", "weights")
+            prototype_input = (
+                (
+                    "N",
+                    3,
+                ),
+                (
+                    "N",
+                    3,
+                ),
+                ("N",),
+            )
             weightarg = "(double*)data_slice__weights"
         else:
-            args_input      = ('v0','v1')
-            prototype_input = (('N',3,), ('N',3,))
+            args_input = ("v0", "v1")
+            prototype_input = (
+                (
+                    "N",
+                    3,
+                ),
+                (
+                    "N",
+                    3,
+                ),
+            )
             weightarg = "NULL"
 
-        if kind == 'R01':
-            what             = 'vectors'
-            prototype_output = (3,3)
+        if kind == "R01":
+            what = "vectors"
+            prototype_output = (3, 3)
             Nelements_output = 9
         else:
-            what             = 'points'
-            prototype_output = (4,3)
+            what = "points"
+            prototype_output = (4, 3)
             Nelements_output = 12
 
-        m.function( f"_align_procrustes_{what}_{kind}_{w}",
+        m.function(
+            f"_align_procrustes_{what}_{kind}_{w}",
             r"""Compute a rotation to align two sets of direction vectors or points
 
         This is the written-in-C Python extension module. Most of the time you want to
@@ -1191,16 +1215,13 @@ for w in ('weights', 'noweights'):
         mrcal._poseutils.fff() or mrcal.fff(). The latter is preferred.
 
             """,
-                    args_input       = args_input,
-                    prototype_input  = prototype_input,
-                    prototype_output = prototype_output,
-
-                    Ccode_validate = r'''
-                    return CHECK_CONTIGUOUS_AND_SETERROR_ALL();''',
-
-                    Ccode_slice_eval = \
-                        {np.float64:
-                         rf'''
+            args_input=args_input,
+            prototype_input=prototype_input,
+            prototype_output=prototype_output,
+            Ccode_validate=r"""
+                    return CHECK_CONTIGUOUS_AND_SETERROR_ALL();""",
+            Ccode_slice_eval={
+                np.float64: rf"""
             bool result =
             mrcal_align_procrustes_{what}_{kind}((double*)data_slice__output,
                                                  dims_slice__v0[0],
@@ -1219,11 +1240,13 @@ for w in ('weights', 'noweights'):
                 return true;
             }}
             return result;
-        '''}
+        """
+            },
         )
 
-m.function( f"R_aligned_to_vector",
-    r'''Compute a rotation to map a given vector to [0,0,1]
+m.function(
+    "R_aligned_to_vector",
+    r"""Compute a rotation to map a given vector to [0,0,1]
 
 SYNOPSIS
 
@@ -1247,21 +1270,19 @@ RETURNED VALUES
 
 The rotation in a (3,3) array
 
-    ''',
-            args_input       = ('v',),
-            prototype_input  = ( (3,), ),
-            prototype_output = (3,3),
-
-            Ccode_validate = r'''
-            return CHECK_CONTIGUOUS_AND_SETERROR_ALL();''',
-
-            Ccode_slice_eval = \
-                {np.float64:
-                 rf'''
+    """,
+    args_input=("v",),
+    prototype_input=((3,),),
+    prototype_output=(3, 3),
+    Ccode_validate=r"""
+            return CHECK_CONTIGUOUS_AND_SETERROR_ALL();""",
+    Ccode_slice_eval={
+        np.float64: r"""
     mrcal_R_aligned_to_vector((double*)data_slice__output,
                               (double*)data_slice__v);
     return true;
-'''}
+"""
+    },
 )
 
 m.write()

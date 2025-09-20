@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 
-f'''Observe the interpolation grid implemented in the C code
+"""Observe the interpolation grid implemented in the C code
 
 This is a validation of mrcal.project()
 
-'''
+"""
 
 import sys
 import os
@@ -16,21 +16,21 @@ import gnuplotlib as gp
 testdir = os.path.dirname(os.path.realpath(__file__))
 
 # I import the LOCAL mrcal since that's what I'm testing
-sys.path[:0] = f"{testdir}/../..",
+sys.path[:0] = (f"{testdir}/../..",)
 import mrcal
 
 
-order      = 3
-Nx         = 11
-Ny         = 8
-fov_x_deg  = 200 # more than 180deg
-imagersize = np.array((3000,2000))
-fxy        = np.array((2000., 1900.))
-cxy        = (imagersize.astype(float) - 1.) / 2.
+order = 3
+Nx = 11
+Ny = 8
+fov_x_deg = 200  # more than 180deg
+imagersize = np.array((3000, 2000))
+fxy = np.array((2000.0, 1900.0))
+cxy = (imagersize.astype(float) - 1.0) / 2.0
 
 # I want random control points, with some (different) bias on x and y
-controlpoints_x = np.random.rand(Ny, Nx) * 1 + 0.5 * np.arange(Nx)/Nx
-controlpoints_y = np.random.rand(Ny, Nx) * 1 - 0.9 * np.arange(Nx)/Nx
+controlpoints_x = np.random.rand(Ny, Nx) * 1 + 0.5 * np.arange(Nx) / Nx
+controlpoints_y = np.random.rand(Ny, Nx) * 1 - 0.9 * np.arange(Nx) / Nx
 
 # to test a delta function
 # controlpoints_y*=0
@@ -41,23 +41,22 @@ controlpoints_y = np.random.rand(Ny, Nx) * 1 - 0.9 * np.arange(Nx)/Nx
 # - y coord
 # - x coord
 # - fx/fy
-parameters = nps.glue( np.array(( fxy[0], fxy[1], cxy[0], cxy[1])),
-                       nps.mv(nps.cat(controlpoints_x,controlpoints_y),
-                              0, -1).ravel(),
-                       axis = -1 )
+parameters = nps.glue(
+    np.array((fxy[0], fxy[1], cxy[0], cxy[1])),
+    nps.mv(nps.cat(controlpoints_x, controlpoints_y), 0, -1).ravel(),
+    axis=-1,
+)
 
 
 # Now I produce a grid of observation vectors indexed on the coords of the
 # control-point arrays
 
 # The index into my spline. ixy has shape (Ny,Nx,2) and contains (x,y) rows
-Nw = Nx*5
-Nh = Ny*5
-x_sampled = np.linspace(1,Nx-2,Nh)
-y_sampled = np.linspace(1,Ny-2,Nw)
-ixy = \
-    nps.mv( nps.cat(*np.meshgrid( x_sampled, y_sampled )),
-            0,-1)
+Nw = Nx * 5
+Nh = Ny * 5
+x_sampled = np.linspace(1, Nx - 2, Nh)
+y_sampled = np.linspace(1, Ny - 2, Nw)
+ixy = nps.mv(nps.cat(*np.meshgrid(x_sampled, y_sampled)), 0, -1)
 
 ##### this has mostly been implemented in mrcal_project_stereographic() and
 ##### mrcal_unproject_stereographic()
@@ -111,13 +110,13 @@ else:
     # quadratic splines. 1/2 control points on each side past my fov
     ix_margin = 0.5
 
-k = (ix_margin - (Nx-1)/2) / (np.tan(-fov_x_deg*np.pi/180./2/2) * 2)
+k = (ix_margin - (Nx - 1) / 2) / (np.tan(-fov_x_deg * np.pi / 180.0 / 2 / 2) * 2)
 
-jxy  = (ixy - (np.array( (Nx, Ny), dtype=float) - 1.)/2.) / k / 2.
+jxy = (ixy - (np.array((Nx, Ny), dtype=float) - 1.0) / 2.0) / k / 2.0
 mjxy = nps.mag(jxy)
-z    = (1./mjxy - mjxy) / 2.
-xy   = jxy / nps.dummy(mjxy, -1) # singular at the center. Do I care?
-p    = nps.glue(xy, nps.dummy(z,-1), axis=-1)
+z = (1.0 / mjxy - mjxy) / 2.0
+xy = jxy / nps.dummy(mjxy, -1)  # singular at the center. Do I care?
+p = nps.glue(xy, nps.dummy(z, -1), axis=-1)
 
 mxy = nps.mag(xy)
 
@@ -126,23 +125,28 @@ mxy = nps.mag(xy)
 # internals to project the unprojection, and to get the focal lengths it ended
 # up using. If the internals were implemented correctly, the dense surface of
 # focal lengths should follow the sparse surface of spline control points
-lensmodel_type = f'LENSMODEL_SPLINED_STEREOGRAPHIC_order={order}_Nx={Nx}_Ny={Ny}_fov_x_deg={fov_x_deg}'
+lensmodel_type = f"LENSMODEL_SPLINED_STEREOGRAPHIC_order={order}_Nx={Nx}_Ny={Ny}_fov_x_deg={fov_x_deg}"
 q = mrcal.project(np.ascontiguousarray(p), lensmodel_type, parameters)
-th = np.arctan2( nps.mag(p[..., :2]), p[..., 2])
-uxy = p[..., :2] * nps.dummy(np.tan(th/2)*2/nps.mag(p[..., :2]), -1)
-deltau = (q-cxy) / fxy - uxy
+th = np.arctan2(nps.mag(p[..., :2]), p[..., 2])
+uxy = p[..., :2] * nps.dummy(np.tan(th / 2) * 2 / nps.mag(p[..., :2]), -1)
+deltau = (q - cxy) / fxy - uxy
 
-deltaux,deltauy = nps.mv(deltau, -1,0)
+deltaux, deltauy = nps.mv(deltau, -1, 0)
 
 
-gp.plot3d( (deltauy,
-            dict( _with='lines',
-                  using=f'($1*{x_sampled[1]-x_sampled[0]}+{x_sampled[0]}):($2*{y_sampled[1]-y_sampled[0]}+{y_sampled[0]}):3' )),
-           (controlpoints_y,
-            dict( _with='points pt 7 ps 2' )),
-           xlabel='x control point index',
-           ylabel='y control point index',
-           title='Deltau-y',
-           squarexy=True,
-           ascii=True,
-           wait=True)
+gp.plot3d(
+    (
+        deltauy,
+        dict(
+            _with="lines",
+            using=f"($1*{x_sampled[1] - x_sampled[0]}+{x_sampled[0]}):($2*{y_sampled[1] - y_sampled[0]}+{y_sampled[0]}):3",
+        ),
+    ),
+    (controlpoints_y, dict(_with="points pt 7 ps 2")),
+    xlabel="x control point index",
+    ylabel="y control point index",
+    title="Deltau-y",
+    squarexy=True,
+    ascii=True,
+    wait=True,
+)

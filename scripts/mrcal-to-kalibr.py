@@ -8,7 +8,7 @@
 #
 #     http://www.apache.org/licenses/LICENSE-2.0
 
-r'''Converts cameramodel(s) to the file format used by kalibr
+r"""Converts cameramodel(s) to the file format used by kalibr
 
 SYNOPSIS
 
@@ -53,43 +53,46 @@ which corresponds to
 
   camera_model == 'pinhole' and distortion_model in ('radtan','none')
 
-'''
+"""
 
 import sys
 import argparse
 import re
-import os
+
 
 def parse_args():
+    parser = argparse.ArgumentParser(
+        description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
+    )
 
-    parser = \
-        argparse.ArgumentParser(description = __doc__,
-                                formatter_class=argparse.RawDescriptionHelpFormatter)
-
-    parser.add_argument('--cam0-at-reference',
-                        action='store_true',
-                        default=False,
-                        help='''By default we set the extrinsics of camera-0 as
+    parser.add_argument(
+        "--cam0-at-reference",
+        action="store_true",
+        default=False,
+        help="""By default we set the extrinsics of camera-0 as
                         they appear in the input. If we want to force camera-0
                         to have an identity transform, pass --cam0-at-reference.
                         Usually this will be the case anyway in the input data,
-                        but this option makes sure''')
-    parser.add_argument('model',
-                        default=['-'],
-                        nargs='*',
-                        type=str,
-                        help='''Input camera model''')
+                        but this option makes sure""",
+    )
+    parser.add_argument(
+        "model", default=["-"], nargs="*", type=str, help="""Input camera model"""
+    )
 
     return parser.parse_args()
+
 
 args = parse_args()
 
 # arg-parsing is done before the imports so that --help works without building
 # stuff, so that I can generate the manpages and README
 
-Nstdin = sum(1 for m in args.model if m=='-')
+Nstdin = sum(1 for m in args.model if m == "-")
 if Nstdin > 1:
-    print(f"At most one model can be read from standard input ('-'), but I got {Nstdin}", file=sys.stderr)
+    print(
+        f"At most one model can be read from standard input ('-'), but I got {Nstdin}",
+        file=sys.stderr,
+    )
     sys.exit(1)
 
 import mrcal
@@ -100,25 +103,26 @@ import numpysane as nps
 
 Rt_ref_camprev = None
 
+
 # stolen from mrcal-to-kalibr. Please consolidate
 def Rt_is_identity(Rt):
-    cos_th = (np.trace(Rt[:3,:]) - 1.) / 2.
+    cos_th = (np.trace(Rt[:3, :]) - 1.0) / 2.0
     # cos_th ~ 1 - x^2/2
-    th_sq = (1 - cos_th)*2.
-    norm2_t = nps.norm2(Rt[3,:])
+    th_sq = (1 - cos_th) * 2.0
+    norm2_t = nps.norm2(Rt[3, :])
     return norm2_t < 1e-12 and th_sq < 1e-12
 
-def convert_one(i, model_filename):
 
+def convert_one(i, model_filename):
     global Rt_ref_camprev
 
     model = mrcal.cameramodel(model_filename)
 
-    lensmodel,intrinsics = model.intrinsics()
-    lensmodel_type = re.match('LENSMODEL_[^_]*',lensmodel).group(0)
+    lensmodel, intrinsics = model.intrinsics()
+    lensmodel_type = re.match("LENSMODEL_[^_]*", lensmodel).group(0)
 
-    imagersize           = model.imagersize()
-    Rt_cam_ref           = model.extrinsics_Rt_fromref()
+    imagersize = model.imagersize()
+    Rt_cam_ref = model.extrinsics_Rt_fromref()
 
     if Rt_ref_camprev is not None:
         Rt_cam_camprev = mrcal.compose_Rt(Rt_cam_ref, Rt_ref_camprev)
@@ -130,90 +134,115 @@ def convert_one(i, model_filename):
             # By default the "prev cam" from cam0 is the reference
             Rt_cam_camprev = Rt_cam_ref
 
-    Rt_ref_camprev = mrcal.invert_Rt(Rt_cam_ref) # for the next one
+    Rt_ref_camprev = mrcal.invert_Rt(Rt_cam_ref)  # for the next one
 
+    lensmodel_known = set(
+        (
+            "LENSMODEL_PINHOLE",
+            "LENSMODEL_OPENCV4",
+            "LENSMODEL_CAHVOR",
+            "LENSMODEL_CAHVORE",
+        ),
+    )
 
-    lensmodel_known = set(('LENSMODEL_PINHOLE','LENSMODEL_OPENCV4',
-                           'LENSMODEL_CAHVOR','LENSMODEL_CAHVORE'),)
-
-    if not lensmodel_type in lensmodel_known:
-        print(f"ERROR: kalibr only supports {lensmodel_known}, but '{model_filename}' uses {lensmodel_type}",
-              file=sys.stderr)
+    if lensmodel_type not in lensmodel_known:
+        print(
+            f"ERROR: kalibr only supports {lensmodel_known}, but '{model_filename}' uses {lensmodel_type}",
+            file=sys.stderr,
+        )
         sys.exit(1)
 
-    if   lensmodel_type == 'LENSMODEL_OPENCV4':
-        camera_model      = 'pinhole'
-        intrinsics        = repr(list(intrinsics[:4]))
-        distortion_model  = 'radtan'
+    if lensmodel_type == "LENSMODEL_OPENCV4":
+        camera_model = "pinhole"
+        intrinsics = repr(list(intrinsics[:4]))
+        distortion_model = "radtan"
         distortion_coeffs = repr(list(intrinsics[4:]))
         cahvore_linearity = None
-    elif lensmodel_type == 'LENSMODEL_PINHOLE':
-        camera_model      = 'pinhole'
-        intrinsics        = repr(list(intrinsics[:4]))
-        distortion_model  = 'none'
+    elif lensmodel_type == "LENSMODEL_PINHOLE":
+        camera_model = "pinhole"
+        intrinsics = repr(list(intrinsics[:4]))
+        distortion_model = "none"
         distortion_coeffs = repr(list(intrinsics[4:]))
         cahvore_linearity = None
     else:
         # cahvor(e)
-        distortion_model  = None
+        distortion_model = None
         distortion_coeffs = None
 
         model_identity_extrinsics = mrcal.cameramodel(model)
         model_identity_extrinsics.extrinsics_Rt_fromref(mrcal.identity_Rt())
         x = mrcal.cahvor._deconstruct_model(model_identity_extrinsics)
 
-        if   lensmodel_type == 'LENSMODEL_CAHVOR':
-            camera_model = 'cahvor'
-            intrinsics   = repr(list(x['C']) +
-                                list(x['A']) +
-                                list(x['H']) +
-                                list(x['V']) +
-                                list(x['O']) +
-                                list(x['R']))
+        if lensmodel_type == "LENSMODEL_CAHVOR":
+            camera_model = "cahvor"
+            intrinsics = repr(
+                list(x["C"])
+                + list(x["A"])
+                + list(x["H"])
+                + list(x["V"])
+                + list(x["O"])
+                + list(x["R"])
+            )
             cahvore_linearity = None
 
-        elif lensmodel_type == 'LENSMODEL_CAHVORE':
-            camera_model = 'cahvore'
-            intrinsics   = repr(list(x['C']) +
-                                list(x['A']) +
-                                list(x['H']) +
-                                list(x['V']) +
-                                list(x['O']) +
-                                list(x['R']) +
-                                list(x['E']))
-            cahvore_linearity = mrcal.lensmodel_metadata_and_config(lensmodel)['linearity']
+        elif lensmodel_type == "LENSMODEL_CAHVORE":
+            camera_model = "cahvore"
+            intrinsics = repr(
+                list(x["C"])
+                + list(x["A"])
+                + list(x["H"])
+                + list(x["V"])
+                + list(x["O"])
+                + list(x["R"])
+                + list(x["E"])
+            )
+            cahvore_linearity = mrcal.lensmodel_metadata_and_config(lensmodel)[
+                "linearity"
+            ]
         else:
             raise Exception("Getting here is a bug")
 
     # Identity transforms on the first camera are allowed to omit T_cn_cnm1
-    if i==0 and Rt_is_identity(Rt_cam_camprev):
+    if i == 0 and Rt_is_identity(Rt_cam_camprev):
         T_cn_cnm1 = None
     else:
         T_cn_cnm1 = np.eye(4, dtype=float)
-        T_cn_cnm1[:3,:3] = Rt_cam_camprev[:3,:]
-        T_cn_cnm1[:3, 3] = Rt_cam_camprev[ 3,:]
+        T_cn_cnm1[:3, :3] = Rt_cam_camprev[:3, :]
+        T_cn_cnm1[:3, 3] = Rt_cam_camprev[3, :]
 
-
-    return \
-        fr'''cam{i}:
+    return (
+        rf"""cam{i}:
   camera_model: {camera_model}
-  intrinsics: {intrinsics}''' + \
-(rf'''
+  intrinsics: {intrinsics}"""
+        + (
+            rf"""
   distortion_model: {distortion_model}
-  distortion_coeffs: {distortion_coeffs}''' if distortion_model is not None else '') + \
-(rf'''
-  cahvore_linearity: {cahvore_linearity}''' if cahvore_linearity is not None else '') + \
-(rf'''
+  distortion_coeffs: {distortion_coeffs}"""
+            if distortion_model is not None
+            else ""
+        )
+        + (
+            rf"""
+  cahvore_linearity: {cahvore_linearity}"""
+            if cahvore_linearity is not None
+            else ""
+        )
+        + (
+            rf"""
   T_cn_cnm1:
-  - {repr(list(T_cn_cnm1[0,:]))}
-  - {repr(list(T_cn_cnm1[1,:]))}
-  - {repr(list(T_cn_cnm1[2,:]))}
-  - {repr(list(T_cn_cnm1[3,:]))}''' if T_cn_cnm1 is not None else '') + \
-rf'''
+  - {repr(list(T_cn_cnm1[0, :]))}
+  - {repr(list(T_cn_cnm1[1, :]))}
+  - {repr(list(T_cn_cnm1[2, :]))}
+  - {repr(list(T_cn_cnm1[3, :]))}"""
+            if T_cn_cnm1 is not None
+            else ""
+        )
+        + rf"""
   resolution: {repr(list(imagersize))}
-'''
+"""
+    )
 
 
-yaml = ''.join(convert_one(i,model) for i,model in enumerate(args.model))
+yaml = "".join(convert_one(i, model) for i, model in enumerate(args.model))
 
 print(yaml)
