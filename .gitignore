@@ -33,3 +33,6 @@ test/test-parser-cameramodel
 *.fig.bak
 ltximg/
 doc/out
+
+build
+.cache

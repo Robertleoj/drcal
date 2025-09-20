@@ -1,0 +1,951 @@
+#!/usr/bin/env python3
+
+# Copyright (c) 2017-2023 California Institute of Technology ("Caltech"). U.S.
+# Government sponsorship acknowledged. All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+
+r'''Calibrate some synchronized, stationary cameras
+
+SYNOPSIS
+
+  $ mrcal-calibrate-cameras
+      --corners-cache corners.vnl
+      --lensmodel LENSMODEL_OPENCV8
+      --focal 1700 --object-spacing 0.01 --object-width-n 10
+      --outdir /tmp
+      --pairs
+      'left*.png' 'right*.png'
+
+    ... lots of output as the solve runs ...
+    Done!
+    RMS reprojection error: 1.9 pixels
+    Worst reprojection error: 7.8 pixels
+    Noutliers: 319 out of 17100 total points: 1.9% of the data
+
+    Wrote /tmp/camera0-0.cameramodel
+    Wrote /tmp/camera0-1.cameramodel
+
+This tool uses the generic mrcal platform to solve a common specific problem of
+N-camera calibration using observations of a chessboard. Please see the mrcal
+documentation at https://mrcal.secretsauce.net/how-to-calibrate.html for details.
+
+'''
+
+import sys
+import argparse
+import re
+import os
+import numpy as np
+import numpysane as nps
+import time
+import glob
+
+import mrcal
+
+
+
+def parse_args():
+
+    def positive_float(string):
+        try:
+            value = float(string)
+        except:
+            print(f"argument MUST be a positive floating-point number. Got '{string}'",
+                  file=sys.stderr)
+            sys.exit(1)
+        if value <= 0:
+            print(f"argument MUST be a positive floating-point number. Got '{string}'",
+                  file=sys.stderr)
+            sys.exit(1)
+        return value
+    def positive_int(string):
+        try:
+            value = int(string)
+        except:
+            print(f"argument MUST be a positive integer. Got '{string}'",
+                  file=sys.stderr)
+            sys.exit(1)
+        if value <= 0 or abs(value-float(string)) > 1e-6:
+            print(f"argument MUST be a positive integer. Got '{string}'",
+                  file=sys.stderr)
+            sys.exit(1)
+        return value
+
+
+    parser = \
+        argparse.ArgumentParser(description = __doc__,
+                                formatter_class=argparse.RawDescriptionHelpFormatter)
+    parser.add_argument('--lensmodel',
+                        required=False,
+                        help='''Which lens model we're using. This is a string "LENSMODEL_....". Required
+                        unless we have a --seed. See https://mrcal.secretsauce.net/how-to-calibrate.html
+                        for notes about how to select a model''')
+    parser.add_argument('--focal',
+                        type=str,
+                        help=r'''Initial estimate of the focal length, in
+                        pixels. Required unless --seed is given. See
+                        https://mrcal.secretsauce.net/how-to-calibrate.html for
+                        notes about how to estimate a focal length. This is
+                        either a single value to use for all the cameras, or a
+                        comma-separated whitespace-less list of values to use
+                        for each camera. If such a list is given, it must match
+                        the number of cameras being calibrated''')
+    parser.add_argument('--imagersize',
+                        nargs=2,
+                        type=int,
+                        required=False,
+                        help='''Size of the imager. This is only required if we pass --corners-cache AND if
+                        none of the image files on disk actually exist and if we
+                        don't have a --seed. If we do have a --seed, the
+                        --imagersize values must match the --seed exactly''')
+    parser.add_argument('--outdir',
+                        type=lambda d: d if os.path.isdir(d) else \
+                                parser.error(f"--outdir requires an existing directory as the arg, but got '{d}'"),
+                        default='.',
+                        help='Directory for the output camera models')
+    parser.add_argument('--object-spacing',
+                        required=False,
+                        type=float,
+                        help='Width of each square in the calibration board, in meters')
+    parser.add_argument('--object-width-n',
+                        type=int,
+                        default=10,
+                        help='''How many points the calibration board has per horizontal side. If omitted we
+                        default to 10''')
+    parser.add_argument('--object-height-n',
+                        type=int,
+                        help='''How many points the calibration board has per vertical side. If omitted, we
+                        assume a square object, setting height=width''')
+    parser.add_argument('--seed',
+                        required=False,
+                        type=str,
+                        help='''A comma-separated whitespace-less list of camera model globs to use as a seed
+                        for the intrinsics and extrinsics. The number of models
+                        must match the number of cameras exactly. Expanded globs
+                        are sorted alphanumerically. This is useful to bootstrap
+                        the solve or to validate an existing set of models, or
+                        to recompute just the extrinsics or just the intrinsics
+                        of a solve. If omitted, we estimate a seed. Exclusive
+                        with --focal. If given, --imagersize is omitted or it
+                        must match EXACTLY with whatever is in the --seed
+                        models''')
+    parser.add_argument('--jobs', '-j',
+                        type=int,
+                        default=1,
+                        help='''How much parallelization we want. Like GNU make. Affects only the chessboard
+                        corner finder. If we are reading a cache file, this does nothing''')
+    parser.add_argument('--corners-cache',
+                        type=lambda f: f if os.path.exists(f) or not os.path.isdir(f) else \
+                                parser.error(f"--corners-cache requires an existing, readable file as the arg or a non-existing path, but got '{f}'"),
+                        required=False,
+                        help=r'''Path to the corner-finder results. If this file exists, I use the corners in
+                        this file. If it doesn't exist, I invoke mrgingham to
+                        compute the corners, and I write the results to that
+                        path. And THEN I compute the calibration off those
+                        observations. This file is a vnlog with legend "#
+                        filename x y level" (exactly what mrgingham reports).
+                        Each rown is an observed corners. If an image had no
+                        observations, a single row "filename - - -" is expected.
+                        The "level" is the decimation level used in detecting
+                        that corner. "0" means "full-resolution", "1" means
+                        "half-resolution", "2" means "quarter-resolution" and so
+                        on. A level of "-" or <0 means "skip this point". This
+                        is how incomplete board observations are specified. A
+                        file with a missing "level" column will fill in "0" for
+                        all corners. A non-mrgingham grid detector may be used
+                        by running that separately, and using this option to
+                        read the output. A detector may output weights instead
+                        of a decimation level in the last column. Pass
+                        --corners-cache-has-weights to interpret the data in
+                        that way''')
+    parser.add_argument('--corners-cache-has-weights',
+                        action='store_true',
+                        help='''By default the corners we read in --corners-cache have columns "filename x y
+                        level". If the last column is a weight instead of a
+                        decimation level, pass this option. This is useful to
+                        support non-mrgingham chessboard detectors''')
+
+    parser.add_argument('--pairs',
+                        action='store_true',
+                        help='''By default, we are calibrating a set of N
+                        independent cameras. If we actually have a number of
+                        stereo pairs, pass this argument: it changes the
+                        filename format of the output models written to disk to
+                        'cameraPAIR-INDEXINPAIR.cameramodel'. Consecutive
+                        cameras in the given list are paired up, and an even
+                        number of cameras is required. This argument ONLY
+                        changes the output filename''')
+    parser.add_argument('--skip-regularization',
+                        action='store_true',
+                        required=False,
+                        default=False,
+                        help='''By default we apply regularization in the solver in the final optimization.
+                        This discourages obviously-wrong solutions, but can
+                        introduce a bias. With this option, regularization isn't
+                        applied''')
+    parser.add_argument('--skip-outlier-rejection',
+                        action='store_true',
+                        required=False,
+                        default=False,
+                        help='''By default we throw out outliers. This option turns that off''')
+    parser.add_argument('--skip-extrinsics-solve',
+                        action='store_true',
+                        required=False,
+                        default=False,
+                        help='''Keep the seeded extrinsics, if given. Allowed only if --seed''')
+    parser.add_argument('--skip-intrinsics-solve',
+                        action='store_true',
+                        required=False,
+                        default=False,
+                        help='''Keep the seeded intrinsics, if given. Allowed only if --seed''')
+    parser.add_argument('--skip-calobject-warp-solve',
+                        action='store_true',
+                        required=False,
+                        default=False,
+                        help='''By default we assume the calibration target is slightly deformed, and we
+                        compute this deformation. If we want to assume that it
+                        is flat, pass this option.''')
+
+    parser.add_argument('--valid-intrinsics-region-parameters',
+                        nargs = 5,
+                        default = (1, 0.5, 1.5, 3, 0),
+                        type = float,
+                        help='''For convenience we compute a valid-intrinsics region to describe the results
+                        of the calibration. This is a watered-down
+                        interpretation of the projection uncertainty that is
+                        easy to interpret. The logic computing this is somewhat
+                        crude, and may go away in the future. The defaults
+                        should be reasonable, so if in doubt, leave these alone.
+                        The intent is to produce usable output even if we're
+                        using a lean lens model where the computed uncertainty
+                        is always overly optimistic. We bin the observations
+                        into a grid, and use mrcal._report_regional_statistics()
+                        to get the residual statistics in each bin. We then
+                        contour the bins to produce the valid-intrinsics region.
+                        If we're using a rich lens model
+                        (LENSMODEL_SPLINED_...), then we only look at the
+                        uncertainty, and not at the other statistics. This
+                        argument takes 5 parameters. The uncertainty is computed
+                        at a range valid_intrinsics_region_parameters[4]. If <=
+                        0, I look out to infinity. The default is 0. A region is
+                        valid only if the projection uncertainty <
+                        valid_intrinsics_region_parameters[0] *
+                        observed_pixel_uncertainty. The default is 1. A region
+                        is valid only if the mean-abs-residuals is <
+                        valid_intrinsics_region_parameters[1] (only for lean
+                        models). The default is 0.5. A region is valid only if
+                        the residuals stdev is <
+                        valid_intrinsics_region_parameters[2] *
+                        observed_pixel_uncertainty (only for lean models). The
+                        default is 1.5. A region is valid only if it contains at
+                        least valid_intrinsics_region_parameters[3] observations
+                        (only for lean models). The default is 3.''')
+
+    parser.add_argument('--verbose-solver',
+                        action='store_true',
+                        required=False,
+                        default=False,
+                        help='''By default the final stage of the solver doesn't say much. This option turns
+                        on verbosity to get lots of diagnostics. This is
+                        generally not very useful to end users''')
+
+    parser.add_argument('--explore',
+                        action='store_true',
+                        required=False,
+                        default=False,
+                        help='''After the solve open an interactive shell to examine the solution''')
+
+    parser.add_argument('images',
+                        type=str,
+                        nargs='+',
+                        help='''A glob-per-camera for the images. Include a glob for each camera. It is
+                        assumed that the image filenames in each glob are of of
+                        the form xxxNNNyyy where xxx and yyy are common to all
+                        images in the set, and NNN varies. This NNN is a frame
+                        number, and identical frame numbers across different
+                        globs signify a time-synchronized observation. I.e. you
+                        can pass 'left*.jpg' and 'right*.jpg' to find images
+                        'left0.jpg', 'left1.jpg', ..., 'right0.jpg',
+                        'right1.jpg', ...''')
+
+    return parser.parse_args()
+
+args = parse_args()
+
+# arg-parsing is done before the imports so that --help works without building
+# stuff, so that I can generate the manpages and README
+
+
+if args.object_spacing is None:
+    print("WARNING: assuming default calibration-object spacing of 0.1m. If this is wrong, all distances will be off by a scale factor",
+          file = sys.stderr)
+    args.object_spacing = 0.1
+
+if args.object_height_n is None:
+    args.object_height_n = args.object_width_n
+
+
+
+
+# wider printing is more convenient here
+np.set_printoptions(linewidth=300)
+
+
+def get_imagersize_one(icamera, indices_frame_camera, paths, wh_args, seedmodels):
+    r'''Returns the imager size for a given camera
+
+    This reports the size for ONE camera. I only look at the first match. It is
+    assumed that all the images matching this glob have the same imager size.
+
+    If I have a corners cache, then this is the ONLY place where I'd need the
+    images on disk at all. If the user passes --imagersize, then I really don't
+    need the images.
+
+    '''
+
+    wh_image    = None
+    wh_seed     = None
+    if seedmodels is not None:
+        wh_seed = list(seedmodels[icamera].imagersize())
+
+    if wh_args is not None and seedmodels is not None:
+        if wh_args != wh_seed:
+            print(f"Both --seed and --imagersize were given, so they must match exactly. But I had --imagersize {wh_args} and one model has imagersize() = {wh_seed}",
+                  file=sys.stderr)
+            sys.exit(1)
+
+    try:
+        iobservation0_thiscamera = next( i for i in range(len(paths)) if indices_frame_camera[i,1] == icamera )
+    except:
+        print(f"Couldn't find any images for camera '{icamera}'",
+              file=sys.stderr)
+        sys.exit(1)
+
+    image = None
+    path = paths[iobservation0_thiscamera]
+    if os.path.isfile(path):
+        try:
+            image = mrcal.load_image(path,
+                                     bits_per_pixel = 8, channels = 1)
+        except:
+            pass # image is already None
+
+    if image is not None:
+        h,w = image.shape[:2]
+        wh_image = (w,h)
+
+        if wh_args is not None and \
+           wh_image != wh_args:
+            print(f"--imagersize is given, and its dimensions do NOT match THOSE of the images in --corners-cache: --imagersize is {wh_args} and {path=} has dimensions {wh_image}",
+                  file=sys.stderr)
+            sys.exit(1)
+        if wh_seed is not None and \
+           wh_image != wh_seed:
+            print(f"--seed is given, and those image dimensions do NOT match THOSE of the images in --corners-cache: --seed model for {icamera=} has imagersize {wh_seed} and {path=} has dimensions {wh_image}",
+                  file=sys.stderr)
+            sys.exit(1)
+
+
+    # everything verified; no inconsistencies.
+    if wh_args is not None:
+        return wh_args
+    if wh_seed is not None:
+        return wh_seed
+    if wh_image is not None:
+        return wh_image
+
+    print("Don't have the imager size. Need either --imagersize or --seed or the images in --corners-cache should be readable",
+          file=sys.stderr)
+    sys.exit(1)
+
+
+def solve_initial(args, seedmodels, imagersizes,
+                  observations, indices_frame_camera):
+    '''Solve an incrementally-expanding optimization problem in several passes
+
+    observations[...,2] start out as the initial outlier set, and are modified
+    by this function to represent the expanded outlier set
+
+    '''
+
+    indices_frame_camintrinsics_camextrinsics = \
+        nps.glue(indices_frame_camera,
+                 indices_frame_camera[:,(1,)]-1,
+                 axis=-1)
+
+
+    def compute_seed():
+        # I have no seed. I compute a rough seed, and run a few preliminary,
+        # incremental optimizations to get it reasonably-close to the right
+        # answer
+        intrinsics_data,extrinsics_rt_fromref,frames_rt_toref = \
+            mrcal.seed_stereographic(imagersizes          = imagersizes,
+                                     focal_estimate       = args.focal,
+                                     indices_frame_camera = indices_frame_camera,
+                                     observations         = observations,
+                                     object_spacing       = args.object_spacing)
+
+        sys.stderr.write("## initial solve: geometry only\n")
+        lensmodel = 'LENSMODEL_STEREOGRAPHIC'
+
+        stats = mrcal.optimize(intrinsics                                = intrinsics_data,
+                               extrinsics_rt_fromref                     = extrinsics_rt_fromref,
+                               frames_rt_toref                           = frames_rt_toref,
+                               observations_board                        = observations,
+                               indices_frame_camintrinsics_camextrinsics = indices_frame_camintrinsics_camextrinsics,
+                               lensmodel                                 = lensmodel,
+
+                               imagersizes                       = imagersizes,
+                               do_optimize_intrinsics_core       = False,
+                               do_optimize_intrinsics_distortions= False,
+                               do_optimize_calobject_warp        = False,
+                               calibration_object_spacing        = args.object_spacing,
+                               do_apply_outlier_rejection        = False,
+                               do_apply_regularization           = False,
+                               verbose                           = False)
+        sys.stderr.write(f"## RMS error: {stats['rms_reproj_error__pixels']:.02f}\n\n")
+
+        sys.stderr.write("## initial solve: geometry and LENSMODEL_STEREOGRAPHIC core only\n")
+        stats = mrcal.optimize(intrinsics                                = intrinsics_data,
+                               extrinsics_rt_fromref                     = extrinsics_rt_fromref,
+                               frames_rt_toref                           = frames_rt_toref,
+                               observations_board                        = observations,
+                               indices_frame_camintrinsics_camextrinsics = indices_frame_camintrinsics_camextrinsics,
+                               lensmodel                                 = lensmodel,
+
+                               imagersizes                       = imagersizes,
+                               do_optimize_intrinsics_core       = True,
+                               do_optimize_intrinsics_distortions= False,
+                               do_optimize_calobject_warp        = False,
+                               calibration_object_spacing        = args.object_spacing,
+                               do_apply_outlier_rejection        = False,
+                               do_apply_regularization           = False,
+                               verbose                           = False)
+
+        extrinsics_Rt_fromref = mrcal.Rt_from_rt( extrinsics_rt_fromref )
+
+        return                     \
+            intrinsics_data,       \
+            extrinsics_Rt_fromref, \
+            frames_rt_toref
+
+    def compute_seed_from_existing_models():
+
+        # The caller made sure that all the models use the same lens model
+        lensmodel       = seedmodels[0].intrinsics()[0]
+        intrinsics_data = nps.cat( *[m.intrinsics()[1] for m in seedmodels])
+
+        # I keep the relative camera poses constant, but place camera0 at the
+        # origin
+        Rt_r0 = seedmodels[0].extrinsics_Rt_toref()
+        extrinsics_Rt_fromref = \
+            nps.cat( *[ mrcal.compose_Rt( m.extrinsics_Rt_fromref(),Rt_r0)
+                        for m in seedmodels[1:]])
+
+        if extrinsics_Rt_fromref.size == 0:
+            # No extrinsics. Represent as 0 Rt transforms
+            extrinsics_Rt_fromref = np.zeros((0,4,3), dtype=float)
+
+        # I have a GOOD extrinsics estimate, so I could compute a GOOD frame
+        # pose estimate by triangulating:
+        #
+        #   import deltapose_lite
+        #   for corresponding images:
+        #       for points in chessboard:
+        #           lindstrom to get point in 3d
+        #           procrustes fit to get frame transformation
+        #
+        # But this takes a lot of typing, and wouldn't handle special cases:
+        # - what if for a given frame only 1 camera is observing the board?
+        # - what if for a given frame more than 2 cameras are observing the board?
+        #
+        # So I do the less-accurate-but-more-robust thing using pinhole
+        # monocular observations. This is what mrcal.seed_stereographic()
+        # does in the no-seed-available case
+        calobject_poses_local_Rt_cf = \
+            mrcal.estimate_monocular_calobject_poses_Rt_tocam( indices_frame_camera,
+                                                               observations,
+                                                               args.object_spacing,
+                                                               seedmodels)
+
+        frames_rt_toref = \
+            mrcal.estimate_joint_frame_poses(
+                calobject_poses_local_Rt_cf,
+                extrinsics_Rt_fromref,
+                indices_frame_camera,
+                args.object_width_n,
+                args.object_height_n,
+                args.object_spacing)
+
+        if 0:
+            # I was seeing an issue with incorrectly-seeded frames_rt_toref, and
+            # I thought that pre-optimizing it would fix it, so I wrote this
+            # code. That issue was actually caused by something else, making
+            # this code unnecessary, but I'm leaving it here, in case it becomes
+            # useful later. For debugging, I'm printing the before/after
+            # frames_rt_toref so that we can see if this pre-optimization does
+            # anything
+
+            print("pre-optimization; before: rt_cf[:2]")
+            print(frames_rt_toref[:2])
+
+            # I have a rough estimate of the geometry. Before it's usable I need
+            # to refine it using the optimizer. I lock down EVERYTHING except
+            # frames_rt_toref, since the seed gives me everything else
+            sys.stderr.write("## reoptimizing frames_rt_toref\n")
+            stats = mrcal.optimize(intrinsics_data,
+                                   mrcal.rt_from_Rt(extrinsics_Rt_fromref),
+                                   frames_rt_toref,
+                                   None,
+                                   observations, indices_frame_camintrinsics_camextrinsics,
+                                   None, None,
+                                   lensmodel,
+                                   imagersizes                       = imagersizes,
+                                   do_optimize_intrinsics_core       = False,
+                                   do_optimize_intrinsics_distortions= False,
+                                   do_optimize_calobject_warp        = False,
+                                   do_optimize_extrinsics            = False,
+                                   do_optimize_frames                = True,
+                                   calibration_object_spacing        = args.object_spacing,
+                                   do_apply_outlier_rejection        = False,
+                                   do_apply_regularization           = False,
+                                   verbose                           = False)
+            sys.stderr.write(f"## RMS error: {stats['rms_reproj_error__pixels']:.02f}\n\n")
+
+            print("pre-optimization; after: rt_cf[:2]")
+            print(frames_rt_toref[:2])
+
+
+        return                     \
+            intrinsics_data,       \
+            extrinsics_Rt_fromref, \
+            frames_rt_toref,
+
+
+
+    if seedmodels is None:
+
+        intrinsics_data,       \
+        extrinsics_Rt_fromref, \
+        frames_rt_toref        = compute_seed()
+
+    else:
+        intrinsics_data,       \
+        extrinsics_Rt_fromref, \
+        frames_rt_toref        = compute_seed_from_existing_models()
+
+
+    def expand_intrinsics(lensmodel, intrinsics_data):
+        NnewDistortions = \
+            mrcal.lensmodel_num_params(lensmodel) - \
+            intrinsics_data.shape[-1]
+        newDistortions = \
+            (np.random.random((Ncameras, NnewDistortions)) - 0.5)*2. *1e-6
+        m = re.search("OPENCV([0-9]+)", lensmodel)
+        if m:
+            Nd = int(m.group(1))
+            if Nd >= 8:
+                # Push down the rational components of the seed. I'd like these all to
+                # sit at 0 ideally. The radial distortion in opencv is x_distorted =
+                # x*scale where r2 = norm2(xy - xyc) and
+                #
+                # scale = (1 + k0 r2 + k1 r4 + k4 r6)/(1 + k5 r2 + k6 r4 + k7 r6)
+                #
+                # Note that k2,k3 are tangential (NOT radial) distortion components.
+                # Note that the r6 factor in the numerator is only present for
+                # >=LENSMODEL_OPENCV5. Note that the denominator is only present for >=
+                # LENSMODEL_OPENCV8. The danger with a rational model is that it's
+                # possible to get into a situation where scale ~ 0/0 ~ 1. This would
+                # have very poorly behaved derivatives. If all the rational coefficients
+                # are ~0, then the denominator is always ~1, and this problematic case
+                # can't happen. I favor that.
+                newDistortions[..., 5:8] *= 1e-3
+        return nps.glue( intrinsics_data, newDistortions, axis=-1 )
+
+
+    # Alrighty. All the preliminary business is finished. I should have a usable
+    # seed now. And thus I now run the main optimization loop
+    lensmodel = args.lensmodel
+    intrinsics_data  = expand_intrinsics(lensmodel, intrinsics_data)
+
+    print("=================== optimizing everything{}from seeded intrinsics". \
+          format(" except board warp " if not args.skip_calobject_warp_solve else " "))
+
+    extrinsics_rt_fromref = mrcal.rt_from_Rt(extrinsics_Rt_fromref)
+
+    # splined models have a core, but those variables are largely redundant with
+    # the spline parameters. So I run another pre-solve to get reasonable values
+    # for the core, and then I lock it down
+    do_optimize_intrinsics_core = not args.skip_intrinsics_solve
+    if re.match("LENSMODEL_SPLINED_STEREOGRAPHIC_", lensmodel):
+        do_optimize_intrinsics_core = False
+
+    optimization_inputs = \
+        dict( intrinsics                                = intrinsics_data,
+              extrinsics_rt_fromref                     = extrinsics_rt_fromref,
+              frames_rt_toref                           = frames_rt_toref,
+              points                                    = None,
+              observations_board                        = observations,
+              indices_frame_camintrinsics_camextrinsics = indices_frame_camintrinsics_camextrinsics,
+              observations_point                        = None,
+              indices_point_camintrinsics_camextrinsics = None,
+              lensmodel                                 = lensmodel,
+              imagersizes                               = imagersizes,
+              calobject_warp                            = None,
+              do_optimize_intrinsics_core               = do_optimize_intrinsics_core,
+              do_optimize_intrinsics_distortions        = not args.skip_intrinsics_solve,
+              do_optimize_extrinsics                    = not args.skip_extrinsics_solve,
+              do_optimize_frames                        = True,
+              do_optimize_calobject_warp                = False,
+              calibration_object_spacing                = args.object_spacing,
+              do_apply_outlier_rejection                = not args.skip_outlier_rejection,
+              do_apply_regularization                   = True,
+              verbose                                   = False,
+              imagepaths                                = paths )
+
+    mrcal.optimize( **optimization_inputs )
+    return optimization_inputs
+
+
+
+
+
+
+
+# expand ~/ into $HOME/
+args.images = [os.path.expanduser(g) for g in args.images]
+
+Ncameras = len(args.images)
+if Ncameras > 10:
+    print(f"Got {Ncameras} image globs. It should be one glob per camera, and this sounds like WAY too many cameras. Did you forget to escape your glob?",
+          file=sys.stderr)
+    sys.exit(1)
+
+if args.pairs and Ncameras % 2:
+    print(f"With --pairs I must have gotten an even number of cameras, but instead got {Ncameras}",
+          file=sys.stderr)
+    sys.exit(1)
+
+if args.seed:
+
+    if args.focal is not None:
+        print("Exactly one of --focal and --seed MUST be given",
+              file=sys.stderr)
+        sys.exit(1)
+
+
+    def seedmodels_iterator():
+        for g in args.seed.split(','):
+            globbed_filenames = sorted(glob.glob(g))
+            if 0 == len(globbed_filenames):
+                print(f"seed glob '{g}' matched no files!",
+                      file=sys.stderr)
+                sys.exit(1)
+            for f in globbed_filenames:
+                yield mrcal.cameramodel(f)
+    seedmodels = list(seedmodels_iterator())
+
+    if Ncameras != len(seedmodels):
+        print(f"I saw {Ncameras} image globs, but {len(seedmodels)} --seed models. Both represent cameras, so I should have identical counts",
+              file=sys.stderr)
+        sys.exit(1)
+
+    lensmodel = seedmodels[0].intrinsics()[0]
+    for m in seedmodels[1:]:
+        if lensmodel != m.intrinsics()[0]:
+            print(f"I expect all cameras to use the same lens model, but --seed saw {lensmodel} and {m.intrinsics()[0]}",
+                  file=sys.stderr)
+            sys.exit(1)
+
+    if args.lensmodel is None:
+        args.lensmodel = lensmodel
+    elif args.lensmodel != lensmodel:
+        print(f"Error: the lensmodel in --seed ({lensmodel}) does not match the given --lensmodel ({args.lensmodel}). With --seed you can omit --lensmodel",
+              file=sys.stderr)
+        sys.exit(1)
+
+else:
+    if args.focal is None:
+        print("Exactly one of --focal and --seed MUST be given",
+              file=sys.stderr)
+        sys.exit(1)
+
+    try:
+        args.focal = [ float(f.strip()) for f in args.focal.split(',') ]
+    except:
+        print(f"--focal must be given a positive floating-point value, or a comma-separated list of such values",
+              file=sys.stderr)
+        sys.exit(1)
+    if not all(f>0 for f in args.focal):
+        print("--focal must be given a POSITIVE floating-point value, or a comma-separated list of such values. Some weren't positive",
+              file=sys.stderr)
+        sys.exit(1)
+
+    if not (len(args.focal) == 1 or \
+            len(args.focal) == Ncameras):
+        print(f"--focal must be a single value, or a comma-separated list of exactly Ncameras such values. Received Ncameras={Ncameras} image globs and {len(args.focal)} focal lengths",
+              file=sys.stderr)
+        sys.exit(1)
+
+    if not args.lensmodel:
+        print("--lensmodel is required if no --seed",
+              file=sys.stderr)
+        sys.exit(1)
+    if args.skip_extrinsics_solve:
+        print("--skip-extrinsics-solve requires --seed",
+              file=sys.stderr)
+        sys.exit(1)
+    if args.skip_intrinsics_solve:
+        print("--skip-intrinsics-solve requires --seed",
+              file=sys.stderr)
+        sys.exit(1)
+
+    seedmodels = None
+
+
+
+try:
+    observations, indices_frame_camera, paths = \
+        mrcal.compute_chessboard_corners(args.object_width_n,
+                                         args.object_height_n,
+                                         globs_per_camera   = args.images,
+                                         corners_cache_vnl  = args.corners_cache,
+                                         jobs               = args.jobs,
+                                         weight_column_kind = 'weight' if args.corners_cache_has_weights else 'level')
+except Exception as e:
+    print(f"Error extracting or reading chessboard corners: {e}", file=sys.stderr)
+    sys.exit(1)
+
+Nobservations = len(observations)
+
+# list of imager sizes; one per camera
+imagersizes = np.array([get_imagersize_one(icamera,
+                                           indices_frame_camera,
+                                           paths,
+                                           args.imagersize,
+                                           seedmodels) for icamera in range(Ncameras)],
+                       dtype=np.int32)
+
+optimization_inputs = \
+    solve_initial(args, seedmodels,
+                  imagersizes,
+                  observations, indices_frame_camera)
+
+if not args.skip_calobject_warp_solve:
+    calobject_warp = np.array((0,0), dtype=float)
+else:
+    calobject_warp = None
+
+print("## final, full optimization",
+      file=sys.stderr)
+
+optimization_inputs['calobject_warp']             = calobject_warp
+optimization_inputs['do_optimize_calobject_warp'] = not args.skip_calobject_warp_solve
+optimization_inputs['do_apply_regularization']    = not args.skip_regularization
+optimization_inputs['do_apply_outlier_rejection'] = not args.skip_outlier_rejection
+optimization_inputs['verbose']                    = args.verbose_solver
+
+# If we're skipping the regularization step, I do EVERYTHING else before the
+# final regularization-free step. Turning that off allows the solution to
+# wander, and I want to help it as much as possible to not do that
+if not optimization_inputs['do_apply_regularization']:
+    optimization_inputs['do_apply_regularization']= True
+    optimization_inputs['verbose']                = False
+
+    stats = mrcal.optimize(**optimization_inputs)
+
+    optimization_inputs['do_apply_regularization']= False
+    optimization_inputs['verbose']                = args.verbose_solver
+
+stats = mrcal.optimize(**optimization_inputs)
+sys.stderr.write(f"## RMS error: {stats['rms_reproj_error__pixels']:.02f}\n")
+
+report = f"RMS reprojection error: {stats['rms_reproj_error__pixels']:.01f} pixels\n"
+
+Npoints_chessboard = args.object_width_n*args.object_height_n*Nobservations
+
+# shape (Nobservations,Nheight,Nwidth,2)
+residuals = \
+    stats['x'][:Npoints_chessboard*2]. \
+    reshape(Nobservations, args.object_height_n, args.object_width_n, 2)
+worst_point_err = np.sqrt(np.max(nps.norm2( nps.clump(residuals, n=3) )))
+report += f"Worst residual (by measurement): {worst_point_err:.01f} pixels\n"
+if not args.skip_outlier_rejection:
+    report += "Noutliers: {} out of {} total points: {:.01f}% of the data\n". \
+        format(stats['Noutliers_board'],
+               args.object_height_n*args.object_width_n*len(observations),
+               100.0 * stats['Noutliers_board'] / (args.object_height_n*args.object_width_n*len(observations)))
+if calobject_warp is not None:
+    report += f"calobject_warp = {calobject_warp}\n"
+
+print(report)
+
+models = \
+    [ mrcal.cameramodel( \
+                optimization_inputs = optimization_inputs,
+                icam_intrinsics     = icam ) \
+      for icam in range(len(optimization_inputs['intrinsics'])) ]
+
+# shape (Nobservations)
+nonoutliers_per_observation = \
+    np.sum( nps.clump( (observations[...,2] > 0.).astype(int),
+                       n = -2 ),
+            axis = -1 )
+
+# shape (Nobservations,)
+rms_residual_perobservation = \
+    np.sqrt( nps.norm2( nps.clump(residuals,n=-3) ) /
+             nonoutliers_per_observation )
+
+# shape (Nobservations,)
+i_observations_sorted_from_worst = \
+    list(reversed(np.argsort(rms_residual_perobservation)))
+
+
+if not args.skip_intrinsics_solve and \
+   args.valid_intrinsics_region_parameters is not None:
+
+    observed_pixel_uncertainty = \
+        np.std(mrcal.measurements_board(optimization_inputs,
+                                        x = stats['x']).ravel())
+
+    threshold_uncertainty = args.valid_intrinsics_region_parameters[0] * observed_pixel_uncertainty
+    threshold_mean        = args.valid_intrinsics_region_parameters[1]
+    threshold_stdev       = args.valid_intrinsics_region_parameters[2] * observed_pixel_uncertainty
+    threshold_count       = args.valid_intrinsics_region_parameters[3]
+    distance              = args.valid_intrinsics_region_parameters[4]
+
+    for i in range(Ncameras):
+        try:
+            models[i].valid_intrinsics_region( \
+                mrcal.calibration._compute_valid_intrinsics_region(models[i],
+                                                       threshold_uncertainty,
+                                                       threshold_mean,
+                                                       threshold_stdev,
+                                                       threshold_count,
+                                                       distance))
+        except Exception as e:
+            print(f"WARNING: Couldn't compute valid-intrinsics region for camera {i}. Will continue without. Error: {e}",
+                  file = sys.stderr)
+
+
+# The note says how we ran this, and contains the commented-out report
+note = \
+    f"generated on {time.strftime('%Y-%m-%d %H:%M:%S')} with   {' '.join(mrcal.shellquote(s) for s in sys.argv)}\n" + \
+    report
+for icam in range(len(models)):
+
+    filename_base = \
+        f'{args.outdir}/camera{icam//2}-{icam%2}' \
+        if args.pairs \
+        else f'{args.outdir}/camera-{icam}'
+
+    cameramodelfile = filename_base + '.cameramodel'
+    models[icam].write(cameramodelfile,
+                       note = note)
+    print(f"Wrote {cameramodelfile}")
+
+
+
+if not args.explore:
+    sys.exit(0)
+
+
+
+# We're exploring!
+import gnuplotlib as gp
+
+
+print('\n')
+print(r'''Solution-examination REPL.
+Potential things to look at:
+
+    show_geometry()
+    show_residuals_board_observation_worst(i_observation_in_order_from_worst)
+    show_residuals_board_observation(i_observation, vectorscale=20)
+    show_projection_uncertainty(icam)
+    show_valid_intrinsics_region(icam)
+    show_residuals_vectorfield(    icam)
+    show_residuals_magnitudes(     icam)
+    show_residuals_directions(     icam)
+    show_residuals_histogram(      icam)
+    show_residuals_regional(       icam)
+    show_distortion_off_pinhole(   icam, vectorfield=False)
+    show_distortion_off_pinhole_radial(icam)
+    show_splined_model_correction(icam)
+    stats
+    i_observations_sorted_from_worst
+    rms_residual_perobservation
+    paths[i_observations_sorted_from_worst[0]]
+    calobject_warp
+''')
+
+
+
+# I want multiple plots to be able to be shown at once. I store the gnuplotlib
+# objects into values in this dict
+plots = dict()
+
+def show_generic_per_cam(f, icam, **kwargs):
+    '''Generic show-things function that plots one camera/plot'''
+    global plots
+    icam_all = (icam,) if icam is not None else range(Ncameras)
+    for icam in icam_all:
+        plots[f.__name__ + str(icam)] = \
+            f(models[icam],
+              extratitle = f"camera {icam}",
+              **kwargs)
+
+def show_generic(f, *args, **kwargs):
+    '''Generic show-things function that plots all cameras/plot'''
+    global plots
+    plots[f.__name__] = f(*args, **kwargs)
+
+def show_splined_model_correction     (icam = None, **kwargs): show_generic_per_cam(mrcal.show_splined_model_correction,     icam, **kwargs)
+def show_projection_uncertainty        (icam = None, **kwargs): show_generic_per_cam(mrcal.show_projection_uncertainty,        icam, **kwargs)
+def show_valid_intrinsics_region       (icam = None, **kwargs): show_generic_per_cam(mrcal.show_valid_intrinsics_region,       icam, **kwargs)
+
+def show_residuals_vectorfield (icam = None, **kwargs): show_generic_per_cam(mrcal.show_residuals_vectorfield, icam, x=stats['x'], **kwargs)
+def show_residuals_magnitudes  (icam = None, **kwargs): show_generic_per_cam(mrcal.show_residuals_magnitudes,  icam, x=stats['x'], **kwargs)
+def show_residuals_directions  (icam = None, **kwargs): show_generic_per_cam(mrcal.show_residuals_directions,  icam, x=stats['x'], **kwargs)
+def show_residuals_regional    (icam = None, **kwargs): show_generic_per_cam(mrcal.show_residuals_regional,    icam, x=stats['x'], **kwargs)
+
+def show_distortion_off_pinhole       (icam = None, **kwargs): show_generic_per_cam(mrcal.show_distortion_off_pinhole,        icam, **kwargs)
+def show_distortion_off_pinhole_radial(icam = None, **kwargs): show_generic_per_cam(mrcal.show_distortion_off_pinhole_radial, icam, **kwargs)
+
+def show_geometry(**kwargs): show_generic(mrcal.show_geometry,
+                                          models, **kwargs)
+
+def show_residuals_board_observation(i_observation, **kwargs):
+    return show_generic( mrcal.show_residuals_board_observation,
+                         optimization_inputs,
+                         i_observation,
+                         paths                            = paths,
+                         i_observations_sorted_from_worst = i_observations_sorted_from_worst,
+                         x                                = stats['x'],
+                         **kwargs)
+
+
+def show_residuals_board_observation_worst(i_observation_from_worst, **kwargs):
+    return show_generic( mrcal.show_residuals_board_observation,
+                         optimization_inputs,
+                         i_observation_from_worst,
+                         from_worst                       = True,
+                         paths                            = paths,
+                         i_observations_sorted_from_worst = i_observations_sorted_from_worst,
+                         x                                = stats['x'],
+                         **kwargs)
+
+def show_residuals_histogram(icam = None, **kwargs):
+    show_generic(mrcal.show_residuals_histogram,
+                 optimization_inputs,
+                 icam,
+                 x = stats['x'],
+                 **kwargs)
+
+import IPython
+IPython.embed()
