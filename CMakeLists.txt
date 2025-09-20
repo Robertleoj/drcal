@@ -1,4 +1,14 @@
 cmake_minimum_required(VERSION 3.15)
+# If no toolchain set, try to pick it up from the env
+if(NOT DEFINED CMAKE_TOOLCHAIN_FILE)
+  if(DEFINED ENV{VCPKG_ROOT})
+    set(CMAKE_TOOLCHAIN_FILE
+        "$ENV{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake"
+        CACHE FILEPATH "vcpkg toolchain file")
+  endif()
+endif()
+
+
 project(drcal LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 17)
@@ -18,20 +28,7 @@ else()
     set(INSTALL_PATH "$ORIGIN")
 endif()
 
-set(SUITESPARSE_ROOT_CMAKELISTS ON CACHE BOOL "")
-
-# Optional: cut noise
-set(SUITESPARSE_USE_CUDA OFF CACHE BOOL "")
-# Some distros try to enable Fortran; CHOLMOD itself is C; safe to OFF
-set(SUITESPARSE_ENABLE_FORTRAN OFF CACHE BOOL "")
-
-
-# Bring in the deps CHOLMOD expects
-add_subdirectory(external/SuiteSparse/SuiteSparse_config)
-add_subdirectory(external/SuiteSparse/AMD)
-add_subdirectory(external/SuiteSparse/COLAMD)
-add_subdirectory(external/SuiteSparse/CHOLMOD)
-
+find_package(CHOLMOD CONFIG REQUIRED)
 
 # add_subdirectory(external/SuiteSparse/CHOLMOD)
 
@@ -54,5 +51,7 @@ endif()
 
 # Build the Python module
 pybind11_add_module(bindings cpp_src/bindings.cpp)
+
+target_link_libraries(bindings PRIVATE SuiteSparse::CHOLMOD_static)
 
 install(TARGETS bindings DESTINATION drcal)

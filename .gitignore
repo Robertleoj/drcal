@@ -36,3 +36,4 @@ doc/out
 
 build
 .cache
+vcpkg_installed/
