@@ -29,6 +29,9 @@ else()
 endif()
 
 find_package(CHOLMOD CONFIG REQUIRED)
+find_package(freeimage CONFIG REQUIRED)
+find_package(BLAS REQUIRED)
+find_package(LAPACK REQUIRED)
 
 # add_subdirectory(external/SuiteSparse/CHOLMOD)
 
@@ -66,12 +69,33 @@ Python3_add_library(
 
     cpp_src/mrcal-pywrap.c
     cpp_src/mrcal.c
+    cpp_src/uncertainty.c
+    cpp_src/image.c
+    cpp_src/stereo.c
+    cpp_src/traverse-sensor-links.c
+    cpp_src/cahvore.cc
+    cpp_src/opencv.c
+    cpp_src/poseutils.c
+    cpp_src/poseutils-opencv.c
+    cpp_src/dogleg.c
+    cpp_src/poseutils-uses-autodiff.cc
+    cpp_src/triangulation.cc
+    cpp_src/heap.cc
 )
 
 target_include_directories(bindings PRIVATE
   ${NUMPY_INCLUDE_DIR}
 )
 
-target_link_libraries(bindings PRIVATE SuiteSparse::CHOLMOD_static)
+target_link_libraries(
+    bindings 
+    
+    PRIVATE 
+        SuiteSparse::CHOLMOD_static
+        freeimage::FreeImage
+        freeimage::FreeImagePlus
+        LAPACK::LAPACK
+        BLAS::BLAS
+)
 
 install(TARGETS bindings DESTINATION drcal)

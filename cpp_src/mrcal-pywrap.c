@@ -830,7 +830,7 @@ static PyMethodDef CHOLMOD_factorization_methods[] = {
 // This isn't mine to fix, so I'm ignoring it
 static PyTypeObject CHOLMOD_factorization_type = {
     .ob_base = PyVarObject_HEAD_INIT(NULL, 0).tp_name =
-        "mrcal.CHOLMOD_factorization",
+        "bindings.CHOLMOD_factorization",
     .tp_basicsize = sizeof(CHOLMOD_factorization),
     .tp_new = PyType_GenericNew,
     .tp_init = (initproc)CHOLMOD_factorization_init,
@@ -7660,7 +7660,7 @@ static PyMethodDef methods[] = {
 #warning "triangulated-solve: fill in the new xxxx.docstring"
 #endif
 
-static void _init_mrcal_common(
+static void _init_bindings_common(
     PyObject* module
 ) {
     Py_INCREF(&CHOLMOD_factorization_type);
@@ -7687,9 +7687,9 @@ static void _init_mrcal_common(
     "mrcal._mrcal.fff() or mrcal.fff(). The latter is preferred.\n"
 
 static struct PyModuleDef module_def =
-    {PyModuleDef_HEAD_INIT, "_mrcal", MODULE_DOCSTRING, -1, methods};
+    {PyModuleDef_HEAD_INIT, "bindings", MODULE_DOCSTRING, -1, methods};
 
-PyMODINIT_FUNC PyInit__mrcal(
+PyMODINIT_FUNC PyInit_bindings(
     void
 ) {
     if (PyType_Ready(&CHOLMOD_factorization_type) < 0) {
@@ -7698,7 +7698,7 @@ PyMODINIT_FUNC PyInit__mrcal(
 
     PyObject* module = PyModule_Create(&module_def);
 
-    _init_mrcal_common(module);
+    _init_bindings_common(module);
     import_array();
 
     return module;

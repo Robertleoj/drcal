@@ -1,6 +1,7 @@
 {
-  "dependencies": [
-    "suitesparse-cholmod",
-    "lapack"
-  ]
+    "dependencies": [
+        "freeimage",
+        "suitesparse-cholmod",
+        "openblas"
+    ]
 }
