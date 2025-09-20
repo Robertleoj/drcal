@@ -17,7 +17,7 @@ mrcal.mmm.fff() can be called as mrcal.fff() instead. The latter is preferred.
 '''
 
 # The C wrapper is written by us in mrcal-pywrap.c
-from ._mrcal import *
+from .bindings import *
 
 # The C wrapper is generated from mrcal-genpywrap.py
 from ._mrcal_npsp    import *

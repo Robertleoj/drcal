@@ -16,10 +16,11 @@ from build_config import CMAKE_FLAGS
 BUILD_DIR = "build"
 
 # TARGET_NAME = "bindings.cpython-313-x86_64-linux-gnu.so"
-TARGET_NAME = "bindings.so"
+TARGETS = ["bindings.so", "bindings_npsp.so"]
 
-LIB_PATH = Path("./build") / TARGET_NAME
-DEST_PATH = Path("./src/drcal/") / TARGET_NAME
+
+LIB_DIR = Path("./build")
+DEST_DIR = Path("./src/drcal/")
 
 
 def _python_exe() -> str:
@@ -52,8 +53,9 @@ def build(debug: bool) -> None:
 
     subprocess.run(["ninja", "-C", str(build_path)])
 
-    DEST_PATH.unlink(missing_ok=True)
-    DEST_PATH.symlink_to(LIB_PATH.resolve())
+    for target in TARGETS:
+        (DEST_DIR / target).unlink(missing_ok=True)
+        (DEST_DIR / target).symlink_to((LIB_DIR / target).resolve())
 
     os.chdir(Path("src/drcal"))
 
@@ -64,6 +66,18 @@ def build(debug: bool) -> None:
         [
             "pybind11-stubgen",
             "bindings",
+            "--numpy-array-remove-parameters",
+            "-o",
+            ".",
+        ],
+        env=env,
+        check=True,
+    )
+
+    subprocess.run(
+        [
+            "pybind11-stubgen",
+            "bindings_npsp",
             "--numpy-array-remove-parameters",
             "-o",
             ".",

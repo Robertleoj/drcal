@@ -1,27 +1,10 @@
-#!/usr/bin/python3
-
-# Copyright (c) 2017-2023 California Institute of Technology ("Caltech"). U.S.
-# Government sponsorship acknowledged. All rights reserved.
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-
-r'''Python-wrap the mrcal routines that can be done with numpysane_pywrap
-
-'''
-
-import sys
-import os
+r"""Python-wrap the mrcal routines that can be done with numpysane_pywrap"""
 
 import numpy as np
-import numpysane as nps
-
 import numpysane_pywrap as npsp
 
 
-docstring_module = '''Low-level routines for core mrcal operations
+docstring_module = """Low-level routines for core mrcal operations
 
 This is the written-in-C Python extension module that underlies the core
 (un)project routines, and several low-level operations. Most of the functions in
@@ -31,11 +14,12 @@ have Python wrappers that should be used instead.
 All functions are exported into the mrcal module. So you can call these via
 mrcal._mrcal_npsp.fff() or mrcal.fff(). The latter is preferred.
 
-'''
+"""
 
-m = npsp.module( name      = "_mrcal_npsp",
-                 docstring = docstring_module,
-                 header    = r'''
+m = npsp.module(
+    name="bindings_npsp",
+    docstring=docstring_module,
+    header=r"""
 #include "mrcal.h"
 #include <float.h>
 
@@ -81,7 +65,8 @@ bool validate_lensmodel_un_project(// out; valid if we returned true
 
     return true;
 }
-''')
+""",
+)
 
 
 # NOTE: these projection functions are not as fast as they SHOULD be. In fact
@@ -131,8 +116,9 @@ index 666f48e..2a4edff 100644
 # committable. It assumes contiguous memory, and it'll produce incorrect output
 # shapes if we try to broadcast on intrinsics_data. These are all fixable, and
 # I'm moving on for now
-m.function( "_project",
-            """Internal point-projection routine
+m.function(
+    "_project",
+    """Internal point-projection routine
 
 This is the internals for mrcal.project(). As a user, please call THAT function,
 and see the docs for that function. The differences:
@@ -157,20 +143,16 @@ mrcal_project() and in the python wrapper definition in _project() and
 _project_withgrad() in mrcal-genpywrap.py. Please keep them in sync
 
 """,
-
-            args_input       = ('points', 'intrinsics'),
-            prototype_input  = ((3,), ('Nintrinsics',)),
-            prototype_output = (2,),
-
-            extra_args = (("const char*", "lensmodel", "NULL", "s"),),
-
-            Ccode_cookie_struct = '''
+    args_input=("points", "intrinsics"),
+    prototype_input=((3,), ("Nintrinsics",)),
+    prototype_output=(2,),
+    extra_args=(("const char*", "lensmodel", "NULL", "s"),),
+    Ccode_cookie_struct="""
               mrcal_lensmodel_t              lensmodel;
               int                            Nintrinsics;
               mrcal_projection_precomputed_t precomputed;
-            ''',
-
-            Ccode_validate = r'''
+            """,
+    Ccode_validate=r"""
               if( !( validate_lensmodel_un_project(&cookie->lensmodel,
                                         lensmodel, dims_slice__intrinsics[0], true) &&
                      CHECK_CONTIGUOUS_AND_SETERROR_ALL()))
@@ -179,11 +161,9 @@ _project_withgrad() in mrcal-genpywrap.py. Please keep them in sync
               cookie->Nintrinsics = mrcal_lensmodel_num_params(&cookie->lensmodel);
               _mrcal_precompute_lensmodel_data(&cookie->precomputed, &cookie->lensmodel);
               return true;
-''',
-
-            Ccode_slice_eval = \
-                {np.float64:
-                 r'''
+""",
+    Ccode_slice_eval={
+        np.float64: r"""
                  const int N = 1;
 
                  if(MRCAL_LENSMODEL_IS_OPENCV(cookie->lensmodel.type) ||
@@ -208,11 +188,13 @@ _project_withgrad() in mrcal-genpywrap.py. Please keep them in sync
                                              // core, distortions concatenated
                                              (const double*)data_slice__intrinsics,
                                              cookie->Nintrinsics, &cookie->precomputed);
-'''},
+"""
+    },
 )
 
-m.function( "_project_withgrad",
-            """Internal point-projection routine
+m.function(
+    "_project_withgrad",
+    """Internal point-projection routine
 
 This is the internals for mrcal.project(). As a user, please call THAT function,
 and see the docs for that function. The differences:
@@ -237,20 +219,16 @@ mrcal_project() and in the python wrapper definition in _project() and
 _project_withgrad() in mrcal-genpywrap.py. Please keep them in sync
 
 """,
-
-            args_input       = ('points', 'intrinsics'),
-            prototype_input  = ((3,), ('Nintrinsics',)),
-            prototype_output = ((2,), (2,3), (2,'Nintrinsics')),
-
-            extra_args = (("const char*", "lensmodel", "NULL", "s"),),
-
-            Ccode_cookie_struct = '''
+    args_input=("points", "intrinsics"),
+    prototype_input=((3,), ("Nintrinsics",)),
+    prototype_output=((2,), (2, 3), (2, "Nintrinsics")),
+    extra_args=(("const char*", "lensmodel", "NULL", "s"),),
+    Ccode_cookie_struct="""
               mrcal_lensmodel_t              lensmodel;
               int                            Nintrinsics;
               mrcal_projection_precomputed_t precomputed;
-            ''',
-
-            Ccode_validate = r'''
+            """,
+    Ccode_validate=r"""
               if( !( validate_lensmodel_un_project(&cookie->lensmodel,
                                         lensmodel, dims_slice__intrinsics[0], true) &&
                      CHECK_CONTIGUOUS_AND_SETERROR_ALL()))
@@ -266,11 +244,9 @@ _project_withgrad() in mrcal-genpywrap.py. Please keep them in sync
               cookie->Nintrinsics = mrcal_lensmodel_num_params(&cookie->lensmodel);
               _mrcal_precompute_lensmodel_data(&cookie->precomputed, &cookie->lensmodel);
               return true;
-''',
-
-            Ccode_slice_eval = \
-                {np.float64:
-                 r'''
+""",
+    Ccode_slice_eval={
+        np.float64: r"""
                  const int N = 1;
 
                  return
@@ -283,11 +259,13 @@ _project_withgrad() in mrcal-genpywrap.py. Please keep them in sync
                                              // core, distortions concatenated
                                              (const double*)data_slice__intrinsics,
                                              cookie->Nintrinsics, &cookie->precomputed);
-'''},
+"""
+    },
 )
 
-m.function( "_unproject",
-            """Internal point-unprojection routine
+m.function(
+    "_unproject",
+    """Internal point-unprojection routine
 
 This is the internals for mrcal.unproject(). As a user, please call THAT
 function, and see the docs for that function. The differences:
@@ -310,19 +288,15 @@ broadcast as expected
 The outer logic (outside the loop-over-N-points) is duplicated in
 mrcal_unproject() and in the python wrapper definition in _unproject()
 mrcal-genpywrap.py. Please keep them in sync """,
-
-            args_input       = ('points', 'intrinsics'),
-            prototype_input  = ((2,), ('Nintrinsics',)),
-            prototype_output = (3,),
-
-            extra_args = (("const char*", "lensmodel", "NULL", "s"),),
-
-            Ccode_cookie_struct = '''
+    args_input=("points", "intrinsics"),
+    prototype_input=((2,), ("Nintrinsics",)),
+    prototype_output=(3,),
+    extra_args=(("const char*", "lensmodel", "NULL", "s"),),
+    Ccode_cookie_struct="""
               mrcal_lensmodel_t lensmodel;
               mrcal_projection_precomputed_t precomputed;
-            ''',
-
-            Ccode_validate = r'''
+            """,
+    Ccode_validate=r"""
               if( !( validate_lensmodel_un_project(&cookie->lensmodel,
                                         lensmodel, dims_slice__intrinsics[0], false) &&
                      CHECK_CONTIGUOUS_AND_SETERROR_ALL()))
@@ -330,11 +304,9 @@ mrcal-genpywrap.py. Please keep them in sync """,
 
               _mrcal_precompute_lensmodel_data(&cookie->precomputed, &cookie->lensmodel);
               return true;
-''',
-
-            Ccode_slice_eval = \
-                {np.float64:
-                 r'''
+""",
+    Ccode_slice_eval={
+        np.float64: r"""
                  const int N = 1;
                  return
                      _mrcal_unproject_internal((mrcal_point3_t*)data_slice__output,
@@ -344,7 +316,8 @@ mrcal-genpywrap.py. Please keep them in sync """,
                                                // core, distortions concatenated
                                                (const double*)data_slice__intrinsics,
                                                &cookie->precomputed);
-'''},
+"""
+    },
 )
 
 project_simple_doc = """Internal projection routine
@@ -399,83 +372,85 @@ expected
 
 """
 
-simple_kwargs_base = \
-    dict(args_input = ('points','fxycxy'),
-         Ccode_validate = r'''return CHECK_CONTIGUOUS_AND_SETERROR_ALL();''')
-project_simple_kwargs = \
-    dict( prototype_input  = ((3,),(4,)),
-          prototype_output = (2,))
-project_withgrad_simple_kwargs = \
-    dict( prototype_input  = ((3,),(4,)),
-          prototype_output = ((2,), (2,3)))
-unproject_simple_kwargs = \
-    dict( prototype_input  = ((2,),(4,)),
-          prototype_output = (3,))
-unproject_withgrad_simple_kwargs = \
-    dict( prototype_input  = ((2,),(4,)),
-          prototype_output = ((3,), (3,2)))
+simple_kwargs_base = dict(
+    args_input=("points", "fxycxy"),
+    Ccode_validate=r"""return CHECK_CONTIGUOUS_AND_SETERROR_ALL();""",
+)
+project_simple_kwargs = dict(prototype_input=((3,), (4,)), prototype_output=(2,))
+project_withgrad_simple_kwargs = dict(
+    prototype_input=((3,), (4,)), prototype_output=((2,), (2, 3))
+)
+unproject_simple_kwargs = dict(prototype_input=((2,), (4,)), prototype_output=(3,))
+unproject_withgrad_simple_kwargs = dict(
+    prototype_input=((2,), (4,)), prototype_output=((3,), (3, 2))
+)
 
-project_simple_code = '''
+project_simple_code = """
             const double* fxycxy = (const double*)data_slice__fxycxy;
             mrcal_project_{what}((mrcal_point2_t*)data_slice__output,
                                         NULL,
                                         (const mrcal_point3_t*)data_slice__points,
                                         1,
                                         fxycxy);
-            return true;'''
-project_withgrad_simple_code = '''
+            return true;"""
+project_withgrad_simple_code = """
             const double* fxycxy = (const double*)data_slice__fxycxy;
             mrcal_project_{what}((mrcal_point2_t*)data_slice__output0,
                                         (mrcal_point3_t*)data_slice__output1,
                                         (const mrcal_point3_t*)data_slice__points,
                                         1,
                                         fxycxy);
-            return true;'''
-unproject_simple_code = '''
+            return true;"""
+unproject_simple_code = """
             const double* fxycxy = (const double*)data_slice__fxycxy;
             mrcal_unproject_{what}((mrcal_point3_t*)data_slice__output,
                                         NULL,
                                         (const mrcal_point2_t*)data_slice__points,
                                         1,
                                         fxycxy);
-            return true;'''
-unproject_withgrad_simple_code = '''
+            return true;"""
+unproject_withgrad_simple_code = """
             const double* fxycxy = (const double*)data_slice__fxycxy;
             mrcal_unproject_{what}((mrcal_point3_t*)data_slice__output0,
                                         (mrcal_point2_t*)data_slice__output1,
                                         (const mrcal_point2_t*)data_slice__points,
                                         1,
                                         fxycxy);
-            return true;'''
+            return true;"""
 
-for what in ('pinhole', 'stereographic', 'lonlat', 'latlon'):
-    m.function( f"_project_{what}",
-                project_simple_doc.format(what = what),
-                Ccode_slice_eval = {np.float64:
-                                    project_simple_code.format(what = what)},
-                **project_simple_kwargs,
-                **simple_kwargs_base )
-    m.function( f"_project_{what}_withgrad",
-                project_withgrad_simple_doc.format(what = what),
-                Ccode_slice_eval = {np.float64:
-                                    project_withgrad_simple_code.format(what = what)},
-                **project_withgrad_simple_kwargs,
-                **simple_kwargs_base )
-    m.function( f"_unproject_{what}",
-                unproject_simple_doc.format(what = what),
-                Ccode_slice_eval = {np.float64:
-                                    unproject_simple_code.format(what = what)},
-                **unproject_simple_kwargs,
-                **simple_kwargs_base )
-    m.function( f"_unproject_{what}_withgrad",
-                unproject_withgrad_simple_doc.format(what = what),
-                Ccode_slice_eval = {np.float64:
-                                    unproject_withgrad_simple_code.format(what = what)},
-                **unproject_withgrad_simple_kwargs,
-                **simple_kwargs_base )
+for what in ("pinhole", "stereographic", "lonlat", "latlon"):
+    m.function(
+        f"_project_{what}",
+        project_simple_doc.format(what=what),
+        Ccode_slice_eval={np.float64: project_simple_code.format(what=what)},
+        **project_simple_kwargs,
+        **simple_kwargs_base,
+    )
+    m.function(
+        f"_project_{what}_withgrad",
+        project_withgrad_simple_doc.format(what=what),
+        Ccode_slice_eval={np.float64: project_withgrad_simple_code.format(what=what)},
+        **project_withgrad_simple_kwargs,
+        **simple_kwargs_base,
+    )
+    m.function(
+        f"_unproject_{what}",
+        unproject_simple_doc.format(what=what),
+        Ccode_slice_eval={np.float64: unproject_simple_code.format(what=what)},
+        **unproject_simple_kwargs,
+        **simple_kwargs_base,
+    )
+    m.function(
+        f"_unproject_{what}_withgrad",
+        unproject_withgrad_simple_doc.format(what=what),
+        Ccode_slice_eval={np.float64: unproject_withgrad_simple_code.format(what=what)},
+        **unproject_withgrad_simple_kwargs,
+        **simple_kwargs_base,
+    )
 
-m.function( "_A_Jt_J_At",
-            """Computes matmult(A,Jt,J,At) for a sparse J
+m.function(
+    "_A_Jt_J_At",
+    """Computes matmult(A,Jt,J,At) for a sparse J
 
 This is used in the internals of projection_uncertainty().
 
@@ -497,25 +472,20 @@ looks like Jt to CHOLMOD). The sparse J is given here as the p,i,x arrays from
 CHOLMOD, equivalent to the indptr,indices,data members of
 scipy.sparse.csr_matrix respectively.
  """,
-
-            args_input       = ('A', 'Jp', 'Ji', 'Jx'),
-            prototype_input  = (('Nx','Nstate'), ('Np',), ('Nix',), ('Nix',)),
-            prototype_output = ('Nx','Nx'),
-
-            extra_args = (("int", "Nleading_rows_J", "-1", "i"),),
-
-            Ccode_validate = r'''
+    args_input=("A", "Jp", "Ji", "Jx"),
+    prototype_input=(("Nx", "Nstate"), ("Np",), ("Nix",), ("Nix",)),
+    prototype_output=("Nx", "Nx"),
+    extra_args=(("int", "Nleading_rows_J", "-1", "i"),),
+    Ccode_validate=r"""
             if(*Nleading_rows_J <= 0)
             {
                 PyErr_Format(PyExc_RuntimeError,
                              "Nleading_rows_J must be passed, and must be > 0");
                 return false;
             }
-            return CHECK_CONTIGUOUS_AND_SETERROR_ALL();''',
-
-            Ccode_slice_eval = \
-                { (np.float64, np.int32, np.int32, np.float64, np.float64):
-                 r'''
+            return CHECK_CONTIGUOUS_AND_SETERROR_ALL();""",
+    Ccode_slice_eval={
+        (np.float64, np.int32, np.int32, np.float64, np.float64): r"""
 
                  // I'm computing A Jt J At = sum(outer(ja,ja)) where ja is each
                  // row of matmult(J,At). Rows of matmult(J,At) are
@@ -563,34 +533,31 @@ scipy.sparse.csr_matrix respectively.
                      }
                  }
                  return true;
-'''},
+"""
+    },
 )
 
-m.function( "_A_Jt_J_At__2",
-            """Computes matmult(A,Jt,J,At) for a sparse J where A.shape=(2,N)
+m.function(
+    "_A_Jt_J_At__2",
+    """Computes matmult(A,Jt,J,At) for a sparse J where A.shape=(2,N)
 
 Exactly the same as _A_Jt_J_At(), but assumes that A.shape=(2,N) for efficiency.
 See the docs of _A_Jt_J_At() for details.
  """,
-
-            args_input       = ('A', 'Jp', 'Ji', 'Jx'),
-            prototype_input  = ((2,'Nstate'), ('Np',), ('Nix',), ('Nix',)),
-            prototype_output = (2,2),
-
-            extra_args = (("int", "Nleading_rows_J", "-1", "i"),),
-
-            Ccode_validate = r'''
+    args_input=("A", "Jp", "Ji", "Jx"),
+    prototype_input=((2, "Nstate"), ("Np",), ("Nix",), ("Nix",)),
+    prototype_output=(2, 2),
+    extra_args=(("int", "Nleading_rows_J", "-1", "i"),),
+    Ccode_validate=r"""
             if(*Nleading_rows_J <= 0)
             {
                 PyErr_Format(PyExc_RuntimeError,
                              "Nleading_rows_J must be passed, and must be > 0");
                 return false;
             }
-            return CHECK_CONTIGUOUS_AND_SETERROR_ALL();''',
-
-            Ccode_slice_eval = \
-                { (np.float64, np.int32, np.int32, np.float64, np.float64):
-                 r'''
+            return CHECK_CONTIGUOUS_AND_SETERROR_ALL();""",
+    Ccode_slice_eval={
+        (np.float64, np.int32, np.int32, np.float64, np.float64): r"""
 
                  // I'm computing A Jt J At = sum(outer(ja,ja)) where ja is each
                  // row of matmult(J,At). Rows of matmult(J,At) are
@@ -634,11 +601,13 @@ See the docs of _A_Jt_J_At() for details.
                  out[2] = out[1];
 
                  return true;
-'''},
+"""
+    },
 )
 
-m.function( "_Jt_x",
-            """Computes matrix-vector multiplication Jt*xt
+m.function(
+    "_Jt_x",
+    """Computes matrix-vector multiplication Jt*xt
 
 SYNOPSIS
 
@@ -668,12 +637,10 @@ shape beforehand. For the same reason, we cannot verify that its shape is
 correct, and the caller MUST do that, or else the program can crash.
 
 """,
-
-            args_input       = ('Jp', 'Ji', 'Jx', 'xt'),
-            prototype_input  = (('Np',), ('Nix',), ('Nix',), ('Nrows',)),
-            prototype_output = ('Ny',),
-
-            Ccode_validate = r'''
+    args_input=("Jp", "Ji", "Jx", "xt"),
+    prototype_input=(("Np",), ("Nix",), ("Nix",), ("Nrows",)),
+    prototype_output=("Ny",),
+    Ccode_validate=r"""
             int32_t Np    = dims_slice__Jp[0];
             int32_t Nrows = dims_slice__xt[0];
             if( Nrows != Np-1 )
@@ -682,11 +649,15 @@ correct, and the caller MUST do that, or else the program can crash.
                              "len(xt) must match the number of rows in J");
                 return false;
             }
-            return CHECK_CONTIGUOUS_AND_SETERROR_ALL();''',
-
-            Ccode_slice_eval = \
-                { (np.int32, np.int32, np.float64, np.float64, np.float64, ):
-                 r'''
+            return CHECK_CONTIGUOUS_AND_SETERROR_ALL();""",
+    Ccode_slice_eval={
+        (
+            np.int32,
+            np.int32,
+            np.float64,
+            np.float64,
+            np.float64,
+        ): r"""
 
                  int32_t Np        = dims_slice__Jp[0];
                  const int32_t* Jp = (const int32_t*)data_slice__Jp;
@@ -714,12 +685,12 @@ correct, and the caller MUST do that, or else the program can crash.
                      }
                  }
                  return true;
-'''},
+"""
+    },
 )
 
 
-apply_homography_body = \
-r'''
+apply_homography_body = r"""
     ctype__v xyz[3] = {
         item__H(0,0)*item__v(0) + item__H(0,1)*item__v(1) + item__H(0,2),
         item__H(1,0)*item__v(0) + item__H(1,1)*item__v(1) + item__H(1,2),
@@ -728,9 +699,10 @@ r'''
      item__output(0) = xyz[0]/xyz[2];
      item__output(1) = xyz[1]/xyz[2];
      return true;
-'''
-m.function( "apply_homography",
-            r'''Apply a homogeneous-coordinate homography to a set of 2D points
+"""
+m.function(
+    "apply_homography",
+    r"""Apply a homogeneous-coordinate homography to a set of 2D points
 
 SYNOPSIS
 
@@ -769,19 +741,18 @@ RETURNED VALUE
 An array of shape (..., 2) containing the pixels q after the homography was
 applied
 
-    ''',
-
-            args_input       = ('H', 'v'),
-            prototype_input  = ((3,3), (2,)),
-            prototype_output = (2,),
-
-            Ccode_slice_eval = \
-                { np.float64: apply_homography_body,
-                  np.float32: apply_homography_body },
+    """,
+    args_input=("H", "v"),
+    prototype_input=((3, 3), (2,)),
+    prototype_output=(2,),
+    Ccode_slice_eval={
+        np.float64: apply_homography_body,
+        np.float32: apply_homography_body,
+    },
 )
 
 
-body__apply_color_map = r'''
+body__apply_color_map = r"""
                  const int H = dims_slice__array[0];
                  const int W = dims_slice__array[1];
 
@@ -813,11 +784,12 @@ body__apply_color_map = r'''
                                                  *function_red,
                                                  *function_green,
                                                  *function_blue);
-'''
+"""
 
 
-m.function( "apply_color_map",
-            """Color-code an array
+m.function(
+    "apply_color_map",
+    """Color-code an array
 
 SYNOPSIS
 
@@ -914,19 +886,18 @@ RETURNED VALUE
 The color-mapped output array of shape array.shape + (3,) and containing 8-bit
 unsigned integers. The last row is the BGR color-mapped values.
 """,
-
-            args_input       = ('array',),
-            prototype_input  = (('H','W'),),
-            prototype_output = ( 'H','W', 3),
-
-            extra_args = (("double", "a_min",          "DBL_MAX", "d"),
-                          ("double", "a_max",          "DBL_MIN", "d"),
-                          ("int",    "function_red",   "7",       "i"),
-                          ("int",    "function_green", "5",       "i"),
-                          ("int",    "function_blue",  "15",      "i"), ),
-
-            # I require contiguity of the last dimension only
-            Ccode_validate = r'''
+    args_input=("array",),
+    prototype_input=(("H", "W"),),
+    prototype_output=("H", "W", 3),
+    extra_args=(
+        ("double", "a_min", "DBL_MAX", "d"),
+        ("double", "a_max", "DBL_MIN", "d"),
+        ("int", "function_red", "7", "i"),
+        ("int", "function_green", "5", "i"),
+        ("int", "function_blue", "15", "i"),
+    ),
+    # I require contiguity of the last dimension only
+    Ccode_validate=r"""
               /* If I have no data, just call the thing contiguous. This is useful */
               /* because np.ascontiguousarray doesn't set contiguous alignment */
               /* for empty arrays */
@@ -951,100 +922,88 @@ unsigned integers. The last row is the BGR color-mapped values.
                   return false;
               }
 
-              return true;''',
-
-            Ccode_slice_eval = \
-            {
-                (np. int8,   np.uint8): body__apply_color_map \
-                  .replace('{T}',     'int8_t') \
-                  .replace('{Tname}', 'int8') \
-                  .replace('{T_min}',  'INT8_MIN') \
-                  .replace('{T_max}',  'INT8_MAX'),
-                (np.uint8,   np.uint8): body__apply_color_map \
-                  .replace('{T}',     'uint8_t') \
-                  .replace('{Tname}', 'uint8') \
-                  .replace('{T_min}',  '0') \
-                  .replace('{T_max}',  'UINT8_MAX'),
-                (np. int16,  np.uint8): body__apply_color_map \
-                  .replace('{T}',     'int16_t') \
-                  .replace('{Tname}', 'int16') \
-                  .replace('{T_min}',  'INT16_MIN') \
-                  .replace('{T_max}',  'INT16_MAX'),
-                (np.uint16,  np.uint8): body__apply_color_map \
-                  .replace('{T}',     'uint16_t') \
-                  .replace('{Tname}', 'uint16') \
-                  .replace('{T_min}',  '0') \
-                  .replace('{T_max}',  'UINT16_MAX'),
-                (np. int32,  np.uint8): body__apply_color_map \
-                  .replace('{T}',     'int32_t') \
-                  .replace('{Tname}', 'int32') \
-                  .replace('{T_min}',  'INT32_MIN') \
-                  .replace('{T_max}',  'INT32_MAX'),
-                (np.uint32,  np.uint8): body__apply_color_map \
-                  .replace('{T}',     'uint32_t') \
-                  .replace('{Tname}', 'uint32') \
-                  .replace('{T_min}',  '0') \
-                  .replace('{T_max}',  'UINT32_MAX'),
-                (np. int64,  np.uint8): body__apply_color_map \
-                  .replace('{T}',     'int64_t') \
-                  .replace('{Tname}', 'int64') \
-                  .replace('{T_min}',  'INT64_MIN') \
-                  .replace('{T_max}',  'INT64_MAX'),
-                (np.uint64,  np.uint8): body__apply_color_map \
-                  .replace('{T}',     'uint64_t') \
-                  .replace('{Tname}', 'uint64') \
-                  .replace('{T_min}',  '0') \
-                  .replace('{T_max}',  'UINT64_MAX'),
-                (np.float32, np.uint8): body__apply_color_map \
-                  .replace('{T}',     'float') \
-                  .replace('{Tname}', 'float') \
-                  .replace('{T_min}', 'FLT_MIN') \
-                  .replace('{T_max}', 'FLT_MAX'),
-                (np.float64, np.uint8): body__apply_color_map \
-                  .replace('{T}',     'double') \
-                  .replace('{Tname}', 'double') \
-                  .replace('{T_min}',  'DBL_MIN') \
-                  .replace('{T_max}',  'DBL_MAX'),
-            },
+              return true;""",
+    Ccode_slice_eval={
+        (np.int8, np.uint8): body__apply_color_map.replace("{T}", "int8_t")
+        .replace("{Tname}", "int8")
+        .replace("{T_min}", "INT8_MIN")
+        .replace("{T_max}", "INT8_MAX"),
+        (np.uint8, np.uint8): body__apply_color_map.replace("{T}", "uint8_t")
+        .replace("{Tname}", "uint8")
+        .replace("{T_min}", "0")
+        .replace("{T_max}", "UINT8_MAX"),
+        (np.int16, np.uint8): body__apply_color_map.replace("{T}", "int16_t")
+        .replace("{Tname}", "int16")
+        .replace("{T_min}", "INT16_MIN")
+        .replace("{T_max}", "INT16_MAX"),
+        (np.uint16, np.uint8): body__apply_color_map.replace("{T}", "uint16_t")
+        .replace("{Tname}", "uint16")
+        .replace("{T_min}", "0")
+        .replace("{T_max}", "UINT16_MAX"),
+        (np.int32, np.uint8): body__apply_color_map.replace("{T}", "int32_t")
+        .replace("{Tname}", "int32")
+        .replace("{T_min}", "INT32_MIN")
+        .replace("{T_max}", "INT32_MAX"),
+        (np.uint32, np.uint8): body__apply_color_map.replace("{T}", "uint32_t")
+        .replace("{Tname}", "uint32")
+        .replace("{T_min}", "0")
+        .replace("{T_max}", "UINT32_MAX"),
+        (np.int64, np.uint8): body__apply_color_map.replace("{T}", "int64_t")
+        .replace("{Tname}", "int64")
+        .replace("{T_min}", "INT64_MIN")
+        .replace("{T_max}", "INT64_MAX"),
+        (np.uint64, np.uint8): body__apply_color_map.replace("{T}", "uint64_t")
+        .replace("{Tname}", "uint64")
+        .replace("{T_min}", "0")
+        .replace("{T_max}", "UINT64_MAX"),
+        (np.float32, np.uint8): body__apply_color_map.replace("{T}", "float")
+        .replace("{Tname}", "float")
+        .replace("{T_min}", "FLT_MIN")
+        .replace("{T_max}", "FLT_MAX"),
+        (np.float64, np.uint8): body__apply_color_map.replace("{T}", "double")
+        .replace("{Tname}", "double")
+        .replace("{T_min}", "DBL_MIN")
+        .replace("{T_max}", "DBL_MAX"),
+    },
 )
 
-m.function( "_stereo_range_sparse",
-            """Internal wrapper of mrcal_stereo_range_sparse()
+m.function(
+    "_stereo_range_sparse",
+    """Internal wrapper of mrcal_stereo_range_sparse()
 """,
-
-            args_input       = ('disparity',
-                                'qrect0',
-                                'disparity_min',
-                                'disparity_max',
-                                'fxycxy_rectified',
-                                'baseline'
-                                ),
-            prototype_input  = (('N',),
-                                ('N',2,),
-                                (),
-                                (),
-                                (4,),
-                                ()),
-            prototype_output = ( 'N', ),
-
-            extra_args = (("const char*", "rectification_model_type", "NULL", "s"),),
-
-            Ccode_cookie_struct = '''
+    args_input=(
+        "disparity",
+        "qrect0",
+        "disparity_min",
+        "disparity_max",
+        "fxycxy_rectified",
+        "baseline",
+    ),
+    prototype_input=(
+        ("N",),
+        (
+            "N",
+            2,
+        ),
+        (),
+        (),
+        (4,),
+        (),
+    ),
+    prototype_output=("N",),
+    extra_args=(("const char*", "rectification_model_type", "NULL", "s"),),
+    Ccode_cookie_struct="""
               mrcal_lensmodel_type_t type;
-            ''',
-
-            Ccode_validate = r'''
+            """,
+    Ccode_validate=r"""
 
               cookie->type = mrcal_lensmodel_type_from_name(rectification_model_type);
               // the mrcal_stereo_range_...() functions will check to make sure
               // the type is valid
 
-              return CHECK_CONTIGUOUS_AND_SETERROR_ALL();''',
-
-            Ccode_slice_eval = \
-            {
-                (float,float,float,float,float,float,
-                 float): '''
+              return CHECK_CONTIGUOUS_AND_SETERROR_ALL();""",
+    Ccode_slice_eval={
+        (float, float, float, float, float, float, float): """
 
                  const int N = dims_slice__output[0];
 
@@ -1063,37 +1022,29 @@ m.function( "_stereo_range_sparse",
                    cookie->type,
                    (double*)data_slice__fxycxy_rectified,
                    *(double*)data_slice__baseline);
-'''
-
-            },
+"""
+    },
 )
 
-m.function( "_stereo_range_dense",
-            """Internal wrapper of mrcal_stereo_range_dense()
+m.function(
+    "_stereo_range_dense",
+    """Internal wrapper of mrcal_stereo_range_dense()
 """,
-
-            args_input       = ('disparity_scaled',
-                                'disparity_scale',
-                                'disparity_scaled_min',
-                                'disparity_scaled_max',
-                                'fxycxy_rectified',
-                                'baseline'
-                                ),
-            prototype_input  = (('H','W'),
-                                (),
-                                (),
-                                (),
-                                (4,),
-                                ()),
-            prototype_output = ('H','W'),
-
-            extra_args = (("const char*", "rectification_model_type", "NULL", "s"),),
-
-            Ccode_cookie_struct = '''
+    args_input=(
+        "disparity_scaled",
+        "disparity_scale",
+        "disparity_scaled_min",
+        "disparity_scaled_max",
+        "fxycxy_rectified",
+        "baseline",
+    ),
+    prototype_input=(("H", "W"), (), (), (), (4,), ()),
+    prototype_output=("H", "W"),
+    extra_args=(("const char*", "rectification_model_type", "NULL", "s"),),
+    Ccode_cookie_struct="""
               mrcal_lensmodel_type_t type;
-            ''',
-
-            Ccode_validate = r'''
+            """,
+    Ccode_validate=r"""
 
               cookie->type = mrcal_lensmodel_type_from_name(rectification_model_type);
               // the mrcal_stereo_range_...() functions will check to make sure
@@ -1114,12 +1065,9 @@ m.function( "_stereo_range_dense",
                   return false;
               }
 
-              return CHECK_CONTIGUOUS_AND_SETERROR_ALL();''',
-
-            Ccode_slice_eval = \
-            {
-                (np.uint16,np.uint16,np.uint16,np.uint16,float,float,
-                 float): '''
+              return CHECK_CONTIGUOUS_AND_SETERROR_ALL();""",
+    Ccode_slice_eval={
+        (np.uint16, np.uint16, np.uint16, np.uint16, float, float, float): """
 
                  const int H = dims_slice__disparity_scaled[0];
                  const int W = dims_slice__disparity_scaled[1];
@@ -1145,8 +1093,8 @@ m.function( "_stereo_range_dense",
                    cookie->type,
                    (double*)data_slice__fxycxy_rectified,
                    *(double*)data_slice__baseline);
-'''
-            },
+"""
+    },
 )
 
 m.write()

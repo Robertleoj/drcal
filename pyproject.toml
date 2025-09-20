@@ -3,7 +3,7 @@ requires = ["scikit-build-core>=0.10", "pybind11", "numpy>=1.23"]
 build-backend = "scikit_build_core.build"
 
 [project]
-name = "drbuild"
+name = "drcal"
 version = "0.0.0"
 description = "DrCal for camera calibrations"
 authors = [{ name = "Robert Leo", email = "robert.leo.jonsson@gmail.com" }]
@@ -12,9 +12,11 @@ requires-python = ">=3.11"
 dependencies = [
     "fire>=0.7.1",
     "numpy>=1.23",
+    "numpysane>=0.40",
     "pybind11>=3.0.1",
     "pybind11-stubgen>=2.5.5",
     "scipy>=1.16.2",
+    "setuptools>=80.9.0",
 ]
 
 [tool.scikit-build]
