@@ -18,6 +18,23 @@ else()
     set(INSTALL_PATH "$ORIGIN")
 endif()
 
+set(SUITESPARSE_ROOT_CMAKELISTS ON CACHE BOOL "")
+
+# Optional: cut noise
+set(SUITESPARSE_USE_CUDA OFF CACHE BOOL "")
+# Some distros try to enable Fortran; CHOLMOD itself is C; safe to OFF
+set(SUITESPARSE_ENABLE_FORTRAN OFF CACHE BOOL "")
+
+
+# Bring in the deps CHOLMOD expects
+add_subdirectory(external/SuiteSparse/SuiteSparse_config)
+add_subdirectory(external/SuiteSparse/AMD)
+add_subdirectory(external/SuiteSparse/COLAMD)
+add_subdirectory(external/SuiteSparse/CHOLMOD)
+
+
+# add_subdirectory(external/SuiteSparse/CHOLMOD)
+
 find_package(Python REQUIRED COMPONENTS Interpreter Development.Module REQUIRED)
 
 # Try to find installed pybind11

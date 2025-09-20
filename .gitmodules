@@ -1,3 +1,0 @@
-[submodule "external/SuiteSparse"]
-	path = external/SuiteSparse
-	url = git@github.com:DrTimothyAldenDavis/SuiteSparse.git
