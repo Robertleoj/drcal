@@ -27,7 +27,7 @@ mrcal._triangulation_npsp.fff() or mrcal.fff(). The latter is preferred.
 """
 
 m = npsp.module(
-    name="_triangulation_npsp",
+    name="bindings_triangulation_npsp",
     docstring=docstring_module,
     header=r"""
 #include "mrcal.h"

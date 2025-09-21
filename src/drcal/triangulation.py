@@ -1,13 +1,3 @@
-#!/usr/bin/python3
-
-# Copyright (c) 2017-2023 California Institute of Technology ("Caltech"). U.S.
-# Government sponsorship acknowledged. All rights reserved.
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-
 """Triangulation routines
 
 Various ways to convert two rays in 3D into a 3D point those rays represent
@@ -19,9 +9,8 @@ mrcal.triangulation.fff() or mrcal.fff(). The latter is preferred.
 
 import numpy as np
 import numpysane as nps
-import mrcal
-import mrcal._triangulation_npsp
-import mrcal.model_analysis
+
+from .poseutils import rotate_point_R
 
 
 def _parse_args(v1, t01, get_gradients, v_are_local, Rt01):
@@ -41,7 +30,7 @@ def _parse_args(v1, t01, get_gradients, v_are_local, Rt01):
             )
         if Rt01 is None:
             raise Exception("v_are_local is True, so Rt01 MUST have been given")
-        v1 = mrcal.rotate_point_R(Rt01[..., :3, :], v1)
+        v1 = rotate_point_R(Rt01[..., :3, :], v1)
         t01 = Rt01[..., 3, :]
     else:
         # Normal path
