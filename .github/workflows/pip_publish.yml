@@ -43,7 +43,8 @@ jobs:
             git clone https://github.com/microsoft/vcpkg /opt/vcpkg
             /opt/vcpkg/bootstrap-vcpkg.sh -disableMetrics
             # Install vcpkg ports needed by CMake find_package() calls
-            /opt/vcpkg/vcpkg install freeimage suitesparse-cholmod lapack-reference openblas
+            /opt/vcpkg/vcpkg install --classic --triplet x64-linux freeimage suitesparse-cholmod lapack-reference openblas
+            # /opt/vcpkg/vcpkg install freeimage suitesparse-cholmod lapack-reference openblas
           # Make CMake pick up vcpkg automatically (your CMakeLists checks VCPKG_ROOT)
           CIBW_ENVIRONMENT_LINUX: 'VCPKG_ROOT=/opt/vcpkg'
           # Respect your pyproject skip rules; no musllinux or windows anyway
