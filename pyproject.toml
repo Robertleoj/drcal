@@ -40,7 +40,7 @@ drcal-reproject-image = "apps.drcal_reproject_image:main"
 minimum-version = "build-system.requires"
 
 [tool.cibuildwheel]
-skip = ["*musllinux*", "*win*", "pp*"]
+skip = ["*musllinux*", "*win*"]
 
 [dependency-groups]
 dev = ["ruff>=0.13.1"]

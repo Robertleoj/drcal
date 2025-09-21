@@ -1,7 +1,16 @@
 {
     "dependencies": [
-        "freeimage",
-        "suitesparse-cholmod",
-        "lapack"
+        {
+            "name": "freeimage",
+            "default-features": false
+        },
+        {
+            "name": "suitesparse-cholmod",
+            "default-features": false
+        },
+        {
+            "name": "lapack",
+            "default-features": false
+        }
     ]
 }

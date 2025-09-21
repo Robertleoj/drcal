@@ -37,14 +37,12 @@ jobs:
           # Linux specifics
           CIBW_ARCHS_LINUX: 'x86_64'
           CIBW_MANYLINUX_X86_64_IMAGE: manylinux_2_28
-          # Prepare toolchain & deps before build (runs inside manylinux container)
+          # Prepare toolchain
+          # We don't need to install the packages, vcpkg will do it from the vcpkg.json
           CIBW_BEFORE_ALL_LINUX: |
             yum -y install git curl zip tar pkgconfig gcc gcc-c++ make
             git clone https://github.com/microsoft/vcpkg /opt/vcpkg
             /opt/vcpkg/bootstrap-vcpkg.sh -disableMetrics
-            # Install vcpkg ports needed by CMake find_package() calls
-            /opt/vcpkg/vcpkg install --classic --triplet x64-linux freeimage suitesparse-cholmod lapack-reference openblas
-            # /opt/vcpkg/vcpkg install freeimage suitesparse-cholmod lapack-reference openblas
           # Make CMake pick up vcpkg automatically (your CMakeLists checks VCPKG_ROOT)
           CIBW_ENVIRONMENT_LINUX: 'VCPKG_ROOT=/opt/vcpkg'
           # Respect your pyproject skip rules; no musllinux or windows anyway
@@ -80,10 +78,11 @@ jobs:
           CIBW_BUILD: 'cp311-* cp312-* cp313-*'
           CIBW_ARCHS_MACOS: 'x86_64 arm64'
           CIBW_BEFORE_ALL_MACOS: |
-            git clone https://github.com/microsoft/vcpkg /opt/vcpkg
-            /opt/vcpkg/bootstrap-vcpkg.sh -disableMetrics
-            /opt/vcpkg/vcpkg install freeimage suitesparse-cholmod lapack-reference openblas
-          CIBW_ENVIRONMENT_MACOS: 'VCPKG_ROOT=/opt/vcpkg'
+            brew update
+            brew install gcc
+            git clone https://github.com/microsoft/vcpkg "$HOME/vcpkg"
+            "$HOME/vcpkg/bootstrap-vcpkg.sh" -disableMetrics
+          CIBW_ENVIRONMENT_MACOS: 'VCPKG_ROOT=$HOME/vcpkg'
         run: |
           cibuildwheel --output-dir dist
 
@@ -91,7 +90,6 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: dist-macos
-          path: dist
 
   build-sdist:
     name: Build sdist
