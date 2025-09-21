@@ -7,7 +7,7 @@ This is my attempt to make it usable in a sane software stack.
 
 # TODO
 
-- Remove all `numpysane` binding stuff (in `nps_insanity/`)
+- Put the generation of the `numpysane` bindings into the build script
 - Remove all dependency on `numpysane`
 - Convert bindings to `pybind11` or `nanobind`
 - Make the python code pass
