@@ -1,13 +1,3 @@
-#!/usr/bin/python3
-
-# Copyright (c) 2017-2023 California Institute of Technology ("Caltech"). U.S.
-# Government sponsorship acknowledged. All rights reserved.
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-
 """General utility functions used throughout mrcal
 
 All functions are exported into the mrcal module. So you can call these via
@@ -20,7 +10,39 @@ import numpysane as nps
 import sys
 import re
 
-import mrcal
+from .bindings import (
+    knots_for_splined_models,
+    lensmodel_metadata_and_config,
+    lensmodel_num_params,
+    measurement_index_boards,
+    measurement_index_points,
+    measurement_index_regularization,
+    num_measurements_boards,
+    num_measurements_points,
+    num_states_calobject_warp,
+    num_states_extrinsics,
+    num_states_frames,
+    num_states_intrinsics,
+    num_states_points,
+    optimizer_callback,
+    state_index_calobject_warp,
+    state_index_extrinsics,
+    state_index_frames,
+    state_index_intrinsics,
+    state_index_points,
+    unpack_state,
+)
+from .poseutils import Rt_from_rt, compose_Rt, transform_point_Rt
+from .projections import unproject
+from .synthetic_data import ref_calibration_object
+
+from .bindings_poseutils_npsp import (
+    _align_procrustes_points_Rt01_noweights,
+    _align_procrustes_points_Rt01_weights,
+    _align_procrustes_vectors_R01_noweights,
+    _align_procrustes_vectors_R01_weights,
+    identity_Rt,
+)
 
 
 def _align_procrustes_points_Rt01_python(p0, p1, weights=None):
@@ -212,11 +234,9 @@ def align_procrustes_points_Rt01(p0, p1, weights=None):
         return _align_procrustes_points_Rt01_python(p0, p1, weights=weights)
 
     if weights is None:
-        return mrcal._poseutils_npsp._align_procrustes_points_Rt01_noweights(p0, p1)
+        return _align_procrustes_points_Rt01_noweights(p0, p1)
     else:
-        return mrcal._poseutils_npsp._align_procrustes_points_Rt01_weights(
-            p0, p1, weights
-        )
+        return _align_procrustes_points_Rt01_weights(p0, p1, weights)
 
 
 def align_procrustes_vectors_R01(v0, v1, weights=None):
@@ -288,11 +308,9 @@ def align_procrustes_vectors_R01(v0, v1, weights=None):
         return _align_procrustes_vectors_R01_python(v0, v1, weights=weights)
 
     if weights is None:
-        return mrcal._poseutils_npsp._align_procrustes_vectors_R01_noweights(v0, v1)
+        return _align_procrustes_vectors_R01_noweights(v0, v1)
     else:
-        return mrcal._poseutils_npsp._align_procrustes_vectors_R01_weights(
-            v0, v1, weights
-        )
+        return _align_procrustes_vectors_R01_weights(v0, v1, weights)
 
 
 def sample_imager(gridn_width, gridn_height, imager_width, imager_height):
@@ -457,7 +475,7 @@ We return a tuple:
         # shape: Ncameras,Nwidth,Nheight,3
         return np.array(
             [
-                mrcal.unproject(
+                unproject(
                     np.ascontiguousarray(grid),
                     lensmodel[i],
                     intrinsics_data[i],
@@ -468,7 +486,7 @@ We return a tuple:
         ), grid
     else:
         # shape: Nheight,Nwidth,3
-        return mrcal.unproject(
+        return unproject(
             np.ascontiguousarray(grid), lensmodel, intrinsics_data, normalize=normalize
         ), grid
 
@@ -574,23 +592,21 @@ RETURNED VALUE
     object_spacing = optimization_inputs["calibration_object_spacing"]
     calobject_warp = optimization_inputs.get("calobject_warp")
     # shape (Nh,Nw,3)
-    full_object = mrcal.ref_calibration_object(
+    full_object = ref_calibration_object(
         object_width_n, object_height_n, object_spacing, calobject_warp=calobject_warp
     )
-    frames_Rt_toref = mrcal.Rt_from_rt(optimization_inputs["frames_rt_toref"])[
+    frames_Rt_toref = Rt_from_rt(optimization_inputs["frames_rt_toref"])[
         indices_frame_camintrinsics_camextrinsics[:, 0]
     ]
     extrinsics_Rt_fromref = nps.glue(
-        mrcal.identity_Rt(),
-        mrcal.Rt_from_rt(optimization_inputs["extrinsics_rt_fromref"]),
+        identity_Rt(),
+        Rt_from_rt(optimization_inputs["extrinsics_rt_fromref"]),
         axis=-3,
     )[indices_frame_camintrinsics_camextrinsics[:, 2] + 1]
 
-    Rt_cam_frame = mrcal.compose_Rt(extrinsics_Rt_fromref, frames_Rt_toref)
+    Rt_cam_frame = compose_Rt(extrinsics_Rt_fromref, frames_Rt_toref)
 
-    p_cam_calobjects = mrcal.transform_point_Rt(
-        nps.mv(Rt_cam_frame, -3, -5), full_object
-    )
+    p_cam_calobjects = transform_point_Rt(nps.mv(Rt_cam_frame, -3, -5), full_object)
 
     # shape (Nobservations,Nheight,Nwidth)
     if idx_inliers is None:
@@ -652,11 +668,11 @@ def _splined_stereographic_domain(lensmodel):
             f"This only makes sense with splined models. Input uses {lensmodel}"
         )
 
-    ux, uy = mrcal.knots_for_splined_models(lensmodel)
+    ux, uy = knots_for_splined_models(lensmodel)
     # shape (Ny,Nx,2)
     u = np.ascontiguousarray(nps.mv(nps.cat(*np.meshgrid(ux, uy)), 0, -1))
 
-    meta = mrcal.lensmodel_metadata_and_config(lensmodel)
+    meta = lensmodel_metadata_and_config(lensmodel)
     if meta["order"] == 2:
         # spline order is 3. The valid region is 1/2 segments inwards from the
         # outer contour
@@ -1085,27 +1101,27 @@ def plotoptions_state_boundaries(**optimization_inputs):
     return (
         list(
             _plot_options_state_meas_boundary(
-                mrcal.state_index_intrinsics, optimization_inputs, 0
+                state_index_intrinsics, optimization_inputs, 0
             )
         )
         + list(
             _plot_options_state_meas_boundary(
-                mrcal.state_index_extrinsics, optimization_inputs, 0
+                state_index_extrinsics, optimization_inputs, 0
             )
         )
         + list(
             _plot_options_state_meas_boundary(
-                mrcal.state_index_frames, optimization_inputs, 0
+                state_index_frames, optimization_inputs, 0
             )
         )
         + list(
             _plot_options_state_meas_boundary(
-                mrcal.state_index_points, optimization_inputs, 0
+                state_index_points, optimization_inputs, 0
             )
         )
         + list(
             _plot_options_state_meas_boundary(
-                mrcal.state_index_calobject_warp, optimization_inputs, None
+                state_index_calobject_warp, optimization_inputs, None
             )
         )
     )
@@ -1151,17 +1167,17 @@ def plotoptions_measurement_boundaries(**optimization_inputs):
     return (
         list(
             _plot_options_state_meas_boundary(
-                mrcal.measurement_index_boards, optimization_inputs, 0
+                measurement_index_boards, optimization_inputs, 0
             )
         )
         + list(
             _plot_options_state_meas_boundary(
-                mrcal.measurement_index_points, optimization_inputs, 0
+                measurement_index_points, optimization_inputs, 0
             )
         )
         + list(
             _plot_options_state_meas_boundary(
-                mrcal.measurement_index_regularization, optimization_inputs, None
+                measurement_index_regularization, optimization_inputs, None
             )
         )
     )
@@ -1221,11 +1237,11 @@ def ingest_packed_state(b_packed, **optimization_inputs):
 
     Npoints_fixed = optimization_inputs.get("Npoints_fixed", 0)
 
-    Nvars_intrinsics = mrcal.num_states_intrinsics(**optimization_inputs)
-    Nvars_extrinsics = mrcal.num_states_extrinsics(**optimization_inputs)
-    Nvars_frames = mrcal.num_states_frames(**optimization_inputs)
-    Nvars_points = mrcal.num_states_points(**optimization_inputs)
-    Nvars_calobject_warp = mrcal.num_states_calobject_warp(**optimization_inputs)
+    Nvars_intrinsics = num_states_intrinsics(**optimization_inputs)
+    Nvars_extrinsics = num_states_extrinsics(**optimization_inputs)
+    Nvars_frames = num_states_frames(**optimization_inputs)
+    Nvars_points = num_states_points(**optimization_inputs)
+    Nvars_calobject_warp = num_states_calobject_warp(**optimization_inputs)
 
     Nvars_expected = (
         Nvars_intrinsics
@@ -1256,17 +1272,17 @@ def ingest_packed_state(b_packed, **optimization_inputs):
         )
 
     b = b_packed.copy()
-    mrcal.unpack_state(b, **optimization_inputs)
+    unpack_state(b, **optimization_inputs)
 
     if do_optimize_intrinsics_core or do_optimize_intrinsics_distortions:
-        ivar0 = mrcal.state_index_intrinsics(0, **optimization_inputs)
+        ivar0 = state_index_intrinsics(0, **optimization_inputs)
         if ivar0 is not None:
             iunpacked0, iunpacked1 = None, None  # everything by default
 
             lensmodel = optimization_inputs["lensmodel"]
-            has_core = mrcal.lensmodel_metadata_and_config(lensmodel)["has_core"]
+            has_core = lensmodel_metadata_and_config(lensmodel)["has_core"]
             Ncore = 4 if has_core else 0
-            Ndistortions = mrcal.lensmodel_num_params(lensmodel) - Ncore
+            Ndistortions = lensmodel_num_params(lensmodel) - Ncore
 
             if not do_optimize_intrinsics_core:
                 iunpacked0 = Ncore
@@ -1276,22 +1292,22 @@ def ingest_packed_state(b_packed, **optimization_inputs):
             intrinsics[:, iunpacked0:iunpacked1].ravel()[:] = b[ivar0:Nvars_intrinsics]
 
     if do_optimize_extrinsics:
-        ivar0 = mrcal.state_index_extrinsics(0, **optimization_inputs)
+        ivar0 = state_index_extrinsics(0, **optimization_inputs)
         if ivar0 is not None:
             extrinsics.ravel()[:] = b[ivar0 : ivar0 + Nvars_extrinsics]
 
     if do_optimize_frames:
-        ivar0 = mrcal.state_index_frames(0, **optimization_inputs)
+        ivar0 = state_index_frames(0, **optimization_inputs)
         if ivar0 is not None:
             frames.ravel()[:] = b[ivar0 : ivar0 + Nvars_frames]
 
     if do_optimize_frames:
-        ivar0 = mrcal.state_index_points(0, **optimization_inputs)
+        ivar0 = state_index_points(0, **optimization_inputs)
         if ivar0 is not None:
             points.ravel()[: -Npoints_fixed * 3] = b[ivar0 : ivar0 + Nvars_points]
 
     if do_optimize_calobject_warp:
-        ivar0 = mrcal.state_index_calobject_warp(**optimization_inputs)
+        ivar0 = state_index_calobject_warp(**optimization_inputs)
         if ivar0 is not None:
             calobject_warp.ravel()[:] = b[ivar0 : ivar0 + Nvars_calobject_warp]
 
@@ -1344,7 +1360,7 @@ def _plot_arg_covariance_ellipse(q_mean, Var, what):
     if np.max(np.abs(Var)) == 0:
         return None
 
-    l, v = mrcal.sorted_eig(Var)
+    l, v = sorted_eig(Var)
     l0, l1 = l
     v0, v1 = nps.transpose(v)
 
@@ -1460,15 +1476,15 @@ def measurements_board(
     if x is None:
         # Flattened measurements. This is ALL the measurements: chessboard,
         # point, regularization...
-        x = mrcal.optimizer_callback(
+        x = optimizer_callback(
             **optimization_inputs, no_jacobian=True, no_factorization=True
         )[1]
 
     measurements_shape = observations_board.shape[:-1] + (2,)
 
     # shape (Nobservations, object_height_n, object_width_n, 2)
-    imeas0 = mrcal.measurement_index_boards(0, **optimization_inputs)
-    Nmeas = mrcal.num_measurements_boards(**optimization_inputs)
+    imeas0 = measurement_index_boards(0, **optimization_inputs)
+    Nmeas = num_measurements_boards(**optimization_inputs)
     x_board = x[imeas0 : imeas0 + Nmeas].reshape(*measurements_shape)
 
     # shape (Nobservations, object_height_n, object_width_n, 3)
@@ -1585,14 +1601,14 @@ def measurements_point(
     if x is None:
         # Flattened measurements. This is ALL the measurements: chessboard,
         # point, regularization...
-        x = mrcal.optimizer_callback(
+        x = optimizer_callback(
             **optimization_inputs, no_jacobian=True, no_factorization=True
         )[1]
 
     Nobservations = len(observations_point)
 
-    imeas0 = mrcal.measurement_index_points(0, **optimization_inputs)
-    Nmeas = mrcal.num_measurements_points(**optimization_inputs)
+    imeas0 = measurement_index_points(0, **optimization_inputs)
+    Nmeas = num_measurements_points(**optimization_inputs)
 
     # shape (Nobservations, 2); each observation row is (err_x, err_y)
     x_point = x[imeas0 : imeas0 + Nmeas].reshape(Nobservations, 2)
