@@ -1,13 +1,3 @@
-#!/usr/bin/python3
-
-# Copyright (c) 2017-2023 California Institute of Technology ("Caltech"). U.S.
-# Government sponsorship acknowledged. All rights reserved.
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-
 """Routines useful in generation and processing of synthetic data
 
 These are very useful in analyzing the behavior or cameras and lenses.
@@ -19,7 +9,21 @@ mrcal.synthetic_data.fff() or mrcal.fff(). The latter is preferred.
 
 import numpy as np
 import numpysane as nps
-import mrcal
+
+from .bindings import optimizer_callback
+from .utils import hypothesis_board_corner_positions
+
+from .poseutils import (
+    Rt_from_rt,
+    compose_Rt,
+    invert_Rt,
+    rotate_point_R,
+    transform_point_Rt,
+)
+from .projections import project, unproject
+from .model_analysis import _observed_pixel_uncertainty_from_inputs
+
+from .bindings_poseutils_npsp import identity_Rt
 
 
 def ref_calibration_object(
@@ -445,7 +449,7 @@ We return a tuple:
 
     # shape: (Nh,Nw,3)
     board_reference = (
-        mrcal.ref_calibration_object(
+        ref_calibration_object(
             object_width_n,
             object_height_n,
             object_spacing,
@@ -457,7 +461,7 @@ We return a tuple:
     # Transformation from the board returned by ref_calibration_object() to
     # the one I use here. It's a shift to move the origin to the center of the
     # board
-    Rt_boardref_origboardref = mrcal.identity_Rt()
+    Rt_boardref_origboardref = identity_Rt()
     Rt_boardref_origboardref[3, :] = -board_center
 
     if max_oblique_angle_deg is not None:
@@ -477,12 +481,12 @@ We return a tuple:
         randomblock = np.random.uniform(low=-1.0, high=1.0, size=(Nframes, 6))
 
         # shape(Nframes,4,3)
-        Rt_ref_boardref = mrcal.Rt_from_rt(
+        Rt_ref_boardref = Rt_from_rt(
             rt_ref_boardcenter + randomblock * rt_ref_boardcenter__noiseradius
         )
 
         # shape = (Nframes, Nh,Nw,3)
-        boards_ref = mrcal.transform_point_Rt(  # shape (Nframes, 1,1,4,3)
+        boards_ref = transform_point_Rt(  # shape (Nframes, 1,1,4,3)
             nps.mv(Rt_ref_boardref, 0, -5),
             # shape ( Nh,Nw,3)
             board_reference,
@@ -492,8 +496,8 @@ We return a tuple:
         q = nps.mv(
             nps.cat(
                 *[
-                    mrcal.project(
-                        mrcal.transform_point_Rt(
+                    project(
+                        transform_point_Rt(
                             models[i].extrinsics_Rt_fromref(), boards_ref
                         ),
                         *models[i].intrinsics(),
@@ -572,7 +576,7 @@ We return a tuple:
             Rt_ref_boardref = Rt_ref_boardref[:Nframes, ...]
             break
 
-    return q, mrcal.compose_Rt(Rt_ref_boardref, Rt_boardref_origboardref)
+    return q, compose_Rt(Rt_ref_boardref, Rt_boardref_origboardref)
 
 
 def _noisy_observation_vectors_for_triangulation(
@@ -581,8 +585,8 @@ def _noisy_observation_vectors_for_triangulation(
     # p has shape (...,3)
 
     # shape (..., 2)
-    q0 = mrcal.project(p, *intrinsics0)
-    q1 = mrcal.project(mrcal.transform_point_Rt(mrcal.invert_Rt(Rt01), p), *intrinsics1)
+    q0 = project(p, *intrinsics0)
+    q1 = project(transform_point_Rt(invert_Rt(Rt01), p), *intrinsics1)
 
     # shape (..., 1,2). Each has x,y
     q0 = nps.dummy(q0, -2)
@@ -597,10 +601,10 @@ def _noisy_observation_vectors_for_triangulation(
     q1_noisy = q1 + q1_noise
 
     # shape (..., Nsamples, 3)
-    v0local_noisy = mrcal.unproject(q0_noisy, *intrinsics0)
-    v1local_noisy = mrcal.unproject(q1_noisy, *intrinsics1)
+    v0local_noisy = unproject(q0_noisy, *intrinsics0)
+    v1local_noisy = unproject(q1_noisy, *intrinsics1)
     v0_noisy = v0local_noisy
-    v1_noisy = mrcal.rotate_point_R(Rt01[:3, :], v1local_noisy)
+    v1_noisy = rotate_point_R(Rt01[:3, :], v1local_noisy)
 
     # All have shape (..., Nsamples,3)
     return v0local_noisy, v1local_noisy, v0_noisy, v1_noisy, q0, q1, q0_noisy, q1_noisy
@@ -665,17 +669,13 @@ def make_perfect_observations(optimization_inputs, *, observed_pixel_uncertainty
 
     """
 
-    import mrcal.model_analysis
-
-    x = mrcal.optimizer_callback(
+    x = optimizer_callback(
         **optimization_inputs, no_jacobian=True, no_factorization=True
     )[1]
 
     if observed_pixel_uncertainty is None:
-        observed_pixel_uncertainty = (
-            mrcal.model_analysis._observed_pixel_uncertainty_from_inputs(
-                optimization_inputs, x=x
-            )
+        observed_pixel_uncertainty = _observed_pixel_uncertainty_from_inputs(
+            optimization_inputs, x=x
         )
 
     if (
@@ -684,13 +684,13 @@ def make_perfect_observations(optimization_inputs, *, observed_pixel_uncertainty
         and optimization_inputs["indices_frame_camintrinsics_camextrinsics"].size
     ):
         # shape (Nobservations, Nheight, Nwidth, 3)
-        pcam = mrcal.hypothesis_board_corner_positions(**optimization_inputs)[0]
+        pcam = hypothesis_board_corner_positions(**optimization_inputs)[0]
         i_intrinsics = optimization_inputs["indices_frame_camintrinsics_camextrinsics"][
             :, 1
         ]
         # shape (Nobservations,1,1,Nintrinsics)
         intrinsics = nps.mv(optimization_inputs["intrinsics"][i_intrinsics], -2, -4)
-        optimization_inputs["observations_board"][..., :2] = mrcal.project(
+        optimization_inputs["observations_board"][..., :2] = project(
             pcam, optimization_inputs["lensmodel"], intrinsics
         )
 
@@ -710,47 +710,21 @@ def make_perfect_observations(optimization_inputs, *, observed_pixel_uncertainty
 
         # shape (Nobservations,4,3)
         Rt_cam_ref = nps.glue(
-            mrcal.identity_Rt(),
-            mrcal.Rt_from_rt(optimization_inputs["extrinsics_rt_fromref"]),
+            identity_Rt(),
+            Rt_from_rt(optimization_inputs["extrinsics_rt_fromref"]),
             axis=-3,
         )[indices_point_camintrinsics_camextrinsics[:, 2] + 1]
 
         # shape (Nobservations,3)
-        pcam = mrcal.transform_point_Rt(Rt_cam_ref, pref)
+        pcam = transform_point_Rt(Rt_cam_ref, pref)
 
         # shape (Nobservations,Nintrinsics)
         intrinsics = optimization_inputs["intrinsics"][
             indices_point_camintrinsics_camextrinsics[:, 1]
         ]
-        optimization_inputs["observations_point"][..., :2] = mrcal.project(
+        optimization_inputs["observations_point"][..., :2] = project(
             pcam, optimization_inputs["lensmodel"], intrinsics
         )
-
-    ########### The perfect observations have been written. Make sure we get
-    ########### perfect residuals
-    # I don't actually do that here, and rely on the tests to make sure it works properly
-    if False:
-        x = mrcal.optimizer_callback(
-            **optimization_inputs, no_jacobian=True, no_factorization=True
-        )[1]
-
-        Nmeas = mrcal.num_measurements_boards(**optimization_inputs)
-        if Nmeas > 0:
-            i_meas0 = mrcal.measurement_index_boards(0, **optimization_inputs)
-            err = nps.norm2(x[i_meas0 : i_meas0 + Nmeas])
-            if err > 1e-16:
-                raise Exception(
-                    "Perfect observations produced nonzero error for boards. This is a bug"
-                )
-
-        Nmeas = mrcal.num_measurements_points(**optimization_inputs)
-        if Nmeas > 0:
-            i_meas0 = mrcal.measurement_index_points(0, **optimization_inputs)
-            err = nps.norm2(x[i_meas0 : i_meas0 + Nmeas])
-            if err > 1e-16:
-                raise Exception(
-                    "Perfect observations produced nonzero error for points. This is a bug"
-                )
 
     ########### I have perfect data. Now add perfect noise
     if observed_pixel_uncertainty == 0:
