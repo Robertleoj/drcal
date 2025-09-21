@@ -1,13 +1,3 @@
-#!/usr/bin/python3
-
-# Copyright (c) 2017-2023 California Institute of Technology ("Caltech"). U.S.
-# Government sponsorship acknowledged. All rights reserved.
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-
 """Routines for analysis of camera projection
 
 This is largely dealing with uncertainty and projection diff operations.
@@ -20,8 +10,46 @@ mrcal.model_analysis.fff() or mrcal.fff(). The latter is preferred.
 import numpy as np
 import numpysane as nps
 import sys
+from shapely.geometry import Polygon, Point
 import re
-import mrcal
+
+from .bindings_poseutils_npsp import identity_Rt, identity_rt, skew_symmetric
+from .projections import project, unproject
+
+from .bindings import (
+    drt_ref_refperturbed__dbpacked,
+    lensmodel_metadata_and_config,
+    measurement_index_regularization,
+    num_intrinsics_optimization_params,
+    num_measurements,
+    num_measurements_boards,
+    num_measurements_points,
+    num_measurements_regularization,
+    num_states,
+    optimizer_callback,
+    pack_state,
+    state_index_extrinsics,
+    state_index_frames,
+    state_index_intrinsics,
+    unpack_state,
+)
+from .utils import (
+    measurements_board,
+    measurements_point,
+    sample_imager,
+    sample_imager_unproject,
+)
+from .bindings_npsp import _A_Jt_J_At__2, _A_Jt_J_At
+
+from .poseutils import (
+    R_from_r,
+    Rt_from_rt,
+    compose_Rt,
+    invert_rt,
+    transform_point_Rt,
+    transform_point_rt,
+    rotate_point_r,
+)
 
 
 def implied_Rt10__from_unprojections(
@@ -223,7 +251,7 @@ report a full Rt transformation with the t component set to 0
     def residual_jacobian_rt(rt):
         # rtp0      has shape (M,N,3)
         # drtp0_drt has shape (M,N,3,6)
-        rtp0, drtp0_drt, _ = mrcal.transform_point_rt(rt, p0_cut, get_gradients=True)
+        rtp0, drtp0_drt, _ = transform_point_rt(rt, p0_cut, get_gradients=True)
 
         # inner(a,b)/(mag(a)*mag(b)) = cos(x) ~ 1 - x^2/2
         # Each of these has shape (M,N,)
@@ -261,7 +289,7 @@ report a full Rt transformation with the t component set to 0
     def residual_jacobian_r(r):
         # rp0     has shape (M,N,3)
         # drp0_dr has shape (M,N,3,3)
-        rp0, drp0_dr, _ = mrcal.rotate_point_r(r, p0_cut, get_gradients=True)
+        rp0, drp0_dr, _ = rotate_point_r(r, p0_cut, get_gradients=True)
 
         # inner(a,b)/(mag(a)*mag(b)) ~ cos(x) ~ 1 - x^2/2
         # Each of these has shape (M,N)
@@ -358,7 +386,7 @@ report a full Rt transformation with the t component set to 0
             verbose=0,
         )
         Rt = np.zeros((4, 3), dtype=float)
-        Rt[:3, :] = mrcal.R_from_r(res.x)
+        Rt[:3, :] = R_from_r(res.x)
         return Rt
 
     else:
@@ -387,7 +415,7 @@ report a full Rt transformation with the t component set to 0
             # low that it's effectively disabled
             gtol=np.finfo(float).eps,
         )
-        return mrcal.Rt_from_rt(res.x)
+        return Rt_from_rt(res.x)
 
 
 def worst_direction_stdev(cov):
@@ -493,7 +521,7 @@ def worst_direction_stdev(cov):
 
 def _observed_pixel_uncertainty_from_inputs(optimization_inputs, x=None):
     if x is None:
-        x = mrcal.optimizer_callback(
+        x = optimizer_callback(
             **optimization_inputs, no_jacobian=True, no_factorization=True
         )[1]
 
@@ -501,12 +529,12 @@ def _observed_pixel_uncertainty_from_inputs(optimization_inputs, x=None):
     Nobservations = 0
 
     # shape (Nobservations*2)
-    measurements = mrcal.measurements_board(optimization_inputs, x=x).ravel()
+    measurements = measurements_board(optimization_inputs, x=x).ravel()
     if measurements.size:
         sum_of_squares_measurements += np.var(measurements) * measurements.size
         Nobservations += measurements.size
 
-    measurements = mrcal.measurements_point(optimization_inputs, x=x).ravel()
+    measurements = measurements_point(optimization_inputs, x=x).ravel()
     if measurements.size:
         sum_of_squares_measurements += np.var(measurements) * measurements.size
         Nobservations += measurements.size
@@ -660,7 +688,7 @@ In the regularized case:
         # Make dF_db use the packed state. I call "unpack_state" because the
         # state is in the denominator
         dF_dbpacked = np.array(dF_dbunpacked)  # make a copy
-        mrcal.unpack_state(dF_dbpacked, **optimization_inputs)
+        unpack_state(dF_dbpacked, **optimization_inputs)
 
     if (
         x is None
@@ -675,22 +703,20 @@ In the regularized case:
             )
 
     if factorization is None or Jpacked is None or x is None:
-        _, x, Jpacked, factorization = mrcal.optimizer_callback(**optimization_inputs)
+        _, x, Jpacked, factorization = optimizer_callback(**optimization_inputs)
         if factorization is None:
             raise Exception(
                 "Cannot compute the uncertainty: factorization computation failed"
             )
 
     if Nmeasurements_observations_leading is None:
-        Nmeasurements_boards = mrcal.num_measurements_boards(**optimization_inputs)
-        Nmeasurements_points = mrcal.num_measurements_points(**optimization_inputs)
-        Nmeasurements_regularization = mrcal.num_measurements_regularization(
+        Nmeasurements_boards = num_measurements_boards(**optimization_inputs)
+        Nmeasurements_points = num_measurements_points(**optimization_inputs)
+        Nmeasurements_regularization = num_measurements_regularization(
             **optimization_inputs
         )
-        Nmeasurements_all = mrcal.num_measurements(**optimization_inputs)
-        imeas_regularization = mrcal.measurement_index_regularization(
-            **optimization_inputs
-        )
+        Nmeasurements_all = num_measurements(**optimization_inputs)
+        imeas_regularization = measurement_index_regularization(**optimization_inputs)
         if (
             Nmeasurements_boards + Nmeasurements_points + Nmeasurements_regularization
             != Nmeasurements_all
@@ -740,9 +766,9 @@ In the regularized case:
             # so I have my own routine in C. AND the C routine does the outer
             # product, so there's no big temporary expression. It's much faster
             if A.ndim >= 2 and A.shape[-2] == 2:
-                f = mrcal._mrcal_npsp._A_Jt_J_At__2
+                f = _A_Jt_J_At__2
             else:
-                f = mrcal._mrcal_npsp._A_Jt_J_At
+                f = _A_Jt_J_At
             return f(
                 A,
                 Jpacked.indptr,
@@ -918,7 +944,7 @@ def _dq_db__Kunpacked_rrp(  ## write output here
     #    0 = dpref*/dt + I
     # -> dpref*/dr = skew(pref)
     #    dpref*/dt = -I
-    dprefp__dr_ref_refp = mrcal.skew_symmetric(p_ref)
+    dprefp__dr_ref_refp = skew_symmetric(p_ref)
 
     # I don't explicitly store dpref*/dt. I multiply by I implicitly
 
@@ -1043,17 +1069,15 @@ def _dq_db__projection_uncertainty(  # shape (...,3)
 
     # shape (..., Ncameras_extrinsics, 3)
     if not atinfinity:
-        p_ref = mrcal.transform_point_rt(
-            mrcal.invert_rt(extrinsics_rt_fromref), nps.dummy(p_cam, -2)
+        p_ref = transform_point_rt(
+            invert_rt(extrinsics_rt_fromref), nps.dummy(p_cam, -2)
         )
     else:
-        p_ref = mrcal.rotate_point_r(
-            -extrinsics_rt_fromref[..., :3], nps.dummy(p_cam, -2)
-        )
+        p_ref = rotate_point_r(-extrinsics_rt_fromref[..., :3], nps.dummy(p_cam, -2))
 
     # shape (..., 2,3)
     # shape (..., 2,Nintrinsics)
-    _, dq_dpcam, dq_dintrinsics = mrcal.project(
+    _, dq_dpcam, dq_dintrinsics = project(
         p_cam, lensmodel, intrinsics_data, get_gradients=True
     )
 
@@ -1081,13 +1105,13 @@ def _dq_db__projection_uncertainty(  # shape (...,3)
     if not atinfinity:
         # shape (..., Ncameras_extrinsics,3,6)
         # shape (..., Ncameras_extrinsics,3,3)
-        _, dpcam_drt, dpcam_dpref = mrcal.transform_point_rt(
+        _, dpcam_drt, dpcam_dpref = transform_point_rt(
             extrinsics_rt_fromref, p_ref, get_gradients=True
         )
     else:
         # shape (..., Ncameras_extrinsics,3,3)
         # shape (..., Ncameras_extrinsics,3,3)
-        _, dpcam_dr, dpcam_dpref = mrcal.rotate_point_r(
+        _, dpcam_dr, dpcam_dpref = rotate_point_r(
             extrinsics_rt_fromref[..., :3], p_ref, get_gradients=True
         )
 
@@ -1202,8 +1226,8 @@ def _dq_db__projection_uncertainty(  # shape (...,3)
             if not atinfinity:
                 # shape (Nframes,Ncameras_extrinsics,3)
                 p_frames = (
-                    mrcal.transform_point_rt(  # shape (Nframes,Ncameras_extrinsics=1,6)
-                        nps.dummy(mrcal.invert_rt(frames_rt_toref), -2),
+                    transform_point_rt(  # shape (Nframes,Ncameras_extrinsics=1,6)
+                        nps.dummy(invert_rt(frames_rt_toref), -2),
                         # shape (..., Nframes=1, Ncameras_extrinsics, 3)
                         nps.dummy(p_ref, -3),
                     )
@@ -1211,14 +1235,14 @@ def _dq_db__projection_uncertainty(  # shape (...,3)
 
                 # shape (...,Nframes,Ncameras_extrinsics,3,6)
                 _, dpref_dframes, _ = (
-                    mrcal.transform_point_rt(  # shape (Nframes,Ncameras_extrinsics=1,6)
+                    transform_point_rt(  # shape (Nframes,Ncameras_extrinsics=1,6)
                         nps.dummy(frames_rt_toref, -2), p_frames, get_gradients=True
                     )
                 )
 
             else:
                 # shape (Nframes,Ncameras_extrinsics,3)
-                p_frames = mrcal.rotate_point_r(  # shape (Nframes,Ncameras_extrinsics=1,6)
+                p_frames = rotate_point_r(  # shape (Nframes,Ncameras_extrinsics=1,6)
                     nps.dummy(-frames_rt_toref[..., :3], -2),
                     # shape (..., Nframes=1, Ncameras_extrinsics, 3)
                     nps.dummy(p_ref, -3),
@@ -1226,7 +1250,7 @@ def _dq_db__projection_uncertainty(  # shape (...,3)
 
                 # shape (...,Nframes,Ncameras_extrinsics,3,6)
                 _, dpref_dframes, _ = (
-                    mrcal.rotate_point_r(  # shape (Nframes,Ncameras_extrinsics=1,3)
+                    rotate_point_r(  # shape (Nframes,Ncameras_extrinsics=1,3)
                         nps.dummy(frames_rt_toref[..., :3], -2),
                         p_frames,
                         get_gradients=True,
@@ -1455,12 +1479,12 @@ def projection_uncertainty(
     # The istate_... variables are None if the particular quantity isn't up for
     # optimization (it is fixed)
     frames_rt_toref = get_input("frames_rt_toref")
-    istate_frames0 = mrcal.state_index_frames(0, **optimization_inputs)
+    istate_frames0 = state_index_frames(0, **optimization_inputs)
 
     if method == "cross-reprojection-rrp-Jfp":
-        Kunpacked_rrp = mrcal.drt_ref_refperturbed__dbpacked(**optimization_inputs)
+        Kunpacked_rrp = drt_ref_refperturbed__dbpacked(**optimization_inputs)
         # The value was packed in the denominator. So I call pack() to unpack it
-        mrcal.pack_state(Kunpacked_rrp, **optimization_inputs)
+        pack_state(Kunpacked_rrp, **optimization_inputs)
     else:
         Kunpacked_rrp = None
         if (
@@ -1502,7 +1526,7 @@ def projection_uncertainty(
     if icam_extrinsics[0] < 0:
         if icam_extrinsics.size == 1:
             # Stationary camera, at the reference
-            extrinsics_rt_fromref = mrcal.identity_rt()
+            extrinsics_rt_fromref = identity_rt()
             istate_extrinsics0 = None
         else:
             # Moving camera. One of the poses is at the reference. This requires
@@ -1516,7 +1540,7 @@ def projection_uncertainty(
         # icam_intrinsics). And I know they're a contiguous block in my
         # optimization vector starting with istate_extrinsics0
         extrinsics_rt_fromref = get_input("extrinsics_rt_fromref")[icam_extrinsics, :]
-        istate_extrinsics0 = mrcal.state_index_extrinsics(
+        istate_extrinsics0 = state_index_extrinsics(
             icam_extrinsics[0], **optimization_inputs
         )
 
@@ -1529,19 +1553,17 @@ def projection_uncertainty(
 
     lensmodel = optimization_inputs["lensmodel"]
     intrinsics_data = optimization_inputs["intrinsics"][icam_intrinsics]
-    istate_intrinsics0 = mrcal.state_index_intrinsics(
-        icam_intrinsics, **optimization_inputs
-    )
-    Nstates_intrinsics = mrcal.num_intrinsics_optimization_params(**optimization_inputs)
+    istate_intrinsics0 = state_index_intrinsics(icam_intrinsics, **optimization_inputs)
+    Nstates_intrinsics = num_intrinsics_optimization_params(**optimization_inputs)
     if (
         not optimization_inputs.get("do_optimize_intrinsics_core")
-        and mrcal.lensmodel_metadata_and_config(lensmodel)["has_core"]
+        and lensmodel_metadata_and_config(lensmodel)["has_core"]
     ):
         istate_intrinsics0_onecam = 4
     else:
         istate_intrinsics0_onecam = 0
 
-    Nstate = mrcal.num_states(**optimization_inputs)
+    Nstate = num_states(**optimization_inputs)
 
     # if method == 'bestq', this has shape (..., Ngeometry, 2, Nstate)
     # else:                                (...,            2, Nstate)
@@ -1819,7 +1841,7 @@ def projection_diff(
     intrinsics_data = [model.intrinsics()[1] for model in models]
 
     for i in range(len(models)):
-        if mrcal.lensmodel_metadata_and_config(lensmodels[i])["noncentral"] and not (
+        if lensmodel_metadata_and_config(lensmodels[i])["noncentral"] and not (
             re.match("LENSMODEL_CAHVORE_", models[i].intrinsics()[0])
             and nps.norm2(models[i].intrinsics()[1][-3:]) < 1e-12
         ):
@@ -1843,7 +1865,7 @@ def projection_diff(
 
     # v  shape (Ncameras,Nheight,Nwidth,3)
     # q0 shape (         Nheight,Nwidth,2)
-    v, q0 = mrcal.sample_imager_unproject(
+    v, q0 = sample_imager_unproject(
         gridn_width, gridn_height, W, H, lensmodels, intrinsics_data, normalize=True
     )
 
@@ -1857,7 +1879,7 @@ def projection_diff(
         try:
             # len(uncertainties) = Ncameras. Each has shape (len(distance),Nh,Nw)
             uncertainties = [
-                mrcal.projection_uncertainty(  # shape (len(distance),Nheight,Nwidth,3)
+                projection_uncertainty(  # shape (len(distance),Nheight,Nwidth,3)
                     v[i] * distance,
                     models[i],
                     atinfinity=atinfinity,
@@ -1887,10 +1909,10 @@ def projection_diff(
 
         else:
             if intrinsics_only:
-                Rt10 = mrcal.identity_Rt()
+                Rt10 = identity_Rt()
             else:
                 if focus_radius == 0:
-                    Rt10 = mrcal.compose_Rt(
+                    Rt10 = compose_Rt(
                         models[1].extrinsics_Rt_fromref(),
                         models[0].extrinsics_Rt_toref(),
                     )
@@ -1922,8 +1944,8 @@ def projection_diff(
                         focus_radius=focus_radius,
                     )
 
-        q1 = mrcal.project(
-            mrcal.transform_point_Rt(
+        q1 = project(
+            transform_point_Rt(
                 Rt10,
                 # shape (len(distance),Nheight,Nwidth,3)
                 v[0, ...] * distance,
@@ -1941,10 +1963,10 @@ def projection_diff(
         # Many models. Look at the stdev
         def get_Rt10(i0, i1):
             if intrinsics_only:
-                return mrcal.identity_Rt()
+                return identity_Rt()
 
             if focus_radius == 0:
-                return mrcal.compose_Rt(
+                return compose_Rt(
                     models[i1].extrinsics_Rt_fromref(), models[i0].extrinsics_Rt_toref()
                 )
 
@@ -1976,8 +1998,8 @@ def projection_diff(
             )
 
         def get_reprojections(q0, Rt10, lensmodel, intrinsics_data):
-            q1 = mrcal.project(
-                mrcal.transform_point_Rt(
+            q1 = project(
+                transform_point_Rt(
                     Rt10,
                     # shape (len(distance),Nheight,Nwidth,3)
                     v[0, ...] * distance,
@@ -2211,7 +2233,7 @@ def stereo_pair_diff(model_pairs, *, gridn_width=60, gridn_height=None, distance
     distance = nps.mv(distance.ravel(), -1, -4)
 
     Rt10_pairs = [
-        mrcal.compose_Rt(
+        compose_Rt(
             model_pair[1].extrinsics_Rt_fromref(), model_pair[0].extrinsics_Rt_toref()
         )
         for model_pair in model_pairs
@@ -2223,7 +2245,7 @@ def stereo_pair_diff(model_pairs, *, gridn_width=60, gridn_height=None, distance
 
     for model_pair in model_pairs:
         for model in model_pair:
-            if mrcal.lensmodel_metadata_and_config(model.intrinsics()[0])[
+            if lensmodel_metadata_and_config(model.intrinsics()[0])[
                 "noncentral"
             ] and not (
                 re.match("LENSMODEL_CAHVORE_", model.intrinsics()[0])
@@ -2259,17 +2281,15 @@ def stereo_pair_diff(model_pairs, *, gridn_width=60, gridn_height=None, distance
             )
         )
 
-    q0 = mrcal.sample_imager(gridn_width, gridn_height, *imagersizes0[0])
+    q0 = sample_imager(gridn_width, gridn_height, *imagersizes0[0])
 
     # q1 shape (Npairs, Nheight,Nwidth,2)
     q1 = [
-        mrcal.project(
-            mrcal.transform_point_Rt(
+        project(
+            transform_point_Rt(
                 Rt10_pairs[ipair],
                 distance
-                * mrcal.unproject(
-                    q0, *model_pairs[ipair][0].intrinsics(), normalize=True
-                ),
+                * unproject(q0, *model_pairs[ipair][0].intrinsics(), normalize=True),
             ),
             *model_pairs[ipair][1].intrinsics(),
         )
@@ -2328,8 +2348,6 @@ def is_within_valid_intrinsics_region(q, model):
     r = model.valid_intrinsics_region()
     if r is None:
         return None
-
-    from shapely.geometry import Polygon, Point
 
     r = Polygon(r)
 
