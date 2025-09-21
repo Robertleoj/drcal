@@ -698,11 +698,11 @@ def main():
             )
             sys.exit(1)
 
-        lensmodel = seedmodels[0].intrinsics()[0]
+        lensmodel = seedmodels[0].intrinsics()[0]  # type: ignore
         for m in seedmodels[1:]:
-            if lensmodel != m.intrinsics()[0]:
+            if lensmodel != m.intrinsics()[0]:  # type: ignore
                 print(
-                    f"I expect all cameras to use the same lens model, but --seed saw {lensmodel} and {m.intrinsics()[0]}",
+                    f"I expect all cameras to use the same lens model, but --seed saw {lensmodel} and {m.intrinsics()[0]}",  # type: ignore
                     file=sys.stderr,
                 )
                 sys.exit(1)
@@ -848,7 +848,7 @@ def main():
 
     models = [
         drcal.cameramodel(optimization_inputs=optimization_inputs, icam_intrinsics=icam)
-        for icam in range(len(optimization_inputs["intrinsics"]))
+        for icam in range(len(optimization_inputs["intrinsics"]))  # type: ignore
     ]
 
     if (
@@ -856,7 +856,7 @@ def main():
         and args.valid_intrinsics_region_parameters is not None
     ):
         observed_pixel_uncertainty = np.std(
-            drcal.measurements_board(optimization_inputs, x=stats["x"]).ravel()
+            drcal.measurements_board(optimization_inputs, x=stats["x"]).ravel()  # type: ignore
         )
 
         threshold_uncertainty = (
