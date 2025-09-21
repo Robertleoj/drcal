@@ -1,13 +1,3 @@
-#!/usr/bin/env python3
-
-# Copyright (c) 2017-2023 California Institute of Technology ("Caltech"). U.S.
-# Government sponsorship acknowledged. All rights reserved.
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-
 r"""Visualizes the surface represented in a splined lens model
 
 SYNOPSIS
@@ -88,6 +78,8 @@ coverage at the edge of the imager.
 import sys
 import argparse
 import re
+
+import drcal
 
 
 def parse_args():
@@ -210,65 +202,63 @@ def parse_args():
     return args
 
 
-args = parse_args()
+def main():
+    args = parse_args()
 
-# arg-parsing is done before the imports so that --help works without building
-# stuff, so that I can generate the manpages and README
+    try:
+        model = drcal.cameramodel(args.model)
+    except Exception as e:
+        print(f"Couldn't load camera model '{args.model}': {e}", file=sys.stderr)
+        sys.exit(1)
+    lensmodel = model.intrinsics()[0]
+
+    if not re.match("LENSMODEL_SPLINED", lensmodel):
+        print(
+            f"This only makes sense with splined models. Input uses {lensmodel}",
+            file=sys.stderr,
+        )
+        sys.exit(1)
+
+    if not args.show_imager_bounds and model.valid_intrinsics_region() is None:
+        print(
+            "The given model has no valid-intrinsics region. Pass --show-imager-bounds",
+            file=sys.stderr,
+        )
+        sys.exit(1)
+
+    plotkwargs = {}
+    if args.set is not None:
+        plotkwargs["set"] = args.set
+    if args.unset is not None:
+        plotkwargs["unset"] = args.unset
+
+    if args.title is not None:
+        plotkwargs["title"] = args.title
+    if args.extratitle is not None:
+        plotkwargs["extratitle"] = args.extratitle
+
+    try:
+        plot = drcal.show_splined_model_correction(
+            model,
+            vectorfield=args.vectorfield,
+            xy=args.xy,
+            imager_domain=args.imager_domain,
+            gridn_width=args.gridn[0],
+            gridn_height=args.gridn[1],
+            vectorscale=args.vectorscale,
+            valid_intrinsics_region=not args.show_imager_bounds,
+            observations=args.observations,
+            hardcopy=args.hardcopy,
+            terminal=args.terminal,
+            **plotkwargs,
+        )
+    except Exception as e:
+        print(f"Error: {e}", file=sys.stderr)
+        sys.exit(1)
+
+    if args.hardcopy is None:
+        plot.wait()
 
 
-import mrcal
-
-
-try:
-    model = mrcal.cameramodel(args.model)
-except Exception as e:
-    print(f"Couldn't load camera model '{args.model}': {e}", file=sys.stderr)
-    sys.exit(1)
-lensmodel = model.intrinsics()[0]
-
-if not re.match("LENSMODEL_SPLINED", lensmodel):
-    print(
-        f"This only makes sense with splined models. Input uses {lensmodel}",
-        file=sys.stderr,
-    )
-    sys.exit(1)
-
-if not args.show_imager_bounds and model.valid_intrinsics_region() is None:
-    print(
-        "The given model has no valid-intrinsics region. Pass --show-imager-bounds",
-        file=sys.stderr,
-    )
-    sys.exit(1)
-
-plotkwargs = {}
-if args.set is not None:
-    plotkwargs["set"] = args.set
-if args.unset is not None:
-    plotkwargs["unset"] = args.unset
-
-if args.title is not None:
-    plotkwargs["title"] = args.title
-if args.extratitle is not None:
-    plotkwargs["extratitle"] = args.extratitle
-
-try:
-    plot = mrcal.show_splined_model_correction(
-        model,
-        vectorfield=args.vectorfield,
-        xy=args.xy,
-        imager_domain=args.imager_domain,
-        gridn_width=args.gridn[0],
-        gridn_height=args.gridn[1],
-        vectorscale=args.vectorscale,
-        valid_intrinsics_region=not args.show_imager_bounds,
-        observations=args.observations,
-        hardcopy=args.hardcopy,
-        terminal=args.terminal,
-        **plotkwargs,
-    )
-except Exception as e:
-    print(f"Error: {e}", file=sys.stderr)
-    sys.exit(1)
-
-if args.hardcopy is None:
-    plot.wait()
+if __name__ == "__main__":
+    main()

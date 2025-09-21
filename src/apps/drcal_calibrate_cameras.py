@@ -307,7 +307,9 @@ def parse_args():
     return parser.parse_args()
 
 
-def get_imagersize_one(icamera, indices_frame_camera, paths, wh_args, seedmodels):
+def get_imagersize_one(
+    icamera, indices_frame_camera, paths, wh_args: tuple[int, int] | None, seedmodels
+):
     r"""Returns the imager size for a given camera
 
     This reports the size for ONE camera. I only look at the first match. It is
@@ -770,11 +772,15 @@ def main():
 
     Nobservations = len(observations)
 
+    wh_args = args.imagersize
+    if wh_args is not None:
+        wh_args = tuple(wh_args)
+
     # list of imager sizes; one per camera
     imagersizes = np.array(
         [
             get_imagersize_one(
-                icamera, indices_frame_camera, paths, args.imagersize, seedmodels
+                icamera, indices_frame_camera, paths, wh_args, seedmodels
             )
             for icamera in range(Ncameras)
         ],
