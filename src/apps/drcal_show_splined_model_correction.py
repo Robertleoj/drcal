@@ -237,24 +237,20 @@ def main():
     if args.extratitle is not None:
         plotkwargs["extratitle"] = args.extratitle
 
-    try:
-        plot = drcal.show_splined_model_correction(
-            model,
-            vectorfield=args.vectorfield,
-            xy=args.xy,
-            imager_domain=args.imager_domain,
-            gridn_width=args.gridn[0],
-            gridn_height=args.gridn[1],
-            vectorscale=args.vectorscale,
-            valid_intrinsics_region=not args.show_imager_bounds,
-            observations=args.observations,
-            hardcopy=args.hardcopy,
-            terminal=args.terminal,
-            **plotkwargs,
-        )
-    except Exception as e:
-        print(f"Error: {e}", file=sys.stderr)
-        sys.exit(1)
+    plot = drcal.show_splined_model_correction(
+        model,
+        vectorfield=args.vectorfield,
+        xy=args.xy,
+        imager_domain=args.imager_domain,
+        gridn_width=args.gridn[0],
+        gridn_height=args.gridn[1],
+        vectorscale=args.vectorscale,
+        valid_intrinsics_region=not args.show_imager_bounds,
+        observations=args.observations,
+        hardcopy=args.hardcopy,
+        terminal=args.terminal,
+        **plotkwargs,
+    )
 
     if args.hardcopy is None:
         plot.wait()

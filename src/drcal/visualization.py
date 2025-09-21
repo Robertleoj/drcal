@@ -5,11 +5,15 @@ mrcal.visualization.fff() or mrcal.fff(). The latter is preferred.
 
 """
 
+import gnuplotlib as gp
 import numpy as np
+import scipy.optimize
+import cv2
+import matplotlib.pyplot as plt
+from scipy.special import erf
 import numpysane as nps
 import sys
 import re
-import gnuplotlib as gp
 import os
 
 from drcal.bindings import (
@@ -322,8 +326,6 @@ plot
         if len(p) <= 1:
             axis_scale = 1.0
         else:
-            import scipy.optimize
-
             res = scipy.optimize.least_squares(  # cost function
                 lambda c: np.sum(nps.mag(p - c)),
                 # seed
@@ -785,8 +787,6 @@ def _options_heatmap_with_contours(
 ):
     r"""Update plotoptions, return curveoptions for a contoured heat map"""
 
-    import gnuplotlib as gp
-
     gp.add_plot_option(plotoptions, "set", ("view equal xy", "view map"))
 
     if do_contours:
@@ -951,8 +951,6 @@ String passable to gnuplotlib in the 'equation' or 'equation_above' plot option
     # k = N*sqrt(2pi) s * erf(binwidth / (s 2*sqrt(2)))
     #   ~ N*sqrt(2pi) s * (binwidth/(s 2*sqrt(2))) *2 / sqrt(pi)
     #   ~ N binwidth
-
-    from scipy.special import erf
 
     if x is not None:
         if mean is not None or sigma is not None or N is not None:
@@ -1274,8 +1272,6 @@ def show_projection_diff(
 
     if len(models) < 2:
         raise Exception("At least 2 models are required to compute the diff")
-
-    import gnuplotlib as gp
 
     if "title" not in kwargs:
         if intrinsics_only:
@@ -1636,8 +1632,6 @@ def show_stereo_pair_diff(
     if len(model_pairs) < 2:
         raise Exception("At least 2 model_pairs are required to compute the diff")
 
-    import gnuplotlib as gp
-
     if "title" not in kwargs:
         title = f"Diff looking at {len(model_pairs)} model_pairs"
         if extratitle is not None:
@@ -1956,8 +1950,6 @@ def show_projection_uncertainty(
 
     """
 
-    import gnuplotlib as gp
-
     known_methods = set(
         ("mean-pcam", "bestq", "cross-reprojection-rrp-Jfp"),
     )
@@ -2207,8 +2199,6 @@ def show_projection_uncertainty_vs_distance(
 
     """
 
-    import gnuplotlib as gp
-
     known_methods = set(
         ("mean-pcam", "bestq", "cross-reprojection-rrp-Jfp"),
     )
@@ -2354,8 +2344,6 @@ def show_distortion_off_pinhole_radial(
     plot
 
     """
-
-    import gnuplotlib as gp
 
     lensmodel, intrinsics_data = model.intrinsics()
 
@@ -2584,8 +2572,6 @@ def show_distortion_off_pinhole(
 
     """
 
-    import gnuplotlib as gp
-
     lensmodel, intrinsics_data = model.intrinsics()
     imagersize = model.imagersize()
 
@@ -2809,8 +2795,6 @@ def show_valid_intrinsics_region(
             valid_regions[i] = np.zeros((1, 2))
             cameranames[i] += ": empty"
 
-    import gnuplotlib as gp
-
     gp.add_plot_option(kwargs, "set", "key opaque")
 
     plot_data_args = []
@@ -3033,8 +3017,6 @@ def show_splined_model_correction(
 
     if gridn_height is None:
         gridn_height = int(round(H / W * gridn_width))
-
-    import gnuplotlib as gp
 
     if "title" not in kwargs:
         title = f"Correction for {lensmodel}"
@@ -3319,8 +3301,6 @@ def annotate_image__valid_intrinsics_region(image, model, *, color=(0, 255, 0)):
     if valid_intrinsics_region is None:
         raise Exception("The given model has no valid-intrinsics region defined")
 
-    import cv2
-
     if valid_intrinsics_region is None:
         cv2.circle(image, tuple((model.imagersize() - 1) // 2), 10, color, -1)
         print(
@@ -3537,8 +3517,6 @@ def show_residuals_board_observation(
     if image_path_prefix is not None and image_directory is not None:
         raise Exception("image_path_prefix and image_directory are mutually exclusive")
 
-    import gnuplotlib as gp
-
     if x is None:
         # Flattened residuals. The board measurements are at the start of the
         # array
@@ -3735,8 +3713,6 @@ def show_residuals_histogram(
         if x is not None:
             raise Exception("residuals and x are mutually exclusive")
         x = residuals
-
-    import gnuplotlib as gp
 
     if (
         "observations_board" in optimization_inputs
@@ -3974,8 +3950,6 @@ def show_residuals_vectorfield(
             raise Exception("residuals and x are mutually exclusive")
         x = residuals
 
-    import gnuplotlib as gp
-
     err, obs, valid_intrinsics_region_plotarg_2d, valid_intrinsics_region_plotarg_3d = (
         _get_show_residuals_data_onecam(model, x, valid_intrinsics_region)
     )
@@ -4103,8 +4077,6 @@ def show_residuals_magnitudes(
             raise Exception("residuals and x are mutually exclusive")
         x = residuals
 
-    import gnuplotlib as gp
-
     err, obs, valid_intrinsics_region_plotarg_2d, valid_intrinsics_region_plotarg_3d = (
         _get_show_residuals_data_onecam(model, x, valid_intrinsics_region)
     )
@@ -4228,8 +4200,6 @@ def show_residuals_directions(
         if x is not None:
             raise Exception("residuals and x are mutually exclusive")
         x = residuals
-
-    import gnuplotlib as gp
 
     err, obs, valid_intrinsics_region_plotarg_2d, valid_intrinsics_region_plotarg_3d = (
         _get_show_residuals_data_onecam(model, x, valid_intrinsics_region)
@@ -4377,8 +4347,6 @@ def show_residuals_regional(
         if x is not None:
             raise Exception("residuals and x are mutually exclusive")
         x = residuals
-
-    import gnuplotlib as gp
 
     err, obs, valid_intrinsics_region_plotarg_2d, valid_intrinsics_region_plotarg_3d = (
         _get_show_residuals_data_onecam(model, x, valid_intrinsics_region)
