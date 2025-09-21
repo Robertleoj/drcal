@@ -33,7 +33,7 @@ test/test-parser-cameramodel
 ltximg/
 doc/out
 
-build
+build/
 .cache
 vcpkg_installed/
 
