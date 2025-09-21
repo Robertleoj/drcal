@@ -12,7 +12,7 @@ r"""Calibrate some synchronized, stationary cameras
 
 SYNOPSIS
 
-  $ mrcal-calibrate-cameras
+  $ drcal-calibrate-cameras
       --corners-cache corners.vnl
       --lensmodel LENSMODEL_OPENCV8
       --focal 1700 --object-spacing 0.01 --object-width-n 10
@@ -29,9 +29,8 @@ SYNOPSIS
     Wrote /tmp/camera0-0.cameramodel
     Wrote /tmp/camera0-1.cameramodel
 
-This tool uses the generic mrcal platform to solve a common specific problem of
-N-camera calibration using observations of a chessboard. Please see the mrcal
-documentation at https://mrcal.secretsauce.net/how-to-calibrate.html for details.
+This tool uses the generic drcal platform to solve a common specific problem of
+N-camera calibration using observations of a chessboard.
 
 """
 
@@ -44,7 +43,7 @@ import numpysane as nps
 import time
 import glob
 
-import mrcal
+import drcal
 
 
 def parse_args():
@@ -87,16 +86,13 @@ def parse_args():
         "--lensmodel",
         required=False,
         help="""Which lens model we're using. This is a string "LENSMODEL_....". Required
-                        unless we have a --seed. See https://mrcal.secretsauce.net/how-to-calibrate.html
-                        for notes about how to select a model""",
+                        unless we have a --seed.""",
     )
     parser.add_argument(
         "--focal",
         type=str,
         help=r"""Initial estimate of the focal length, in
-                        pixels. Required unless --seed is given. See
-                        https://mrcal.secretsauce.net/how-to-calibrate.html for
-                        notes about how to estimate a focal length. This is
+                        pixels. Required unless --seed is given. This is
                         either a single value to use for all the cameras, or a
                         comma-separated whitespace-less list of values to use
                         for each camera. If such a list is given, it must match
@@ -269,7 +265,7 @@ def parse_args():
                         The intent is to produce usable output even if we're
                         using a lean lens model where the computed uncertainty
                         is always overly optimistic. We bin the observations
-                        into a grid, and use mrcal._report_regional_statistics()
+                        into a grid, and use drcal._report_regional_statistics()
                         to get the residual statistics in each bin. We then
                         contour the bins to produce the valid-intrinsics region.
                         If we're using a rich lens model
@@ -386,7 +382,7 @@ def get_imagersize_one(icamera, indices_frame_camera, paths, wh_args, seedmodels
     path = paths[iobservation0_thiscamera]
     if os.path.isfile(path):
         try:
-            image = mrcal.load_image(path, bits_per_pixel=8, channels=1)
+            image = drcal.load_image(path, bits_per_pixel=8, channels=1)
         except:
             pass  # image is already None
 
@@ -439,7 +435,7 @@ def solve_initial(args, seedmodels, imagersizes, observations, indices_frame_cam
         # incremental optimizations to get it reasonably-close to the right
         # answer
         intrinsics_data, extrinsics_rt_fromref, frames_rt_toref = (
-            mrcal.seed_stereographic(
+            drcal.seed_stereographic(
                 imagersizes=imagersizes,
                 focal_estimate=args.focal,
                 indices_frame_camera=indices_frame_camera,
@@ -451,7 +447,7 @@ def solve_initial(args, seedmodels, imagersizes, observations, indices_frame_cam
         sys.stderr.write("## initial solve: geometry only\n")
         lensmodel = "LENSMODEL_STEREOGRAPHIC"
 
-        stats = mrcal.optimize(
+        stats = drcal.optimize(
             intrinsics=intrinsics_data,
             extrinsics_rt_fromref=extrinsics_rt_fromref,
             frames_rt_toref=frames_rt_toref,
@@ -472,7 +468,7 @@ def solve_initial(args, seedmodels, imagersizes, observations, indices_frame_cam
         sys.stderr.write(
             "## initial solve: geometry and LENSMODEL_STEREOGRAPHIC core only\n"
         )
-        stats = mrcal.optimize(
+        stats = drcal.optimize(
             intrinsics=intrinsics_data,
             extrinsics_rt_fromref=extrinsics_rt_fromref,
             frames_rt_toref=frames_rt_toref,
@@ -489,7 +485,7 @@ def solve_initial(args, seedmodels, imagersizes, observations, indices_frame_cam
             verbose=False,
         )
 
-        extrinsics_Rt_fromref = mrcal.Rt_from_rt(extrinsics_rt_fromref)
+        extrinsics_Rt_fromref = drcal.Rt_from_rt(extrinsics_rt_fromref)
 
         return intrinsics_data, extrinsics_Rt_fromref, frames_rt_toref
 
@@ -503,7 +499,7 @@ def solve_initial(args, seedmodels, imagersizes, observations, indices_frame_cam
         Rt_r0 = seedmodels[0].extrinsics_Rt_toref()
         extrinsics_Rt_fromref = nps.cat(
             *[
-                mrcal.compose_Rt(m.extrinsics_Rt_fromref(), Rt_r0)
+                drcal.compose_Rt(m.extrinsics_Rt_fromref(), Rt_r0)
                 for m in seedmodels[1:]
             ]
         )
@@ -526,13 +522,13 @@ def solve_initial(args, seedmodels, imagersizes, observations, indices_frame_cam
         # - what if for a given frame more than 2 cameras are observing the board?
         #
         # So I do the less-accurate-but-more-robust thing using pinhole
-        # monocular observations. This is what mrcal.seed_stereographic()
+        # monocular observations. This is what drcal.seed_stereographic()
         # does in the no-seed-available case
-        calobject_poses_local_Rt_cf = mrcal.estimate_monocular_calobject_poses_Rt_tocam(
+        calobject_poses_local_Rt_cf = drcal.estimate_monocular_calobject_poses_Rt_tocam(
             indices_frame_camera, observations, args.object_spacing, seedmodels
         )
 
-        frames_rt_toref = mrcal.estimate_joint_frame_poses(
+        frames_rt_toref = drcal.estimate_joint_frame_poses(
             calobject_poses_local_Rt_cf,
             extrinsics_Rt_fromref,
             indices_frame_camera,
@@ -557,9 +553,9 @@ def solve_initial(args, seedmodels, imagersizes, observations, indices_frame_cam
             # to refine it using the optimizer. I lock down EVERYTHING except
             # frames_rt_toref, since the seed gives me everything else
             sys.stderr.write("## reoptimizing frames_rt_toref\n")
-            stats = mrcal.optimize(
+            stats = drcal.optimize(
                 intrinsics_data,
-                mrcal.rt_from_Rt(extrinsics_Rt_fromref),
+                drcal.rt_from_Rt(extrinsics_Rt_fromref),
                 frames_rt_toref,
                 None,
                 observations,
@@ -601,7 +597,7 @@ def solve_initial(args, seedmodels, imagersizes, observations, indices_frame_cam
 
     def expand_intrinsics(lensmodel, intrinsics_data):
         NnewDistortions = (
-            mrcal.lensmodel_num_params(lensmodel) - intrinsics_data.shape[-1]
+            drcal.lensmodel_num_params(lensmodel) - intrinsics_data.shape[-1]
         )
         newDistortions = (
             (np.random.random((Ncameras, NnewDistortions)) - 0.5) * 2.0 * 1e-6
@@ -638,7 +634,7 @@ def solve_initial(args, seedmodels, imagersizes, observations, indices_frame_cam
         )
     )
 
-    extrinsics_rt_fromref = mrcal.rt_from_Rt(extrinsics_Rt_fromref)
+    extrinsics_rt_fromref = drcal.rt_from_Rt(extrinsics_Rt_fromref)
 
     # splined models have a core, but those variables are largely redundant with
     # the spline parameters. So I run another pre-solve to get reasonable values
@@ -671,7 +667,7 @@ def solve_initial(args, seedmodels, imagersizes, observations, indices_frame_cam
         imagepaths=paths,
     )
 
-    mrcal.optimize(**optimization_inputs)
+    drcal.optimize(**optimization_inputs)
     return optimization_inputs
 
 
@@ -705,7 +701,7 @@ if args.seed:
                 print(f"seed glob '{g}' matched no files!", file=sys.stderr)
                 sys.exit(1)
             for f in globbed_filenames:
-                yield mrcal.cameramodel(f)
+                yield drcal.cameramodel(f)
 
     seedmodels = list(seedmodels_iterator())
 
@@ -775,7 +771,7 @@ else:
 
 
 try:
-    observations, indices_frame_camera, paths = mrcal.compute_chessboard_corners(
+    observations, indices_frame_camera, paths = drcal.compute_chessboard_corners(
         args.object_width_n,
         args.object_height_n,
         globs_per_camera=args.images,
@@ -824,12 +820,12 @@ if not optimization_inputs["do_apply_regularization"]:
     optimization_inputs["do_apply_regularization"] = True
     optimization_inputs["verbose"] = False
 
-    stats = mrcal.optimize(**optimization_inputs)
+    stats = drcal.optimize(**optimization_inputs)
 
     optimization_inputs["do_apply_regularization"] = False
     optimization_inputs["verbose"] = args.verbose_solver
 
-stats = mrcal.optimize(**optimization_inputs)
+stats = drcal.optimize(**optimization_inputs)
 sys.stderr.write(f"## RMS error: {stats['rms_reproj_error__pixels']:.02f}\n")
 
 report = f"RMS reprojection error: {stats['rms_reproj_error__pixels']:.01f} pixels\n"
@@ -856,7 +852,7 @@ if calobject_warp is not None:
 print(report)
 
 models = [
-    mrcal.cameramodel(optimization_inputs=optimization_inputs, icam_intrinsics=icam)
+    drcal.cameramodel(optimization_inputs=optimization_inputs, icam_intrinsics=icam)
     for icam in range(len(optimization_inputs["intrinsics"]))
 ]
 
@@ -881,7 +877,7 @@ if (
     and args.valid_intrinsics_region_parameters is not None
 ):
     observed_pixel_uncertainty = np.std(
-        mrcal.measurements_board(optimization_inputs, x=stats["x"]).ravel()
+        drcal.measurements_board(optimization_inputs, x=stats["x"]).ravel()
     )
 
     threshold_uncertainty = (
@@ -897,7 +893,7 @@ if (
     for i in range(Ncameras):
         try:
             models[i].valid_intrinsics_region(
-                mrcal.calibration._compute_valid_intrinsics_region(
+                drcal.calibration._compute_valid_intrinsics_region(
                     models[i],
                     threshold_uncertainty,
                     threshold_mean,
@@ -915,7 +911,7 @@ if (
 
 # The note says how we ran this, and contains the commented-out report
 note = (
-    f"generated on {time.strftime('%Y-%m-%d %H:%M:%S')} with   {' '.join(mrcal.shellquote(s) for s in sys.argv)}\n"
+    f"generated on {time.strftime('%Y-%m-%d %H:%M:%S')} with   {' '.join(drcal.shellquote(s) for s in sys.argv)}\n"
     + report
 )
 for icam in range(len(models)):
@@ -981,48 +977,48 @@ def show_generic(f, *args, **kwargs):
 
 
 def show_splined_model_correction(icam=None, **kwargs):
-    show_generic_per_cam(mrcal.show_splined_model_correction, icam, **kwargs)
+    show_generic_per_cam(drcal.show_splined_model_correction, icam, **kwargs)
 
 
 def show_projection_uncertainty(icam=None, **kwargs):
-    show_generic_per_cam(mrcal.show_projection_uncertainty, icam, **kwargs)
+    show_generic_per_cam(drcal.show_projection_uncertainty, icam, **kwargs)
 
 
 def show_valid_intrinsics_region(icam=None, **kwargs):
-    show_generic_per_cam(mrcal.show_valid_intrinsics_region, icam, **kwargs)
+    show_generic_per_cam(drcal.show_valid_intrinsics_region, icam, **kwargs)
 
 
 def show_residuals_vectorfield(icam=None, **kwargs):
-    show_generic_per_cam(mrcal.show_residuals_vectorfield, icam, x=stats["x"], **kwargs)
+    show_generic_per_cam(drcal.show_residuals_vectorfield, icam, x=stats["x"], **kwargs)
 
 
 def show_residuals_magnitudes(icam=None, **kwargs):
-    show_generic_per_cam(mrcal.show_residuals_magnitudes, icam, x=stats["x"], **kwargs)
+    show_generic_per_cam(drcal.show_residuals_magnitudes, icam, x=stats["x"], **kwargs)
 
 
 def show_residuals_directions(icam=None, **kwargs):
-    show_generic_per_cam(mrcal.show_residuals_directions, icam, x=stats["x"], **kwargs)
+    show_generic_per_cam(drcal.show_residuals_directions, icam, x=stats["x"], **kwargs)
 
 
 def show_residuals_regional(icam=None, **kwargs):
-    show_generic_per_cam(mrcal.show_residuals_regional, icam, x=stats["x"], **kwargs)
+    show_generic_per_cam(drcal.show_residuals_regional, icam, x=stats["x"], **kwargs)
 
 
 def show_distortion_off_pinhole(icam=None, **kwargs):
-    show_generic_per_cam(mrcal.show_distortion_off_pinhole, icam, **kwargs)
+    show_generic_per_cam(drcal.show_distortion_off_pinhole, icam, **kwargs)
 
 
 def show_distortion_off_pinhole_radial(icam=None, **kwargs):
-    show_generic_per_cam(mrcal.show_distortion_off_pinhole_radial, icam, **kwargs)
+    show_generic_per_cam(drcal.show_distortion_off_pinhole_radial, icam, **kwargs)
 
 
 def show_geometry(**kwargs):
-    show_generic(mrcal.show_geometry, models, **kwargs)
+    show_generic(drcal.show_geometry, models, **kwargs)
 
 
 def show_residuals_board_observation(i_observation, **kwargs):
     return show_generic(
-        mrcal.show_residuals_board_observation,
+        drcal.show_residuals_board_observation,
         optimization_inputs,
         i_observation,
         paths=paths,
@@ -1034,7 +1030,7 @@ def show_residuals_board_observation(i_observation, **kwargs):
 
 def show_residuals_board_observation_worst(i_observation_from_worst, **kwargs):
     return show_generic(
-        mrcal.show_residuals_board_observation,
+        drcal.show_residuals_board_observation,
         optimization_inputs,
         i_observation_from_worst,
         from_worst=True,
@@ -1047,7 +1043,7 @@ def show_residuals_board_observation_worst(i_observation_from_worst, **kwargs):
 
 def show_residuals_histogram(icam=None, **kwargs):
     show_generic(
-        mrcal.show_residuals_histogram,
+        drcal.show_residuals_histogram,
         optimization_inputs,
         icam,
         x=stats["x"],

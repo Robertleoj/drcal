@@ -1,29 +1,18 @@
-#!/usr/bin/python3
-
-# Copyright (c) 2017-2023 California Institute of Technology ("Caltech"). U.S.
-# Government sponsorship acknowledged. All rights reserved.
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-
 """Routines to (un)project points using any camera model
 
 Most of these are Python wrappers around the written-in-C Python extension
-module mrcal._mrcal_npsp. Most of the time you want to use this module
-instead of touching mrcal._mrcal_npsp directly.
+module drcal.bindings_npsp. Most of the time you want to use this module
+instead of touching drcal.bindings_npsp directly.
 
-All functions are exported into the mrcal module. So you can call these via
-mrcal.projections.fff() or mrcal.fff(). The latter is preferred.
-
+All functions are exported into the drcal module. So you can call these via
+drcal.projections.fff() or drcal.fff(). The latter is preferred.
 """
 
 import numpy as np
 import numpysane as nps
 import sys
 
-import mrcal
+import drcal
 
 
 def project(v, lensmodel, intrinsics_data, *, get_gradients=False, out=None):
@@ -32,13 +21,13 @@ def project(v, lensmodel, intrinsics_data, *, get_gradients=False, out=None):
     SYNOPSIS
 
         # v is a (...,3) array of 3D points we're projecting
-        points = mrcal.project( v,
+        points = drcal.project( v,
                                 lensmodel, intrinsics_data )
 
         ### OR ###
 
-        m = mrcal.cameramodel(...)
-        points = mrcal.project( v, *m.intrinsics() )
+        m = drcal.cameramodel(...)
+        points = drcal.project( v, *m.intrinsics() )
 
         # points is a (...,2) array of pixel coordinates
 
@@ -102,10 +91,10 @@ def project(v, lensmodel, intrinsics_data, *, get_gradients=False, out=None):
     # Internal function must have a different argument order so
     # that all the broadcasting stuff is in the leading arguments
     if not get_gradients:
-        return mrcal._mrcal_npsp._project(
+        return drcal.bindings_npsp._project(
             v, intrinsics_data, lensmodel=lensmodel, out=out
         )
-    return mrcal._mrcal_npsp._project_withgrad(
+    return drcal.bindings_npsp._project_withgrad(
         v, intrinsics_data, lensmodel=lensmodel, out=out
     )
 
@@ -118,13 +107,13 @@ def unproject(
     SYNOPSIS
 
         # q is a (...,2) array of pixel observations
-        v = mrcal.unproject( q,
+        v = drcal.unproject( q,
                              lensmodel, intrinsics_data )
 
         ### OR ###
 
-        m = mrcal.cameramodel(...)
-        v = mrcal.unproject( q, *m.intrinsics() )
+        m = drcal.cameramodel(...)
+        v = drcal.unproject( q, *m.intrinsics() )
 
     Maps a set of 2D imager points q to a set of 3D vectors in camera coordinates
     that produced these pixel observations. Each 3D vector is unique only
@@ -134,7 +123,7 @@ def unproject(
 
     This is the "reverse" direction, so an iterative nonlinear optimization is
     performed internally to compute this result. This is much slower than
-    mrcal_project. For OpenCV distortions specifically, OpenCV has
+    drcal_project. For OpenCV distortions specifically, OpenCV has
     cvUndistortPoints() (and cv2.undistortPoints()), but these are inaccurate and we
     do not use them: https://github.com/opencv/opencv/issues/8811
 
@@ -162,8 +151,8 @@ def unproject(
 
     Broadcasting is fully supported across q and intrinsics_data.
 
-    Models that have no gradients available cannot use mrcal_unproject() in C, but
-    CAN still use this mrcal.unproject() Python routine: a slower routine is
+    Models that have no gradients available cannot use drcal_unproject() in C, but
+    CAN still use this drcal.unproject() Python routine: a slower routine is
     employed that uses numerical differences instead of analytical gradients.
 
     ARGUMENTS
@@ -261,18 +250,21 @@ def unproject(
         or lensmodel == "LENSMODEL_LATLON"
         or lensmodel == "LENSMODEL_STEREOGRAPHIC"
     ):
-        if lensmodel == "LENSMODEL_PINHOLE":
-            func = mrcal.unproject_pinhole
-            always_normalized = False
-        elif lensmodel == "LENSMODEL_LONLAT":
-            func = mrcal.unproject_lonlat
-            always_normalized = True
-        elif lensmodel == "LENSMODEL_LATLON":
-            func = mrcal.unproject_latlon
-            always_normalized = True
-        elif lensmodel == "LENSMODEL_STEREOGRAPHIC":
-            func = mrcal.unproject_stereographic
-            always_normalized = False
+        match lensmodel:
+            case "LENSMODEL_PINHOLE":
+                func = drcal.unproject_pinhole
+                always_normalized = False
+            case "LENSMODEL_LONLAT":
+                func = drcal.unproject_lonlat
+                always_normalized = True
+            case "LENSMODEL_LATLON":
+                func = drcal.unproject_latlon
+                always_normalized = True
+            case "LENSMODEL_STEREOGRAPHIC":
+                func = drcal.unproject_stereographic
+                always_normalized = False
+            case _:
+                raise RuntimeError("Should not happen")
 
         if not get_gradients:
             v = func(q, intrinsics_data, out=out)
@@ -327,7 +319,7 @@ def unproject(
         return v, dv_dq, dv_di
 
     try:
-        meta = mrcal.lensmodel_metadata_and_config(lensmodel)
+        meta = drcal.lensmodel_metadata_and_config(lensmodel)
     except:
         raise Exception(f"Invalid lens model '{lensmodel}': couldn't get the metadata")
     if meta["has_gradients"]:
@@ -336,7 +328,7 @@ def unproject(
         # Internal function must have a different argument order so
         # that all the broadcasting stuff is in the leading arguments
         if not get_gradients:
-            v = mrcal._mrcal_npsp._unproject(
+            v = drcal.bindings_npsp._unproject(
                 q, intrinsics_data, lensmodel=lensmodel, out=out
             )
             if normalize:
@@ -353,7 +345,7 @@ def unproject(
             return v
 
         # We need to report gradients
-        vs = mrcal._mrcal_npsp._unproject(q, intrinsics_data, lensmodel=lensmodel)
+        vs = drcal.bindings_npsp._unproject(q, intrinsics_data, lensmodel=lensmodel)
 
         # I have no gradients available for unproject(), and I need to invert a
         # non-square matrix to use the gradients from project(). I deal with this
@@ -365,13 +357,13 @@ def unproject(
         # I reproject vs, to produce a scaled v = k*vs. I'm assuming all
         # projections are central, so vs represents q just as well as v does. u
         # is a 2-vector, so dq_du is (2x2), and I can invert it
-        u = mrcal.project_stereographic(vs)
+        u = drcal.project_stereographic(vs)
         dv_du = np.zeros(vs.shape + (2,), dtype=float)
-        v, dv_du = mrcal.unproject_stereographic(
+        v, dv_du = drcal.unproject_stereographic(
             u, get_gradients=True, out=(vs if out is None else out[0], dv_du)
         )
 
-        _, dq_dv, dq_di = mrcal.project(
+        _, dq_dv, dq_di = drcal.project(
             v, lensmodel, intrinsics_data, get_gradients=True
         )
 
@@ -408,7 +400,7 @@ def unproject(
     #
     # We compute the gradients numerically. This is a reimplementation of the C
     # code. It's barely maintained, and here for legacy compatibility only
-    raise ("should never get here")
+    raise Exception("should never get here")
 
     if get_gradients:
         raise Exception(
@@ -445,7 +437,7 @@ def unproject(
         def cost_no_gradients(vxy, *args, **kwargs):
             """Optimization functions"""
             return (
-                mrcal.project(
+                drcal.project(
                     np.array((vxy[0], vxy[1], 1.0)), lensmodel, intrinsics_data
                 )
                 - q0
@@ -491,15 +483,13 @@ def project_pinhole(
     SYNOPSIS
 
         # points is a (N,3) array of camera-coordinate-system points
-        q = mrcal.project_pinhole( points, fxycxy )
+        q = drcal.project_pinhole( points, fxycxy )
 
         # q is now a (N,2) array of pinhole coordinates
 
-    This is a special case of mrcal.project(). Useful to represent a very simple,
+    This is a special case of drcal.project(). Useful to represent a very simple,
     very perfect lens. Wide lenses do not follow this model. Long lenses usually
-    more-or-less DO follow this model. See the lensmodel documentation for details:
-
-    https://mrcal.secretsauce.net/lensmodels.html#lensmodel-pinhole
+    more-or-less DO follow this model.
 
     Given a (N,3) array of points in the camera frame (x,y aligned with the imager
     coords, z 'forward') and the parameters fxycxy, this function computes the
@@ -542,8 +532,8 @@ def project_pinhole(
     # Internal function must have a different argument order so
     # that all the broadcasting stuff is in the leading arguments
     if not get_gradients:
-        return mrcal._mrcal_npsp._project_pinhole(points, fxycxy, out=out)
-    return mrcal._mrcal_npsp._project_pinhole_withgrad(points, fxycxy, out=out)
+        return drcal.bindings_npsp._project_pinhole(points, fxycxy, out=out)
+    return drcal.bindings_npsp._project_pinhole_withgrad(points, fxycxy, out=out)
 
 
 def unproject_pinhole(
@@ -558,17 +548,15 @@ def unproject_pinhole(
     SYNOPSIS
 
         # points is a (N,2) array of imager points
-        v = mrcal.unproject_pinhole( points,
+        v = drcal.unproject_pinhole( points,
                                      fxycxy )
 
         # v is now a (N,3) array of observation directions in the camera coordinate
         # system. v are NOT normalized
 
-    This is a special case of mrcal.unproject(). Useful to represent a very simple,
+    This is a special case of drcal.unproject(). Useful to represent a very simple,
     very perfect lens. Wide lenses do not follow this model. Long lenses usually
-    more-or-less DO follow this model. See the lensmodel documentation for details:
-
-    https://mrcal.secretsauce.net/lensmodels.html#lensmodel-pinhole
+    more-or-less DO follow this model.
 
     Given a (N,2) array of pinhole coordinates and the parameters fxycxy, this
     function computes the inverse projection, optionally with gradients.
@@ -610,8 +598,8 @@ def unproject_pinhole(
 
     """
     if not get_gradients:
-        return mrcal._mrcal_npsp._unproject_pinhole(points, fxycxy, out=out)
-    return mrcal._mrcal_npsp._unproject_pinhole_withgrad(points, fxycxy, out=out)
+        return drcal.bindings_npsp._unproject_pinhole(points, fxycxy, out=out)
+    return drcal.bindings_npsp._unproject_pinhole_withgrad(points, fxycxy, out=out)
 
 
 def project_stereographic(
@@ -626,15 +614,15 @@ def project_stereographic(
     SYNOPSIS
 
         # points is a (N,3) array of camera-coordinate-system points
-        q = mrcal.project_stereographic( points )
+        q = drcal.project_stereographic( points )
 
         # q is now a (N,2) array of normalized stereographic coordinates
 
-    This is a special case of mrcal.project(). No actual lens ever follows this
+    This is a special case of drcal.project(). No actual lens ever follows this
     model exactly, but this is useful as a baseline for other models. See the
     lensmodel documentation for details:
 
-    https://mrcal.secretsauce.net/lensmodels.html#lensmodel-stereographic
+    https://drcal.secretsauce.net/lensmodels.html#lensmodel-stereographic
 
     Given a (N,3) array of points in the camera frame (x,y aligned with the imager
     coords, z 'forward') and parameters of a perfect stereographic camera, this
@@ -687,8 +675,8 @@ def project_stereographic(
 
     """
     if not get_gradients:
-        return mrcal._mrcal_npsp._project_stereographic(points, fxycxy, out=out)
-    return mrcal._mrcal_npsp._project_stereographic_withgrad(points, fxycxy, out=out)
+        return drcal.bindings_npsp._project_stereographic(points, fxycxy, out=out)
+    return drcal.bindings_npsp._project_stereographic_withgrad(points, fxycxy, out=out)
 
 
 def unproject_stereographic(
@@ -703,16 +691,13 @@ def unproject_stereographic(
     SYNOPSIS
 
         # points is a (N,2) array of pixel coordinates
-        v = mrcal.unproject_stereographic( points, fxycxy)
+        v = drcal.unproject_stereographic( points, fxycxy)
 
         # v is now a (N,3) array of observation directions in the camera coordinate
         # system. v are NOT normalized
 
-    This is a special case of mrcal.unproject(). No actual lens ever follows this
-    model exactly, but this is useful as a baseline for other models. See the
-    lensmodel documentation for details:
-
-    https://mrcal.secretsauce.net/lensmodels.html#lensmodel-stereographic
+    This is a special case of drcal.unproject(). No actual lens ever follows this
+    model exactly, but this is useful as a baseline for other models.
 
     Given a (N,2) array of stereographic coordinates and parameters of a perfect
     stereographic camera, this function computes the inverse projection, optionally
@@ -766,8 +751,10 @@ def unproject_stereographic(
 
     """
     if not get_gradients:
-        return mrcal._mrcal_npsp._unproject_stereographic(points, fxycxy, out=out)
-    return mrcal._mrcal_npsp._unproject_stereographic_withgrad(points, fxycxy, out=out)
+        return drcal.bindings_npsp._unproject_stereographic(points, fxycxy, out=out)
+    return drcal.bindings_npsp._unproject_stereographic_withgrad(
+        points, fxycxy, out=out
+    )
 
 
 def project_lonlat(
@@ -782,16 +769,14 @@ def project_lonlat(
     SYNOPSIS
 
         # points is a (N,3) array of camera-coordinate-system points
-        q = mrcal.project_lonlat( points, fxycxy )
+        q = drcal.project_lonlat( points, fxycxy )
 
         # q is now a (N,2) array of equirectangular coordinates
 
-    This is a special case of mrcal.project(). Useful not for
+    This is a special case of drcal.project(). Useful not for
     representing lenses, but for describing the projection function of wide
-    panoramic images. Lenses do not follow this model. See the lensmodel
-    documentation for details:
+    panoramic images. Lenses do not follow this model.
 
-    https://mrcal.secretsauce.net/lensmodels.html#lensmodel-lonlat
 
     Given a (N,3) array of points in the camera frame (x,y aligned with the imager
     coords, z 'forward') and the parameters fxycxy, this function computes the
@@ -835,8 +820,8 @@ def project_lonlat(
     # Internal function must have a different argument order so
     # that all the broadcasting stuff is in the leading arguments
     if not get_gradients:
-        return mrcal._mrcal_npsp._project_lonlat(points, fxycxy, out=out)
-    return mrcal._mrcal_npsp._project_lonlat_withgrad(points, fxycxy, out=out)
+        return drcal.bindings_npsp._project_lonlat(points, fxycxy, out=out)
+    return drcal.bindings_npsp._project_lonlat_withgrad(points, fxycxy, out=out)
 
 
 def unproject_lonlat(
@@ -851,17 +836,14 @@ def unproject_lonlat(
     SYNOPSIS
 
         # points is a (N,2) array of imager points
-        v = mrcal.unproject_lonlat( points, fxycxy )
+        v = drcal.unproject_lonlat( points, fxycxy )
 
         # v is now a (N,3) array of observation directions in the camera coordinate
         # system. v are normalized
 
-    This is a special case of mrcal.unproject(). Useful not for
+    This is a special case of drcal.unproject(). Useful not for
     representing lenses, but for describing the projection function of wide
-    panoramic images. Lenses do not follow this model. See the lensmodel
-    documentation for details:
-
-    https://mrcal.secretsauce.net/lensmodels.html#lensmodel-lonlat
+    panoramic images. Lenses do not follow this model.
 
     Given a (N,2) array of equirectangular coordinates and the parameters fxycxy,
     this function computes the inverse projection, optionally with gradients.
@@ -904,8 +886,8 @@ def unproject_lonlat(
 
     """
     if not get_gradients:
-        return mrcal._mrcal_npsp._unproject_lonlat(points, fxycxy, out=out)
-    return mrcal._mrcal_npsp._unproject_lonlat_withgrad(points, fxycxy, out=out)
+        return drcal.bindings_npsp._unproject_lonlat(points, fxycxy, out=out)
+    return drcal.bindings_npsp._unproject_lonlat_withgrad(points, fxycxy, out=out)
 
 
 def project_latlon(
@@ -920,15 +902,12 @@ def project_latlon(
     SYNOPSIS
 
         # points is a (N,3) array of camera-coordinate-system points
-        q = mrcal.project_latlon( points, fxycxy )
+        q = drcal.project_latlon( points, fxycxy )
 
         # q is now a (N,2) array of transverse equirectangular coordinates
 
-    This is a special case of mrcal.project(). Useful not for representing lenses,
-    but for performing stereo rectification. Lenses do not follow this model. See
-    the lensmodel documentation for details:
-
-    https://mrcal.secretsauce.net/lensmodels.html#lensmodel-latlon
+    This is a special case of drcal.project(). Useful not for representing lenses,
+    but for performing stereo rectification. Lenses do not follow this model.
 
     Given a (N,3) array of points in the camera frame (x,y aligned with the imager
     coords, z 'forward') and the parameters fxycxy, this function computes the
@@ -972,8 +951,8 @@ def project_latlon(
     # Internal function must have a different argument order so
     # that all the broadcasting stuff is in the leading arguments
     if not get_gradients:
-        return mrcal._mrcal_npsp._project_latlon(points, fxycxy, out=out)
-    return mrcal._mrcal_npsp._project_latlon_withgrad(points, fxycxy, out=out)
+        return drcal.bindings_npsp._project_latlon(points, fxycxy, out=out)
+    return drcal.bindings_npsp._project_latlon_withgrad(points, fxycxy, out=out)
 
 
 def unproject_latlon(
@@ -988,16 +967,13 @@ def unproject_latlon(
     SYNOPSIS
 
         # points is a (N,2) array of imager points
-        v = mrcal.unproject_latlon( points, fxycxy )
+        v = drcal.unproject_latlon( points, fxycxy )
 
         # v is now a (N,3) array of observation directions in the camera coordinate
         # system. v are normalized
 
-    This is a special case of mrcal.unproject(). Useful not for representing lenses,
-    but for performing stereo rectification. Lenses do not follow this model. See
-    the lensmodel documentation for details:
-
-    https://mrcal.secretsauce.net/lensmodels.html#lensmodel-latlon
+    This is a special case of drcal.unproject(). Useful not for representing lenses,
+    but for performing stereo rectification. Lenses do not follow this model.
 
     Given a (N,2) array of transverse equirectangular coordinates and the parameters
     fxycxy, this function computes the inverse projection, optionally with
@@ -1041,5 +1017,5 @@ def unproject_latlon(
 
     """
     if not get_gradients:
-        return mrcal._mrcal_npsp._unproject_latlon(points, fxycxy, out=out)
-    return mrcal._mrcal_npsp._unproject_latlon_withgrad(points, fxycxy, out=out)
+        return drcal.bindings_npsp._unproject_latlon(points, fxycxy, out=out)
+    return drcal.bindings_npsp._unproject_latlon_withgrad(points, fxycxy, out=out)
