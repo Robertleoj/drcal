@@ -1,23 +1,34 @@
-#!/usr/bin/python3
-
-# Copyright (c) 2017-2023 California Institute of Technology ("Caltech"). U.S.
-# Government sponsorship acknowledged. All rights reserved.
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-
 """Routines for stereo processing: rectification and ranging
 
-All functions are exported into the mrcal module. So you can call these via
-mrcal.stereo.fff() or mrcal.fff(). The latter is preferred.
+All functions are exported into the drcal module. So you can call these via
+drcal.stereo.fff() or drcal.fff(). The latter is preferred.
 """
 
 import numpy as np
 import numpysane as nps
-import mrcal
 import re
+
+from .image_transforms import transform_image
+
+from .cameramodel import cameramodel
+
+from .poseutils import compose_Rt, rotate_point_R
+
+from .projections import (
+    project,
+    unproject,
+    unproject_latlon,
+    unproject_lonlat,
+    unproject_pinhole,
+)
+
+from .bindings import (
+    _rectified_resolution,
+    lensmodel_metadata_and_config,
+    _rectified_system,
+    _rectification_maps,
+)
+from .bindings_npsp import _stereo_range_dense, _stereo_range_sparse, apply_homography
 
 
 def rectified_resolution(
@@ -38,23 +49,23 @@ SYNOPSIS
 
     pixels_per_deg_az,  \
     pixels_per_deg_el = \
-        mrcal.rectified_resolution(model,
+        drcal.rectified_resolution(model,
                                    az_fov_deg = 120,
                                    el_fov_deg = 100,
                                    az0_deg    = 0,
                                    el0_deg    = 0
                                    R_cam0_rect0)
 
-This is usually called from inside mrcal.rectified_system() only, and usually
+This is usually called from inside drcal.rectified_system() only, and usually
 there's no reason for the end-user to call this function. If the final
 resolution used in the rectification is needed, call
-mrcal.rectified_system(return_metadata = True)
+drcal.rectified_system(return_metadata = True)
 
 This function also supports LENSMODEL_LONLAT (not for stereo rectification, but
 for a 360deg around-the-horizon view), and is useful to compute the image
 resolution in those applications.
 
-Similar to mrcal.rectified_system(), this functions takes in rectified-image
+Similar to drcal.rectified_system(), this functions takes in rectified-image
 pan,zoom values and a desired resolution in pixels_per_deg_.... If
 pixels_per_deg_... < 0: we compute and return a scaled factor of the input image
 resolution at the center of the rectified field of view. pixels_per_deg_... = -1
@@ -93,7 +104,7 @@ ARGUMENTS
 - pixels_per_deg_el: same as pixels_per_deg_az but in the elevation direction
 
 - rectification_model: optional string that selects the projection function to
-  use in the resulting rectified system. This is a string selecting the mrcal
+  use in the resulting rectified system. This is a string selecting the drcal
   lens model. Currently supported are "LENSMODEL_LATLON" (the default) and
   "LENSMODEL_LONLAT" and "LENSMODEL_PINHOLE"
 
@@ -102,7 +113,7 @@ RETURNED VALUES
 A tuple (pixels_per_deg_az,pixels_per_deg_el)
 """
     # The guts of this function are implemented in C. Call that
-    return mrcal._mrcal._rectified_resolution(
+    return _rectified_resolution(
         *model.intrinsics(),
         R_cam0_rect0=np.ascontiguousarray(R_cam0_rect0),
         az_fov_deg=az_fov_deg,
@@ -127,11 +138,11 @@ def _rectified_resolution_python(
     pixels_per_deg_el=-1.0,
     rectification_model="LENSMODEL_LATLON",
 ):
-    r"""Reference implementation of mrcal_rectified_resolution() in python
+    r"""Reference implementation of drcal_rectified_resolution() in python
 
     The main implementation is written in C in stereo.c:
 
-      mrcal_rectified_resolution()
+      drcal_rectified_resolution()
 
     This should be identical to the rectified_resolution() function above. There's
     no explicit test to compare the two implementations, but test/test-stereo.py
@@ -151,15 +162,13 @@ def _rectified_resolution_python(
         # th is an angular perturbation applied to v.
         if rectification_model == "LENSMODEL_LATLON":
             q0_normalized = azel0
-            v, dv_dazel = mrcal.unproject_latlon(q0_normalized, get_gradients=True)
+            v, dv_dazel = unproject_latlon(q0_normalized, get_gradients=True)
         elif rectification_model == "LENSMODEL_LONLAT":
             q0_normalized = azel0
-            v, dv_dazel = mrcal.unproject_lonlat(q0_normalized, get_gradients=True)
+            v, dv_dazel = unproject_lonlat(q0_normalized, get_gradients=True)
         elif rectification_model == "LENSMODEL_PINHOLE":
             q0_normalized = np.tan(azel0)
-            v, dv_dq0normalized = mrcal.unproject_pinhole(
-                q0_normalized, get_gradients=True
-            )
+            v, dv_dq0normalized = unproject_pinhole(q0_normalized, get_gradients=True)
             # dq/dth = dtanth/dth = 1/cos^2(th)
             dv_dazel = dv_dq0normalized
 
@@ -169,10 +178,10 @@ def _rectified_resolution_python(
         else:
             raise Exception("Unsupported rectification model")
 
-        v0 = mrcal.rotate_point_R(R_cam0_rect0, v)
+        v0 = rotate_point_R(R_cam0_rect0, v)
         dv0_dazel = nps.matmult(R_cam0_rect0, dv_dazel)
 
-        _, dq_dv0, _ = mrcal.project(v0, *model.intrinsics(), get_gradients=True)
+        _, dq_dv0, _ = project(v0, *model.intrinsics(), get_gradients=True)
 
         # More complex method that's probably not any better
         #
@@ -184,13 +193,13 @@ def _rectified_resolution_python(
         #     #
         #     # norm2(dq/dth) = [cos,sin] MtM [cos,sin]t is then an ellipse with the
         #     # eigenvalues of MtM giving me the best and worst sensitivities. I can
-        #     # use mrcal.worst_direction_stdev() to find the densest direction. But I
+        #     # use drcal.worst_direction_stdev() to find the densest direction. But I
         #     # actually know the directions I care about, so I evaluate them
         #     # independently for the az and el directions
-        #     Ruv = mrcal.R_aligned_to_vector(v0)
+        #     Ruv = drcal.R_aligned_to_vector(v0)
         #     M = nps.matmult(dq_dv0, nps.transpose(Ruv[:2,:]))
         #     # I pick the densest direction: highest |dq/dth|
-        #     pixels_per_rad = mrcal.worst_direction_stdev( nps.matmult( nps.transpose(M),M) )
+        #     pixels_per_rad = drcal.worst_direction_stdev( nps.matmult( nps.transpose(M),M) )
 
         dq_dazel = nps.matmult(dq_dv0, dv0_dazel)
 
@@ -240,26 +249,26 @@ def rectified_system(
 SYNOPSIS
 
     import sys
-    import mrcal
+    import drcal
     import cv2
     import numpy as np
     import numpysane as nps
 
-    models = [ mrcal.cameramodel(f) \
+    models = [ drcal.cameramodel(f) \
                for f in ('left.cameramodel',
                          'right.cameramodel') ]
 
-    images = [ mrcal.load_image(f) \
+    images = [ drcal.load_image(f) \
                for f in ('left.jpg', 'right.jpg') ]
 
     models_rectified = \
-        mrcal.rectified_system(models,
+        drcal.rectified_system(models,
                                az_fov_deg = 120,
                                el_fov_deg = 100)
 
-    rectification_maps = mrcal.rectification_maps(models, models_rectified)
+    rectification_maps = drcal.rectification_maps(models, models_rectified)
 
-    images_rectified = [ mrcal.transform_image(images[i], rectification_maps[i]) \
+    images_rectified = [ drcal.transform_image(images[i], rectification_maps[i]) \
                          for i in range(2) ]
 
     # Find stereo correspondences using OpenCV
@@ -280,20 +289,20 @@ SYNOPSIS
 
     # Point cloud in rectified camera-0 coordinates
     # shape (H,W,3)
-    p_rect0 = mrcal.stereo_unproject( disparity16,
+    p_rect0 = drcal.stereo_unproject( disparity16,
                                       models_rectified,
                                       disparity_scale = 16 )
 
-    Rt_cam0_rect0 = mrcal.compose_Rt( models          [0].extrinsics_Rt_fromref(),
+    Rt_cam0_rect0 = drcal.compose_Rt( models          [0].extrinsics_Rt_fromref(),
                                       models_rectified[0].extrinsics_Rt_toref() )
 
     # Point cloud in camera-0 coordinates
     # shape (H,W,3)
-    p_cam0 = mrcal.transform_point_Rt(Rt_cam0_rect0, p_rect0)
+    p_cam0 = drcal.transform_point_Rt(Rt_cam0_rect0, p_rect0)
 
 This function computes the parameters of a rectified system from two
 cameramodels in a stereo pair. The output is a pair of "rectified" models. Each
-of these is a normal mrcal.cameramodel object describing a "camera" somewhere in
+of these is a normal drcal.cameramodel object describing a "camera" somewhere in
 space, with some particular projection behavior. The pair of models returned
 here have the desired property that each row of pixels represents a plane in
 space AND each corresponding row in the pair of rectified images represents the
@@ -337,7 +346,7 @@ return. Two projections are currently supported:
 - "LENSMODEL_LATLON": the default projection that utilizes a transverse
   equirectangular map. This projection has even angular spacing between pixels,
   so it works well even with wide lenses. The documentation has more information:
-  https://mrcal.secretsauce.net/lensmodels.html#lensmodel-latlon
+  https://drcal.secretsauce.net/lensmodels.html#lensmodel-latlon
 
 - "LENSMODEL_PINHOLE": the traditional projection function that utilizes a
   pinhole camera. This works badly with wide lenses, and is recommended if
@@ -345,7 +354,7 @@ return. Two projections are currently supported:
 
 ARGUMENTS
 
-- models: an iterable of two mrcal.cameramodel objects representing the cameras
+- models: an iterable of two drcal.cameramodel objects representing the cameras
   in the stereo pair. Any sane combination of lens models and resolutions and
   geometries is valid
 
@@ -381,7 +390,7 @@ ARGUMENTS
 - pixels_per_deg_el: same as pixels_per_deg_az but in the elevation direction
 
 - rectification_model: optional string that selects the projection function to
-  use in the resulting rectified system. This is a string selecting the mrcal
+  use in the resulting rectified system. This is a string selecting the drcal
   lens model. Currently supported are "LENSMODEL_LATLON" (the default) and
   "LENSMODEL_PINHOLE"
 
@@ -400,7 +409,7 @@ ARGUMENTS
 
 RETURNED VALUES
 
-We compute a tuple of mrcal.cameramodels describing the two rectified cameras.
+We compute a tuple of drcal.cameramodels describing the two rectified cameras.
 These two models are identical, except for a baseline translation in the +x
 direction in rectified coordinates.
 
@@ -411,7 +420,7 @@ else:                   we return this tuple of models, dict of metadata
 
     for m in models:
         lensmodel = m.intrinsics()[0]
-        meta = mrcal.lensmodel_metadata_and_config(lensmodel)
+        meta = lensmodel_metadata_and_config(lensmodel)
         if meta["noncentral"]:
             if re.match("^LENSMODEL_CAHVORE", lensmodel):
                 if nps.norm2(m.intrinsics()[1][-3:]) > 0:
@@ -451,7 +460,7 @@ else:                   we return this tuple of models, dict of metadata
         el_fov_deg,
         az0_deg,
         el0_deg,
-    ) = mrcal._mrcal._rectified_system(
+    ) = _rectified_system(
         *models[0].intrinsics(),
         models[0].extrinsics_rt_fromref(),
         models[1].extrinsics_rt_fromref(),
@@ -474,12 +483,12 @@ else:                   we return this tuple of models, dict of metadata
     rt_rect1_ref[3] -= baseline
 
     models_rectified = (
-        mrcal.cameramodel(
+        cameramodel(
             intrinsics=(rectification_model, fxycxy_rectified),
             imagersize=(Naz, Nel),
             extrinsics_rt_fromref=rt_rect0_ref,
         ),
-        mrcal.cameramodel(
+        cameramodel(
             intrinsics=(rectification_model, fxycxy_rectified),
             imagersize=(Naz, Nel),
             extrinsics_rt_fromref=rt_rect1_ref,
@@ -514,18 +523,18 @@ def _rectified_system_python(
     rectification_model="LENSMODEL_LATLON",
     return_metadata=False,
 ):
-    r"""Reference implementation of mrcal_rectified_system() in python
+    r"""Reference implementation of drcal_rectified_system() in python
 
     The main implementation is written in C in stereo.c:
 
-      mrcal_rectified_system()
+      drcal_rectified_system()
 
     This should be identical to the rectified_system() function above. There's no
     explicit test to compare the two implementations, but test/test-stereo.py should
     catch any differences.
 
     NOTE: THE C IMPLEMENTATION HANDLES LENSMODEL_LATLON only. The
-    mrcal.rectified_system() wrapper above calls THIS function in that case
+    drcal.rectified_system() wrapper above calls THIS function in that case
 
     """
 
@@ -533,7 +542,7 @@ def _rectified_system_python(
         rectification_model == "LENSMODEL_LATLON"
         or rectification_model == "LENSMODEL_PINHOLE"
     ):
-        raise (
+        raise RuntimeError(
             f"Unsupported rectification model '{rectification_model}'. Only LENSMODEL_LATLON and LENSMODEL_PINHOLE are supported."
         )
 
@@ -566,7 +575,7 @@ def _rectified_system_python(
     ######## y: completes the system from x,z
     ######## z: component of the cameras' viewing direction
     ########    normal to the baseline
-    Rt01 = mrcal.compose_Rt(
+    Rt01 = compose_Rt(
         models[0].extrinsics_Rt_fromref(), models[1].extrinsics_Rt_toref()
     )
 
@@ -638,7 +647,7 @@ def _rectified_system_python(
 
     el0 = el0_deg * np.pi / 180.0
 
-    pixels_per_deg_az, pixels_per_deg_el = mrcal.rectified_resolution(
+    pixels_per_deg_az, pixels_per_deg_el = rectified_resolution(
         models[0],
         az_fov_deg=az_fov_deg,
         el_fov_deg=el_fov_deg,
@@ -773,7 +782,7 @@ def _rectified_system_python(
         )
 
     ######## The geometry
-    Rt_rect0_ref = mrcal.compose_Rt(Rt_rect0_cam0, models[0].extrinsics_Rt_fromref())
+    Rt_rect0_ref = compose_Rt(Rt_rect0_cam0, models[0].extrinsics_Rt_fromref())
     # rect1 coord system has the same orientation as rect0, but is translated so
     # that its origin is at the origin of cam1
     R_rect1_cam0 = R_rect0_cam0
@@ -786,15 +795,15 @@ def _rectified_system_python(
         ),
         axis=-2,
     )
-    Rt_rect1_ref = mrcal.compose_Rt(Rt_rect1_cam1, models[1].extrinsics_Rt_fromref())
+    Rt_rect1_ref = compose_Rt(Rt_rect1_cam1, models[1].extrinsics_Rt_fromref())
 
     models_rectified = (
-        mrcal.cameramodel(
+        cameramodel(
             intrinsics=(rectification_model, fxycxy),
             imagersize=(Naz, Nel),
             extrinsics_Rt_fromref=Rt_rect0_ref,
         ),
-        mrcal.cameramodel(
+        cameramodel(
             intrinsics=(rectification_model, fxycxy),
             imagersize=(Naz, Nel),
             extrinsics_Rt_fromref=Rt_rect1_ref,
@@ -833,7 +842,7 @@ def _validate_models_rectified(models_rectified):
         )
 
     intrinsics = [m.intrinsics() for m in models_rectified]
-    Rt01 = mrcal.compose_Rt(
+    Rt01 = compose_Rt(
         models_rectified[0].extrinsics_Rt_fromref(),
         models_rectified[1].extrinsics_Rt_toref(),
     )
@@ -859,7 +868,7 @@ def _validate_models_rectified(models_rectified):
         models_rectified[1].imagersize()
     )
     if imagersize_diff[0] != 0 or imagersize_diff[1] != 0:
-        raise Exceptions("The two rectified models MUST have the same imager size")
+        raise RuntimeError("The two rectified models MUST have the same imager size")
 
     costh = (np.trace(Rt01[:3, :]) - 1.0) / 2.0
     if costh < 0.999999:
@@ -877,26 +886,26 @@ def rectification_maps(models, models_rectified):
 SYNOPSIS
 
     import sys
-    import mrcal
+    import drcal
     import cv2
     import numpy as np
     import numpysane as nps
 
-    models = [ mrcal.cameramodel(f) \
+    models = [ drcal.cameramodel(f) \
                for f in ('left.cameramodel',
                          'right.cameramodel') ]
 
-    images = [ mrcal.load_image(f) \
+    images = [ drcal.load_image(f) \
                for f in ('left.jpg', 'right.jpg') ]
 
     models_rectified = \
-        mrcal.rectified_system(models,
+        drcal.rectified_system(models,
                                az_fov_deg = 120,
                                el_fov_deg = 100)
 
-    rectification_maps = mrcal.rectification_maps(models, models_rectified)
+    rectification_maps = drcal.rectification_maps(models, models_rectified)
 
-    images_rectified = [ mrcal.transform_image(images[i], rectification_maps[i]) \
+    images_rectified = [ drcal.transform_image(images[i], rectification_maps[i]) \
                          for i in range(2) ]
 
     # Find stereo correspondences using OpenCV
@@ -917,42 +926,42 @@ SYNOPSIS
 
     # Point cloud in rectified camera-0 coordinates
     # shape (H,W,3)
-    p_rect0 = mrcal.stereo_unproject( disparity16,
+    p_rect0 = drcal.stereo_unproject( disparity16,
                                       models_rectified,
                                       disparity_scale = 16 )
 
-    Rt_cam0_rect0 = mrcal.compose_Rt( models          [0].extrinsics_Rt_fromref(),
+    Rt_cam0_rect0 = drcal.compose_Rt( models          [0].extrinsics_Rt_fromref(),
                                       models_rectified[0].extrinsics_Rt_toref() )
 
     # Point cloud in camera-0 coordinates
     # shape (H,W,3)
-    p_cam0 = mrcal.transform_point_Rt(Rt_cam0_rect0, p_rect0)
+    p_cam0 = drcal.transform_point_Rt(Rt_cam0_rect0, p_rect0)
 
-After the pair of rectified models has been built by mrcal.rectified_system(),
+After the pair of rectified models has been built by drcal.rectified_system(),
 this function can be called to compute the rectification maps. These can be
-passed to mrcal.transform_image() to remap input images into the rectified
+passed to drcal.transform_image() to remap input images into the rectified
 space.
 
-The documentation for mrcal.rectified_system() applies here.
+The documentation for drcal.rectified_system() applies here.
 
-This function is implemented in C in the mrcal_rectification_maps() function. An
+This function is implemented in C in the drcal_rectification_maps() function. An
 equivalent Python implementation is available:
-mrcal.stereo._rectification_maps_python()
+drcal.stereo._rectification_maps_python()
 
 ARGUMENTS
 
-- models: an iterable of two mrcal.cameramodel objects representing the cameras
+- models: an iterable of two drcal.cameramodel objects representing the cameras
   in the stereo pair
 
 - models_rectified: the pair of rectified models, corresponding to the input
-  images. Usually this is returned by mrcal.rectified_system()
+  images. Usually this is returned by drcal.rectified_system()
 
 RETURNED VALUES
 
 We return a length-2 tuple of numpy arrays containing transformation maps for
-each camera. Each map can be used to mrcal.transform_image() images into
+each camera. Each map can be used to drcal.transform_image() images into
 rectified space. Each array contains 32-bit floats (as expected by
-mrcal.transform_image() and cv2.remap()). Each array has shape (Nel,Naz,2),
+drcal.transform_image() and cv2.remap()). Each array has shape (Nel,Naz,2),
 where (Nel,Naz) is the shape of each rectified image. Each shape-(2,) row
 contains corresponding pixel coordinates in the input image
 
@@ -963,7 +972,7 @@ contains corresponding pixel coordinates in the input image
     Naz, Nel = models_rectified[0].imagersize()
     # shape (Ncameras=2, Nel, Naz, Nxy=2)
     rectification_maps = np.zeros((2, Nel, Naz, 2), dtype=np.float32)
-    mrcal._mrcal._rectification_maps(
+    _rectification_maps(
         *models[0].intrinsics(),
         *models[1].intrinsics(),
         *models_rectified[0].intrinsics(),
@@ -977,11 +986,11 @@ contains corresponding pixel coordinates in the input image
 
 
 def _rectification_maps_python(models, models_rectified):
-    r"""Reference implementation of mrcal.rectification_maps() in python
+    r"""Reference implementation of drcal.rectification_maps() in python
 
     The main implementation is written in C in stereo.c:
 
-      mrcal_rectification_maps()
+      drcal_rectification_maps()
 
     This should be identical to the rectification_maps() function above. This is
     checked by the test-rectification-maps.py test.
@@ -1011,20 +1020,20 @@ def _rectification_maps_python(models, models_rectified):
 
     # shape (Nel,Naz,3)
     if models_rectified[0].intrinsics()[0] == "LENSMODEL_LATLON":
-        unproject = mrcal.unproject_latlon
+        unproject = unproject_latlon
     else:
-        unproject = mrcal.unproject_pinhole
+        unproject = unproject_pinhole
 
     az, el = np.meshgrid(np.arange(Naz, dtype=float), np.arange(Nel, dtype=float))
 
     v = unproject(np.ascontiguousarray(nps.mv(nps.cat(az, el), 0, -1)), fxycxy)
 
-    v0 = mrcal.rotate_point_R(R_cam_rect[0], v)
-    v1 = mrcal.rotate_point_R(R_cam_rect[1], v)
+    v0 = rotate_point_R(R_cam_rect[0], v)
+    v1 = rotate_point_R(R_cam_rect[1], v)
 
     return (
-        mrcal.project(v0, *models[0].intrinsics()).astype(np.float32),
-        mrcal.project(v1, *models[1].intrinsics()).astype(np.float32),
+        project(v0, *models[0].intrinsics()).astype(np.float32),
+        project(v1, *models[1].intrinsics()).astype(np.float32),
     )
 
 
@@ -1044,26 +1053,26 @@ def stereo_range(
 SYNOPSIS
 
     import sys
-    import mrcal
+    import drcal
     import cv2
     import numpy as np
     import numpysane as nps
 
-    models = [ mrcal.cameramodel(f) \
+    models = [ drcal.cameramodel(f) \
                for f in ('left.cameramodel',
                          'right.cameramodel') ]
 
-    images = [ mrcal.load_image(f) \
+    images = [ drcal.load_image(f) \
                for f in ('left.jpg', 'right.jpg') ]
 
     models_rectified = \
-        mrcal.rectified_system(models,
+        drcal.rectified_system(models,
                                az_fov_deg = 120,
                                el_fov_deg = 100)
 
-    rectification_maps = mrcal.rectification_maps(models, models_rectified)
+    rectification_maps = drcal.rectification_maps(models, models_rectified)
 
-    images_rectified = [ mrcal.transform_image(images[i], rectification_maps[i]) \
+    images_rectified = [ drcal.transform_image(images[i], rectification_maps[i]) \
                          for i in range(2) ]
 
     # Find stereo correspondences using OpenCV
@@ -1083,7 +1092,7 @@ SYNOPSIS
     disparity16 = matcher.compute(*images_rectified) # in pixels*16
 
     # Convert the disparities to range-to-camera0
-    ranges = mrcal.stereo_range( disparity16,
+    ranges = drcal.stereo_range( disparity16,
                                  models_rectified,
                                  disparity_scale = 16 )
 
@@ -1098,15 +1107,15 @@ SYNOPSIS
     # Point cloud in rectified camera-0 coordinates
     # shape (H,W,3)
     p_rect0 = \
-        mrcal.unproject_latlon(q, models_rectified[0].intrinsics()[1]) * \
+        drcal.unproject_latlon(q, models_rectified[0].intrinsics()[1]) * \
         nps.dummy(ranges, axis=-1)
 
-    Rt_cam0_rect0 = mrcal.compose_Rt( models          [0].extrinsics_Rt_fromref(),
+    Rt_cam0_rect0 = drcal.compose_Rt( models          [0].extrinsics_Rt_fromref(),
                                       models_rectified[0].extrinsics_Rt_toref() )
 
     # Point cloud in camera-0 coordinates
     # shape (H,W,3)
-    p_cam0 = mrcal.transform_point_Rt(Rt_cam0_rect0, p_rect0)
+    p_cam0 = drcal.transform_point_Rt(Rt_cam0_rect0, p_rect0)
 
 As shown in the example above, we can perform stereo processing by building
 rectified models and transformation maps, rectifying our images, and then doing
@@ -1121,7 +1130,7 @@ usable geometry by calling one of two functions:
 In the most common usage of stereo_range() we take a full disparity IMAGE, and
 then convert it to a range IMAGE. In this common case we call
 
-    range_image = mrcal.stereo_range(disparity_image, models_rectified)
+    range_image = drcal.stereo_range(disparity_image, models_rectified)
 
 If we aren't processing the full disparity image, we can pass in an array of
 rectified pixel coordinates (in the first rectified camera) in the "qrect0"
@@ -1241,7 +1250,7 @@ ARGUMENTS
   common case of a disparity IMAGE, this is an array of shape (Nel, Naz)
 
 - models_rectified: the pair of rectified models, corresponding to the input
-  images. Usually this is returned by mrcal.rectified_system()
+  images. Usually this is returned by drcal.rectified_system()
 
 - disparity_scale: optional scale factor for the "disparity" array. If omitted,
   the "disparity" array is assumed to contain the disparities, in pixels.
@@ -1327,7 +1336,7 @@ RETURNED VALUES
             (disparity,),
         )
 
-    Rt01 = mrcal.compose_Rt(
+    Rt01 = compose_Rt(
         models_rectified[0].extrinsics_Rt_fromref(),
         models_rectified[1].extrinsics_Rt_toref(),
     )
@@ -1340,7 +1349,7 @@ RETURNED VALUES
                 f"qrect0 is None, so the given disparity and full rectified images MUST have the same dimensions. I have {disparity.shape=} and {models_rectified[0].imagersize()=}"
             )
 
-        r = mrcal._mrcal_npsp._stereo_range_dense(
+        r = _stereo_range_dense(
             disparity_scaled=disparity.astype(np.uint16),
             disparity_scale=np.uint16(disparity_scale),
             disparity_scaled_min=np.uint16(disparity_scaled_min),
@@ -1351,7 +1360,7 @@ RETURNED VALUES
         )
 
     else:
-        r = mrcal._mrcal_npsp._stereo_range_sparse(
+        r = _stereo_range_sparse(
             disparity=disparity.astype(float) / disparity_scale,
             qrect0=qrect0.astype(float),
             disparity_min=float(disparity_min),
@@ -1377,11 +1386,11 @@ def _stereo_range_python(
     disparity_scaled_max=None,
     qrect0=None,
 ):
-    r"""Reference implementation of mrcal.stereo_range() in python
+    r"""Reference implementation of drcal.stereo_range() in python
 
     The main implementation is written in C in stereo.c:
 
-      mrcal_stereo_range_sparse() and mrcal_stereo_range_dense()
+      drcal_stereo_range_sparse() and drcal_stereo_range_dense()
 
     This should be identical to the stereo_range() function above. This is
     checked by the test-stereo-range.py test.
@@ -1452,7 +1461,7 @@ def _stereo_range_python(
     fx = intrinsics[1][0]
     cx = intrinsics[1][2]
 
-    Rt01 = mrcal.compose_Rt(
+    Rt01 = compose_Rt(
         models_rectified[0].extrinsics_Rt_fromref(),
         models_rectified[1].extrinsics_Rt_toref(),
     )
@@ -1530,26 +1539,26 @@ def stereo_unproject(
 SYNOPSIS
 
     import sys
-    import mrcal
+    import drcal
     import cv2
     import numpy as np
     import numpysane as nps
 
-    models = [ mrcal.cameramodel(f) \
+    models = [ drcal.cameramodel(f) \
                for f in ('left.cameramodel',
                          'right.cameramodel') ]
 
-    images = [ mrcal.load_image(f) \
+    images = [ drcal.load_image(f) \
                for f in ('left.jpg', 'right.jpg') ]
 
     models_rectified = \
-        mrcal.rectified_system(models,
+        drcal.rectified_system(models,
                                az_fov_deg = 120,
                                el_fov_deg = 100)
 
-    rectification_maps = mrcal.rectification_maps(models, models_rectified)
+    rectification_maps = drcal.rectification_maps(models, models_rectified)
 
-    images_rectified = [ mrcal.transform_image(images[i], rectification_maps[i]) \
+    images_rectified = [ drcal.transform_image(images[i], rectification_maps[i]) \
                          for i in range(2) ]
 
     # Find stereo correspondences using OpenCV
@@ -1570,16 +1579,16 @@ SYNOPSIS
 
     # Point cloud in rectified camera-0 coordinates
     # shape (H,W,3)
-    p_rect0 = mrcal.stereo_unproject( disparity16,
+    p_rect0 = drcal.stereo_unproject( disparity16,
                                       models_rectified,
                                       disparity_scale = 16 )
 
-    Rt_cam0_rect0 = mrcal.compose_Rt( models          [0].extrinsics_Rt_fromref(),
+    Rt_cam0_rect0 = drcal.compose_Rt( models          [0].extrinsics_Rt_fromref(),
                                       models_rectified[0].extrinsics_Rt_toref() )
 
     # Point cloud in camera-0 coordinates
     # shape (H,W,3)
-    p_cam0 = mrcal.transform_point_Rt(Rt_cam0_rect0, p_rect0)
+    p_cam0 = drcal.transform_point_Rt(Rt_cam0_rect0, p_rect0)
 
 As shown in the example above, we can perform stereo processing by building
 rectified models and transformation maps, rectifying our images, and then doing
@@ -1595,7 +1604,7 @@ In the most common usage of stereo_unproject() we take a full disparity IMAGE,
 and then convert it to a dense point cloud: one point per pixel. In this common
 case we call
 
-    p_rect0 = mrcal.stereo_unproject(disparity_image, models_rectified)
+    p_rect0 = drcal.stereo_unproject(disparity_image, models_rectified)
 
 If we aren't processing the full disparity image, we can pass in an array of
 rectified pixel coordinates (in the first rectified camera) in the "qrect0"
@@ -1608,7 +1617,7 @@ Exactly one of (disparity,ranges) must be given as non-None. "ranges" is a
 keyword-only argument, while "disparity" is positional. So if passing ranges,
 the disparity must be explicitly given as None:
 
-    p_rect0 = mrcal.stereo_unproject( disparity        = None,
+    p_rect0 = drcal.stereo_unproject( disparity        = None,
                                       models_rectified = models_rectified,
                                       ranges           = ranges )
 
@@ -1623,7 +1632,7 @@ ARGUMENTS
   common case of a disparity IMAGE, this is an array of shape (Nel, Naz)
 
 - models_rectified: the pair of rectified models, corresponding to the input
-  images. Usually this is returned by mrcal.rectified_system()
+  images. Usually this is returned by drcal.rectified_system()
 
 - ranges: optional numpy array with the ranges returned by stereo_range().
   Exactly one of (disparity,ranges) should be given as non-None.
@@ -1671,7 +1680,7 @@ RETURNED VALUES
         )
 
     # shape (..., 3)
-    vrect0 = mrcal.unproject(qrect0, *models_rectified[0].intrinsics(), normalize=True)
+    vrect0 = unproject(qrect0, *models_rectified[0].intrinsics(), normalize=True)
     # shape (..., 3)
     p_rect0 = vrect0 * nps.dummy(ranges, axis=-1)
 
@@ -1704,11 +1713,11 @@ SYNOPSIS
     # the q0 estimate. We use this homography to estimate the corresponding
     # pixel coordinate q1, and we use it to transform the search template
     def xy_from_q(model, q):
-        v, dv_dq, _ = mrcal.unproject(q, *model.intrinsics(),
+        v, dv_dq, _ = drcal.unproject(q, *model.intrinsics(),
                                       get_gradients = True)
         t_ref_cam = model.extrinsics_Rt_toref()[ 3,:]
         R_ref_cam = model.extrinsics_Rt_toref()[:3,:]
-        vref      = mrcal.rotate_point_R(R_ref_cam, v)
+        vref      = drcal.rotate_point_R(R_ref_cam, v)
 
         # We're looking at the plane z=0, so z = 0 = t_ref_cam[2] + k*vref[2]
         k = -t_ref_cam[2]/vref[2]
@@ -1726,9 +1735,9 @@ SYNOPSIS
 
     xy, H_xy_q0 = xy_from_q(model0, q0)
 
-    v1 = mrcal.transform_point_Rt(model1.extrinsics_Rt_fromref(),
+    v1 = drcal.transform_point_Rt(model1.extrinsics_Rt_fromref(),
                                   np.array((*xy, 0.)))
-    q1 = mrcal.project(v1, *model1.intrinsics())
+    q1 = drcal.project(v1, *model1.intrinsics())
 
     _, H_xy_q1 = xy_from_q(model1, q1)
 
@@ -1736,7 +1745,7 @@ SYNOPSIS
 
 
     q1, diagnostics = \
-        mrcal.match_feature( image0, image1,
+        drcal.match_feature( image0, image1,
                              q0,
                              H10            = H10,
                              search_radius1 = 200,
@@ -1745,12 +1754,12 @@ SYNOPSIS
 This function wraps the OpenCV cv2.matchTemplate() function to provide
 additional functionality. The big differences are
 
-1. The mrcal.match_feature() interface reports a matching pixel coordinate, NOT
+1. The drcal.match_feature() interface reports a matching pixel coordinate, NOT
    a matching template. The conversions between templates and pixel coordinates
    at their center are tedious and error-prone, and they're handled by this
    function.
 
-2. mrcal.match_feature() can take into account a homography that is applied to
+2. drcal.match_feature() can take into account a homography that is applied to
    the two images to match their appearance. The caller can estimate this from
    the relative geometry of the two cameras and the geometry of the observed
    object. If two pinhole cameras are observing a plane in space, a homography
@@ -1760,7 +1769,7 @@ additional functionality. The big differences are
    oriented differently) and/or a skewing (if the object is being observed from
    different angles)
 
-3. mrcal.match_feature() performs simple sub-pixel interpolation to increase the
+3. drcal.match_feature() performs simple sub-pixel interpolation to increase the
    resolution of the reported pixel match
 
 4. Visualization capabilities are included to allow the user to evaluate the
@@ -1781,7 +1790,7 @@ The H10 homography estimate is used in two separate ways:
 2. To compute the initial estimate of q1. This becomes the center of the search
    window. We have
 
-   q1_estimate = mrcal.apply_homography(H10, q0)
+   q1_estimate = drcal.apply_homography(H10, q0)
 
 A common use case is a translation-only homography. This avoids any image
 transformation, but does select a q1_estimate. This special case is supported by
@@ -1794,7 +1803,7 @@ full translation-only homography may be passed in:
 
 The top-level logic of this function:
 
-1. q1_estimate = mrcal.apply_homography(H10, q0)
+1. q1_estimate = drcal.apply_homography(H10, q0)
 
 2. Select a region in image1, centered at q1_estimate, with dimensions given in
    template_size1
@@ -1966,7 +1975,7 @@ data_tuples, plot_options. The plot can then be made with gp.plot(*data_tuples,
         q1_estimate = q1_estimate.astype(np.float32)
     else:
         H10 = H10.astype(np.float32)
-        q1_estimate = mrcal.apply_homography(H10, q0)
+        q1_estimate = apply_homography(H10, q0)
 
     # I default to normalized cross-correlation. The method arg defaults to None
     # instead of cv2.TM_CCORR_NORMED so that I don't need to import cv2, unless
@@ -2011,10 +2020,10 @@ data_tuples, plot_options. The plot can then be made with gp.plot(*data_tuples,
         axis=-1,
     ).astype(np.float32)
 
-    q0 = mrcal.apply_homography(np.linalg.inv(H10), q1)
+    q0 = apply_homography(np.linalg.inv(H10), q1)
     checkdims(image0.shape, "image0", q0[0, 0], q0[-1, 0], q0[0, -1], q0[-1, -1])
 
-    image0_template = mrcal.transform_image(image0, q0)
+    image0_template = transform_image(image0, q0)
 
     ################### MATCH TEMPLATE
     q1_min = q1_template_min - search_radius1
@@ -2043,7 +2052,7 @@ data_tuples, plot_options. The plot can then be made with gp.plot(*data_tuples,
         matchoutput_optimum_flatindex = np.argmin(matchoutput.ravel())
     else:
         matchoutput_optimum_flatindex = np.argmax(matchoutput.ravel())
-    matchoutput_optimum = matchoutput.ravel()[matchoutput_optimum_flatindex]
+
     # optimal, discrete-pixel q1 in image1_cut coords
     q1_cut = np.array(
         np.unravel_index(matchoutput_optimum_flatindex, matchoutput.shape)

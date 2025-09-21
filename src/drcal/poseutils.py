@@ -10,7 +10,6 @@ mrcal.poseutils.fff() or mrcal.fff(). The latter is preferred.
 """
 
 import numpy as np
-import numpysane as nps
 
 from functools import reduce
 
