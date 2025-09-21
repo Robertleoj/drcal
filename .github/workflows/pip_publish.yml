@@ -1,9 +1,5 @@
 name: Upload Python Package to PyPI when a Release is Created
 
-# on:
-#   release:
-#     types: [created]
-
 on:
   release:
     types: [created]
@@ -32,20 +28,17 @@ jobs:
 
       - name: Build wheels with cibuildwheel
         env:
-          # Build only CPython 3.11–3.13 (your package requires >=3.11)
           CIBW_BUILD: 'cp311-* cp312-* cp313-*'
-          # Linux specifics
           CIBW_ARCHS_LINUX: 'x86_64'
           CIBW_MANYLINUX_X86_64_IMAGE: manylinux_2_28
-          # Prepare toolchain
-          # We don't need to install the packages, vcpkg will do it from the vcpkg.json
+          # Prep toolchain & vcpkg (classic mode) INSIDE the manylinux container
           CIBW_BEFORE_ALL_LINUX: |
-            yum -y install git curl zip tar pkgconfig gcc gcc-c++ make
+            yum -y install git curl zip unzip tar which pkgconfig gcc gcc-c++ gcc-gfortran make
             git clone https://github.com/microsoft/vcpkg /opt/vcpkg
             /opt/vcpkg/bootstrap-vcpkg.sh -disableMetrics
-          # Make CMake pick up vcpkg automatically (your CMakeLists checks VCPKG_ROOT)
-          CIBW_ENVIRONMENT_LINUX: 'VCPKG_ROOT=/opt/vcpkg'
-          # Respect your pyproject skip rules; no musllinux or windows anyway
+            /opt/vcpkg/vcpkg install --classic --triplet x64-linux freeimage suitesparse-cholmod lapack-reference openblas
+          # Make CMake see vcpkg, but DISABLE manifest mode
+          CIBW_ENVIRONMENT_LINUX: 'VCPKG_ROOT=/opt/vcpkg VCPKG_MANIFEST_MODE=OFF'
         run: |
           cibuildwheel --output-dir dist
 
@@ -82,7 +75,10 @@ jobs:
             brew install gcc
             git clone https://github.com/microsoft/vcpkg "$HOME/vcpkg"
             "$HOME/vcpkg/bootstrap-vcpkg.sh" -disableMetrics
-          CIBW_ENVIRONMENT_MACOS: 'VCPKG_ROOT=$HOME/vcpkg'
+            "$HOME/vcpkg/vcpkg" install --classic --triplet x64-osx   freeimage suitesparse-cholmod lapack-reference openblas
+            "$HOME/vcpkg/vcpkg" install --classic --triplet arm64-osx freeimage suitesparse-cholmod lapack-reference openblas
+          # Point CMake at vcpkg and turn OFF manifest mode
+          CIBW_ENVIRONMENT_MACOS: 'VCPKG_ROOT=$HOME/vcpkg VCPKG_MANIFEST_MODE=OFF'
         run: |
           cibuildwheel --output-dir dist
 
@@ -90,6 +86,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: dist-macos
+          path: dist
 
   build-sdist:
     name: Build sdist
