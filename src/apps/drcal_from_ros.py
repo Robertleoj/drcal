@@ -1,13 +1,3 @@
-#!/usr/bin/env python3
-
-# Copyright (c) 2017-2023 California Institute of Technology ("Caltech"). U.S.
-# Government sponsorship acknowledged. All rights reserved.
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-
 ### THIS IS LARGELY A COPY OF mrcal-from-cahvor. Please consolidate
 
 r"""Converts a ROS/OpenCV-formatted camera model to the .cameramodel file format
@@ -45,6 +35,7 @@ to you, to clarify what it should do, exactly.
 import sys
 import argparse
 import os
+import drcal
 
 
 def parse_args():
@@ -78,49 +69,52 @@ def parse_args():
     return parser.parse_args()
 
 
-args = parse_args()
+def main():
+    args = parse_args()
 
-# arg-parsing is done before the imports so that --help works without building
-# stuff, so that I can generate the manpages and README
+    # arg-parsing is done before the imports so that --help works without building
+    # stuff, so that I can generate the manpages and README
 
-Nstdin = sum(1 for m in args.model if m == "-")
-if Nstdin > 1:
-    print(
-        f"At most one model can be read from standard input ('-'), but I got {Nstdin}",
-        file=sys.stderr,
-    )
-    sys.exit(1)
+    Nstdin = sum(1 for m in args.model if m == "-")
+    if Nstdin > 1:
+        print(
+            f"At most one model can be read from standard input ('-'), but I got {Nstdin}",
+            file=sys.stderr,
+        )
+        sys.exit(1)
 
-import mrcal
-
-for model in args.model:
-    if model == "-":
-        try:
-            m = mrcal.cameramodel(model)
-        except KeyboardInterrupt:
-            sys.exit(1)
-        except Exception as e:
-            print(e, file=sys.stderr)
-            sys.exit(1)
-        m.write(sys.stdout)
-    else:
-        base, extension = os.path.splitext(model)
-        if extension.lower() == ".cameramodel":
-            print(
-                "Input file is already in the cameramodel format (judging from the filename). Doing nothing",
-                file=sys.stderr,
-            )
-            sys.exit(0)
-
-        if args.outdir is not None:
-            base = args.outdir + "/" + os.path.split(base)[1]
-        filename_out = base + ".cameramodel"
-        if not args.force and os.path.exists(filename_out):
-            print(
-                f"Target model '{filename_out}' already exists. Doing nothing with this model. Pass -f to overwrite",
-                file=sys.stderr,
-            )
+    for model in args.model:
+        if model == "-":
+            try:
+                m = drcal.cameramodel(model)
+            except KeyboardInterrupt:
+                sys.exit(1)
+            except Exception as e:
+                print(e, file=sys.stderr)
+                sys.exit(1)
+            m.write(sys.stdout)
         else:
-            m = mrcal.cameramodel(model)
-            m.write(filename_out)
-            print("Wrote " + filename_out)
+            base, extension = os.path.splitext(model)
+            if extension.lower() == ".cameramodel":
+                print(
+                    "Input file is already in the cameramodel format (judging from the filename). Doing nothing",
+                    file=sys.stderr,
+                )
+                sys.exit(0)
+
+            if args.outdir is not None:
+                base = args.outdir + "/" + os.path.split(base)[1]
+            filename_out = base + ".cameramodel"
+            if not args.force and os.path.exists(filename_out):
+                print(
+                    f"Target model '{filename_out}' already exists. Doing nothing with this model. Pass -f to overwrite",
+                    file=sys.stderr,
+                )
+            else:
+                m = drcal.cameramodel(model)
+                m.write(filename_out)
+                print("Wrote " + filename_out)
+
+
+if __name__ == "__main__":
+    main()

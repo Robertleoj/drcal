@@ -37,6 +37,7 @@ mrcal.mmm.fff() can be called as mrcal.fff() instead. The latter is preferred.
 # from .utils import *
 # from .triangulation import *
 
+from . import cahvor
 from .bindings_poseutils_npsp import identity_Rt
 from .projections import unproject
 from .visualization import (
@@ -76,6 +77,7 @@ from .calibration import (
 
 
 __all__ = [
+    "cahvor",
     "identity_Rt",
     "unproject",
     "show_projection_diff",

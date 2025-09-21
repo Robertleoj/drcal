@@ -38,6 +38,13 @@ from .poseutils import Rt_from_rt, invert_Rt, transform_point_Rt, compose_Rt, rt
 from .synthetic_data import ref_calibration_object
 from .model_analysis import projection_uncertainty
 from .visualization import _report_regional_statistics
+import os
+import fnmatch
+import subprocess
+import shutil
+from tempfile import mkstemp
+import io
+import copy
 
 
 def compute_chessboard_corners(
@@ -45,7 +52,7 @@ def compute_chessboard_corners(
     H,
     *,
     globs_per_camera=("*",),
-    corners_cache_vnl: str | None = None,
+    corners_cache_vnl: str | io.IOBase | None = None,
     image_path_prefix=None,
     image_directory=None,
     jobs=1,
@@ -207,14 +214,6 @@ which mrcal.optimize() expects
         raise Exception(
             f"weight_column_kind must be one of ('level','weight',None); got '{weight_column_kind}'"
         )
-
-    import os
-    import fnmatch
-    import subprocess
-    import shutil
-    from tempfile import mkstemp
-    import io
-    import copy
 
     def get_corner_observations(
         W, H, globs_per_camera, corners_cache_vnl: str | None, exclude_images=set()

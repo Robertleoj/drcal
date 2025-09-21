@@ -60,6 +60,13 @@ import sys
 import argparse
 import re
 import os
+import drcal
+import yaml
+import numpy as np
+import numpysane as nps
+
+# wtf is this
+Rt_camprev_ref = None
 
 
 def parse_args():
@@ -120,23 +127,6 @@ def parse_args():
     return args
 
 
-args = parse_args()
-
-# arg-parsing is done before the imports so that --help works without building
-# stuff, so that I can generate the manpages and README
-
-
-import mrcal
-import mrcal.cahvor
-import yaml
-import numpy as np
-import numpysane as nps
-
-
-Rt_camprev_ref = None
-
-
-# stolen from mrcal-to-kalibr. Please consolidate
 def Rt_is_identity(Rt):
     cos_th = (np.trace(Rt[:3, :]) - 1.0) / 2.0
     # cos_th ~ 1 - x^2/2
@@ -145,7 +135,7 @@ def Rt_is_identity(Rt):
     return norm2_t < 1e-12 and th_sq < 1e-12
 
 
-def convert_one(d, name):
+def convert_one(d, name, args):
     global Rt_camprev_ref
 
     # I expect at least this structure:
@@ -190,9 +180,12 @@ def convert_one(d, name):
                 np.array(d["intrinsics"] + d["distortion_coeffs"], dtype=float),
             )
         else:
-            intrinsics = ("LENSMODEL_PINHOLE", np.array(d["intrinsics"], dtype=float))
+            intrinsics = (
+                "LENSMODEL_PINHOLE",
+                np.array(d["intrinsics"], dtype=float),
+            )
 
-        m = mrcal.cameramodel(
+        m = drcal.cameramodel(
             intrinsics=intrinsics, imagersize=np.array(d["resolution"], dtype=int)
         )
 
@@ -230,7 +223,7 @@ def convert_one(d, name):
             C, A, H, V, O, R, E = intrinsics.reshape(7, 3)
 
         try:
-            m = mrcal.cahvor._construct_model(
+            m = drcal.cahvor._construct_model(
                 C,
                 A,
                 H,
@@ -256,7 +249,7 @@ def convert_one(d, name):
             sys.exit(1)
 
     if "T_cn_cnm1" not in d:
-        Rt_cam_camprev = mrcal.identity_Rt()
+        Rt_cam_camprev = drcal.identity_Rt()
 
     else:
         T_cn_cnm1 = np.array(d["T_cn_cnm1"])
@@ -298,11 +291,11 @@ def convert_one(d, name):
         Rt_cam_camprev = nps.glue(R_cam_camprev, t_cam_camprev, axis=-2)
 
     if Rt_camprev_ref is not None:
-        Rt_cam_ref = mrcal.compose_Rt(Rt_cam_camprev, Rt_camprev_ref)
+        Rt_cam_ref = drcal.compose_Rt(Rt_cam_camprev, Rt_camprev_ref)
     else:
         # This is the first camera. What do we use as our reference?
         if args.cam0_at_reference:
-            Rt_cam_ref = mrcal.identity_Rt()
+            Rt_cam_ref = drcal.identity_Rt()
         else:
             # By default the "prev cam" from cam0 is the reference
             Rt_cam_ref = Rt_cam_camprev
@@ -313,108 +306,110 @@ def convert_one(d, name):
     return m
 
 
-def convert_all(f, which):
-    # which is None = "all cameras"
+def main():
+    args = parse_args()
 
-    try:
-        D = yaml.safe_load(f)
-    except yaml.scanner.ScannerError as e:
-        print("Error parsing YAML:\n\n")
-        print(e)
-        sys.exit(1)
+    def convert_all(f, which):
+        # which is None = "all cameras"
 
-    if len(D) == 0:
-        print("Zero models read from input", file=sys.stderr)
-        sys.exit(1)
+        try:
+            D = yaml.safe_load(f)
+        except Exception as e:
+            print("Error parsing YAML:\n\n")
+            print(e)
+            sys.exit(1)
 
-    if "camera_model" in D:
-        # one camera; stored inline
-        d = D
-        if which is not None:
+        if len(D) == 0:
+            print("Zero models read from input", file=sys.stderr)
+            sys.exit(1)
+
+        if "camera_model" in D:
+            # one camera; stored inline
+            d = D
+            if which is not None:
+                print(
+                    f"Error: a single in-line model found in the file, but a specific camera is requested: '{which}'. Omit --camera",
+                    file=sys.stderr,
+                )
+                sys.exit(1)
+            try:
+                return ((None, convert_one(d, "camera", args)),)
+            except KeyError as e:
+                print(f"Error parsing input; missing key: {e}", file=sys.stderr)
+                sys.exit(1)
+
+        if which is not None and which not in D:
             print(
-                f"Error: a single in-line model found in the file, but a specific camera is requested: '{which}'. Omit --camera",
+                f"Error: asked for camera '{which}', but the given file contains only these cameras: {tuple(D.keys())}",
                 file=sys.stderr,
             )
             sys.exit(1)
-        try:
-            return ((None, convert_one(d, "camera")),)
-        except KeyError as e:
-            print(f"Error parsing input; missing key: {e}", file=sys.stderr)
-            sys.exit(1)
 
-    if which is not None and which not in D:
-        print(
-            f"Error: asked for camera '{which}', but the given file contains only these cameras: {tuple(D.keys())}",
-            file=sys.stderr,
-        )
-        sys.exit(1)
+        # The extrinsics are specified as a serial chain. So I need to parse all the
+        # cameras, even if I only need to save one
+        models = dict()
+        for name, d in D.items():
+            try:
+                models[name] = convert_one(d, name, args)
+            except KeyError as e:
+                print(f"Error parsing input; missing key: {e}", file=sys.stderr)
+                sys.exit(1)
 
-    # The extrinsics are specified as a serial chain. So I need to parse all the
-    # cameras, even if I only need to save one
-    models = dict()
-    for name, d in D.items():
-        try:
-            models[name] = convert_one(d, name)
-        except KeyError as e:
-            print(f"Error parsing input; missing key: {e}", file=sys.stderr)
-            sys.exit(1)
+        if which is None:
+            # all cameras requested
+            return [(name, models[name]) for name in models.keys()]
 
-    if which is None:
-        # all cameras requested
-        return [(name, models[name]) for name in models.keys()]
+        return ((which, models[which]),)
 
-    return ((which, models[which]),)
-
-
-if args.model == "-":
-    if sys.stdin.isatty():
-        # This isn't an error per-se. But most likely the user ran this
-        # without redirecting any data into it. Without this check the
-        # program will sit there, waiting for input. Which will look strange
-        # to an unsuspecting user
-        print(
-            "Trying to read a model from standard input, but no file is being redirected into it",
-            file=sys.stderr,
-        )
-        sys.exit(1)
-
-    names_models = convert_all(sys.stdin, which=args.camera)
-    if len(names_models) > 1:
-        print(
-            f"Reading from standard input may only produce ONE model on stdout, but got more here. Pass --camera to select the camera you want; available cameras: {list(n for n, m in names_models)}",
-            file=sys.stderr,
-        )
-        sys.exit(1)
-
-    names_models[0][1].write(sys.stdout)
-
-else:
-    base, extension = os.path.splitext(args.model)
-    if extension.lower() == ".cameramodel":
-        print(
-            "Input file is already in the cameramodel format (judging from the filename). Doing nothing",
-            file=sys.stderr,
-        )
-        sys.exit(0)
-
-    if args.outdir is not None:
-        base = args.outdir + "/" + os.path.split(base)[1]
-
-    with open(args.model, "r") as f:
-        names_models = convert_all(f, which=args.camera)
-
-    for name, model in names_models:
-        if name is None:
-            name = ""
-        else:
-            name = f"-{name}"
-        filename_out = f"{base}{name}.cameramodel"
-        if not args.force and os.path.exists(filename_out):
+    if args.model == "-":
+        if sys.stdin.isatty():
+            # This isn't an error per-se. But most likely the user ran this
+            # without redirecting any data into it. Without this check the
+            # program will sit there, waiting for input. Which will look strange
+            # to an unsuspecting user
             print(
-                f"Target model '{filename_out}' already exists. Doing nothing with this model. Pass -f to overwrite",
+                "Trying to read a model from standard input, but no file is being redirected into it",
                 file=sys.stderr,
             )
-            continue
+            sys.exit(1)
 
-        model.write(filename_out)
-        print("Wrote " + filename_out)
+        names_models = convert_all(sys.stdin, which=args.camera)
+        if len(names_models) > 1:
+            print(
+                f"Reading from standard input may only produce ONE model on stdout, but got more here. Pass --camera to select the camera you want; available cameras: {list(n for n, m in names_models)}",
+                file=sys.stderr,
+            )
+            sys.exit(1)
+
+        names_models[0][1].write(sys.stdout)
+
+    else:
+        base, extension = os.path.splitext(args.model)
+        if extension.lower() == ".cameramodel":
+            print(
+                "Input file is already in the cameramodel format (judging from the filename). Doing nothing",
+                file=sys.stderr,
+            )
+            sys.exit(0)
+
+        if args.outdir is not None:
+            base = args.outdir + "/" + os.path.split(base)[1]
+
+        with open(args.model, "r") as f:
+            names_models = convert_all(f, which=args.camera)
+
+        for name, model in names_models:
+            if name is None:
+                name = ""
+            else:
+                name = f"-{name}"
+            filename_out = f"{base}{name}.cameramodel"
+            if not args.force and os.path.exists(filename_out):
+                print(
+                    f"Target model '{filename_out}' already exists. Doing nothing with this model. Pass -f to overwrite",
+                    file=sys.stderr,
+                )
+                continue
+
+            model.write(filename_out)
+            print("Wrote " + filename_out)

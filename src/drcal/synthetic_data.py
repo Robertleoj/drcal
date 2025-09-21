@@ -28,7 +28,6 @@ from .model_analysis import _observed_pixel_uncertainty_from_inputs
 from .bindings_poseutils_npsp import identity_Rt
 
 
-
 def synthesize_board_observations(
     models,
     *,
