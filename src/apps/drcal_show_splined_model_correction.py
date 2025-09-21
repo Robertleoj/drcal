@@ -132,6 +132,7 @@ def parse_args():
         type=str,
         help="""Write the output to disk, instead of making an interactive plot""",
     )
+
     parser.add_argument(
         "--terminal",
         type=str,
@@ -259,7 +260,7 @@ def main():
     )
 
     if args.hardcopy is None:
-        plot.wait()
+        plot.wait()  # type: ignore
 
 
 if __name__ == "__main__":

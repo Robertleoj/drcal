@@ -27,6 +27,7 @@ dependencies = [
 [project.scripts]
 drcal-calibrate-cameras = "apps.drcal_calibrate_cameras:main"
 drcal-show-splined-model-correction = "apps.drcal_show_splined_model_correction:main"
+drcal-convert-lensmodel = "apps.drcal_convert_lensmodel:main"
 
 [tool.scikit-build]
 minimum-version = "build-system.requires"

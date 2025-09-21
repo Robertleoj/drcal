@@ -1416,6 +1416,12 @@ projection_matrix:
             else:
                 self._write(f, note)
 
+    def assume_intrinsics(self) -> tuple[str, np.ndarray]:
+        intr = self.intrinsics()
+        assert intr is not None
+
+        return intr
+
     def intrinsics(
         self,
         intrinsics=None,

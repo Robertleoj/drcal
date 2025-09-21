@@ -37,7 +37,10 @@ mrcal.mmm.fff() can be called as mrcal.fff() instead. The latter is preferred.
 # from .utils import *
 # from .triangulation import *
 
+from .bindings_poseutils_npsp import identity_Rt
+from .projections import unproject
 from .visualization import (
+    show_projection_diff,
     show_splined_model_correction,
     show_projection_uncertainty,
     show_valid_intrinsics_region,
@@ -51,10 +54,19 @@ from .visualization import (
     show_residuals_board_observation,
     show_residuals_histogram,
 )
-from .utils import measurements_board
+from .utils import (
+    align_procrustes_points_Rt01,
+    hypothesis_board_corner_positions,
+    measurements_board,
+)
 from .cameramodel import cameramodel
-from .poseutils import rt_from_Rt, Rt_from_rt, compose_Rt
-from .bindings import lensmodel_num_params, load_image, optimize
+from .poseutils import rt_from_Rt, Rt_from_rt, compose_Rt, compose_rt
+from .bindings import (
+    lensmodel_metadata_and_config,
+    lensmodel_num_params,
+    load_image,
+    optimize,
+)
 from .calibration import (
     compute_chessboard_corners,
     estimate_joint_frame_poses,
@@ -64,6 +76,9 @@ from .calibration import (
 
 
 __all__ = [
+    "identity_Rt",
+    "unproject",
+    "show_projection_diff",
     "show_residuals_histogram",
     "show_residuals_board_observation",
     "show_geometry",
@@ -76,11 +91,15 @@ __all__ = [
     "show_splined_model_correction",
     "show_residuals_vectorfield",
     "show_residuals_magnitudes",
+    "align_procrustes_points_Rt01",
+    "hypothesis_board_corner_positions",
     "measurements_board",
     "cameramodel",
     "rt_from_Rt",
     "Rt_from_rt",
     "compose_Rt",
+    "compose_rt",
+    "lensmodel_metadata_and_config",
     "lensmodel_num_params",
     "load_image",
     "optimize",
