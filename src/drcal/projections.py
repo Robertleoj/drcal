@@ -10,8 +10,29 @@ drcal.projections.fff() or drcal.fff(). The latter is preferred.
 
 import numpy as np
 import numpysane as nps
-import sys
 
+from .bindings_npsp import (
+    _project,
+    _project_withgrad,
+    _unproject,
+    _project_pinhole,
+    _project_pinhole_withgrad,
+    _unproject_pinhole,
+    _unproject_pinhole_withgrad,
+    _project_stereographic,
+    _project_stereographic_withgrad,
+    _unproject_stereographic,
+    _unproject_stereographic_withgrad,
+    _project_lonlat,
+    _project_lonlat_withgrad,
+    _unproject_lonlat,
+    _unproject_lonlat_withgrad,
+    _project_latlon,
+    _project_latlon_withgrad,
+    _unproject_latlon,
+    _unproject_latlon_withgrad,
+)
+from .bindings import lensmodel_metadata_and_config
 
 
 def project(v, lensmodel, intrinsics_data, *, get_gradients=False, out=None):
@@ -90,12 +111,8 @@ def project(v, lensmodel, intrinsics_data, *, get_gradients=False, out=None):
     # Internal function must have a different argument order so
     # that all the broadcasting stuff is in the leading arguments
     if not get_gradients:
-        return drcal.bindings_npsp._project(
-            v, intrinsics_data, lensmodel=lensmodel, out=out
-        )
-    return drcal.bindings_npsp._project_withgrad(
-        v, intrinsics_data, lensmodel=lensmodel, out=out
-    )
+        return _project(v, intrinsics_data, lensmodel=lensmodel, out=out)
+    return _project_withgrad(v, intrinsics_data, lensmodel=lensmodel, out=out)
 
 
 def unproject(
@@ -251,16 +268,16 @@ def unproject(
     ):
         match lensmodel:
             case "LENSMODEL_PINHOLE":
-                func = drcal.unproject_pinhole
+                func = unproject_pinhole
                 always_normalized = False
             case "LENSMODEL_LONLAT":
-                func = drcal.unproject_lonlat
+                func = unproject_lonlat
                 always_normalized = True
             case "LENSMODEL_LATLON":
-                func = drcal.unproject_latlon
+                func = unproject_latlon
                 always_normalized = True
             case "LENSMODEL_STEREOGRAPHIC":
-                func = drcal.unproject_stereographic
+                func = unproject_stereographic
                 always_normalized = False
             case _:
                 raise RuntimeError("Should not happen")
@@ -318,7 +335,7 @@ def unproject(
         return v, dv_dq, dv_di
 
     try:
-        meta = drcal.lensmodel_metadata_and_config(lensmodel)
+        meta = lensmodel_metadata_and_config(lensmodel)
     except:
         raise Exception(f"Invalid lens model '{lensmodel}': couldn't get the metadata")
     if meta["has_gradients"]:
@@ -327,9 +344,7 @@ def unproject(
         # Internal function must have a different argument order so
         # that all the broadcasting stuff is in the leading arguments
         if not get_gradients:
-            v = drcal.bindings_npsp._unproject(
-                q, intrinsics_data, lensmodel=lensmodel, out=out
-            )
+            v = _unproject(q, intrinsics_data, lensmodel=lensmodel, out=out)
             if normalize:
                 # Explicitly handle nan and inf to set their normalized values
                 # to 0. Otherwise I get a scary-looking warning from numpy
@@ -344,7 +359,7 @@ def unproject(
             return v
 
         # We need to report gradients
-        vs = drcal.bindings_npsp._unproject(q, intrinsics_data, lensmodel=lensmodel)
+        vs = _unproject(q, intrinsics_data, lensmodel=lensmodel)
 
         # I have no gradients available for unproject(), and I need to invert a
         # non-square matrix to use the gradients from project(). I deal with this
@@ -356,15 +371,13 @@ def unproject(
         # I reproject vs, to produce a scaled v = k*vs. I'm assuming all
         # projections are central, so vs represents q just as well as v does. u
         # is a 2-vector, so dq_du is (2x2), and I can invert it
-        u = drcal.project_stereographic(vs)
+        u = project_stereographic(vs)
         dv_du = np.zeros(vs.shape + (2,), dtype=float)
-        v, dv_du = drcal.unproject_stereographic(
+        v, dv_du = unproject_stereographic(
             u, get_gradients=True, out=(vs if out is None else out[0], dv_du)
         )
 
-        _, dq_dv, dq_di = drcal.project(
-            v, lensmodel, intrinsics_data, get_gradients=True
-        )
+        _, dq_dv, dq_di = project(v, lensmodel, intrinsics_data, get_gradients=True)
 
         # shape (..., 2,2). Square. Invertible!
         dq_du = nps.matmult(dq_dv, dv_du)
@@ -391,83 +404,6 @@ def unproject(
             apply_normalization_to_output_with_gradients(v, dv_dq, dv_di)
 
         return v, dv_dq, dv_di
-
-    # No projection gradients implemented in C. We should get here approximately
-    # never. At this time, there are no longer any projection functions that
-    # have no gradients implemented. If another such model is defined, this path
-    # will be used. If these see use, real gradients should be implemented
-    #
-    # We compute the gradients numerically. This is a reimplementation of the C
-    # code. It's barely maintained, and here for legacy compatibility only
-    raise Exception("should never get here")
-
-    if get_gradients:
-        raise Exception(
-            f"unproject(..., get_gradients=True) is unsupported for models with no gradients, such as '{lensmodel}'"
-        )
-
-    if q is None:
-        return q
-    if q.size == 0:
-        s = q.shape
-        return np.zeros(s[:-1] + (3,))
-
-    if out is not None:
-        raise Exception(
-            f"unproject(..., out) is unsupported if out is not None and we're using a model with no gradients, such as '{lensmodel}'"
-        )
-
-    fxy = intrinsics_data[..., :2]
-    cxy = intrinsics_data[..., 2:4]
-
-    # undistort the q, by running an optimizer
-
-    import scipy.optimize
-
-    # I optimize each point separately because the internal optimization
-    # algorithm doesn't know that each point is independent, so if I optimized
-    # it all together, it would solve a dense linear system whose size is linear
-    # in Npoints. The computation time thus would be much slower than
-    # linear(Npoints)
-    @nps.broadcast_define(
-        ((2,),),
-    )
-    def undistort_this(q0):
-        def cost_no_gradients(vxy, *args, **kwargs):
-            """Optimization functions"""
-            return (
-                drcal.project(
-                    np.array((vxy[0], vxy[1], 1.0)), lensmodel, intrinsics_data
-                )
-                - q0
-            )
-
-        # seed assuming distortions aren't there
-        vxy_seed = (q0 - cxy) / fxy
-
-        # no gradients available
-        result = scipy.optimize.least_squares(cost_no_gradients, vxy_seed, "3-point")
-
-        vxy = result.x
-
-        # This needs to be precise; if it isn't, I barf. Shouldn't happen
-        # very often
-        if np.sqrt(result.cost / 2.0) > 1e-3:
-            if not unproject.__dict__.get("already_complained"):
-                sys.stderr.write(
-                    "WARNING: unproject() wasn't able to precisely compute some points. Returning nan for those. Will complain just once\n"
-                )
-                unproject.already_complained = True
-            return np.array((np.nan, np.nan))
-        return vxy
-
-    vxy = undistort_this(q)
-
-    # I append a 1. shape = (..., 3)
-    v = nps.glue(vxy, np.ones(vxy.shape[:-1] + (1,)), axis=-1)
-    if normalize:
-        v /= nps.dummy(nps.mag(v), -1)
-    return v
 
 
 def project_pinhole(
@@ -531,8 +467,8 @@ def project_pinhole(
     # Internal function must have a different argument order so
     # that all the broadcasting stuff is in the leading arguments
     if not get_gradients:
-        return drcal.bindings_npsp._project_pinhole(points, fxycxy, out=out)
-    return drcal.bindings_npsp._project_pinhole_withgrad(points, fxycxy, out=out)
+        return _project_pinhole(points, fxycxy, out=out)
+    return _project_pinhole_withgrad(points, fxycxy, out=out)
 
 
 def unproject_pinhole(
@@ -597,8 +533,8 @@ def unproject_pinhole(
 
     """
     if not get_gradients:
-        return drcal.bindings_npsp._unproject_pinhole(points, fxycxy, out=out)
-    return drcal.bindings_npsp._unproject_pinhole_withgrad(points, fxycxy, out=out)
+        return _unproject_pinhole(points, fxycxy, out=out)
+    return _unproject_pinhole_withgrad(points, fxycxy, out=out)
 
 
 def project_stereographic(
@@ -674,8 +610,8 @@ def project_stereographic(
 
     """
     if not get_gradients:
-        return drcal.bindings_npsp._project_stereographic(points, fxycxy, out=out)
-    return drcal.bindings_npsp._project_stereographic_withgrad(points, fxycxy, out=out)
+        return _project_stereographic(points, fxycxy, out=out)
+    return _project_stereographic_withgrad(points, fxycxy, out=out)
 
 
 def unproject_stereographic(
@@ -750,10 +686,8 @@ def unproject_stereographic(
 
     """
     if not get_gradients:
-        return drcal.bindings_npsp._unproject_stereographic(points, fxycxy, out=out)
-    return drcal.bindings_npsp._unproject_stereographic_withgrad(
-        points, fxycxy, out=out
-    )
+        return _unproject_stereographic(points, fxycxy, out=out)
+    return _unproject_stereographic_withgrad(points, fxycxy, out=out)
 
 
 def project_lonlat(
@@ -819,8 +753,8 @@ def project_lonlat(
     # Internal function must have a different argument order so
     # that all the broadcasting stuff is in the leading arguments
     if not get_gradients:
-        return drcal.bindings_npsp._project_lonlat(points, fxycxy, out=out)
-    return drcal.bindings_npsp._project_lonlat_withgrad(points, fxycxy, out=out)
+        return _project_lonlat(points, fxycxy, out=out)
+    return _project_lonlat_withgrad(points, fxycxy, out=out)
 
 
 def unproject_lonlat(
@@ -885,8 +819,8 @@ def unproject_lonlat(
 
     """
     if not get_gradients:
-        return drcal.bindings_npsp._unproject_lonlat(points, fxycxy, out=out)
-    return drcal.bindings_npsp._unproject_lonlat_withgrad(points, fxycxy, out=out)
+        return _unproject_lonlat(points, fxycxy, out=out)
+    return _unproject_lonlat_withgrad(points, fxycxy, out=out)
 
 
 def project_latlon(
@@ -950,8 +884,8 @@ def project_latlon(
     # Internal function must have a different argument order so
     # that all the broadcasting stuff is in the leading arguments
     if not get_gradients:
-        return drcal.bindings_npsp._project_latlon(points, fxycxy, out=out)
-    return drcal.bindings_npsp._project_latlon_withgrad(points, fxycxy, out=out)
+        return _project_latlon(points, fxycxy, out=out)
+    return _project_latlon_withgrad(points, fxycxy, out=out)
 
 
 def unproject_latlon(
@@ -1016,5 +950,5 @@ def unproject_latlon(
 
     """
     if not get_gradients:
-        return drcal.bindings_npsp._unproject_latlon(points, fxycxy, out=out)
-    return drcal.bindings_npsp._unproject_latlon_withgrad(points, fxycxy, out=out)
+        return _unproject_latlon(points, fxycxy, out=out)
+    return _unproject_latlon_withgrad(points, fxycxy, out=out)
