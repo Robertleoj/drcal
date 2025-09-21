@@ -16,8 +16,18 @@ from build_config import CMAKE_FLAGS
 BUILD_DIR = "build"
 
 # TARGET_NAME = "bindings.cpython-313-x86_64-linux-gnu.so"
-TARGETS = ["bindings.so", "bindings_npsp.so", "bindings_poseutils_npsp.so"]
-MODULES = ["bindings", "bindings_npsp", "bindings_poseutils_npsp"]
+TARGETS = [
+    "bindings.so",
+    "bindings_npsp.so",
+    "bindings_poseutils_npsp.so",
+    "bindings_triangulation_npsp.so",
+]
+MODULES = [
+    "bindings",
+    "bindings_npsp",
+    "bindings_poseutils_npsp",
+    "bindings_triangulation_npsp",
+]
 
 
 LIB_DIR = Path("./build")

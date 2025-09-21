@@ -10,7 +10,44 @@ mrcal.triangulation.fff() or mrcal.fff(). The latter is preferred.
 import numpy as np
 import numpysane as nps
 
-from .poseutils import rotate_point_R
+from .bindings import (
+    corresponding_icam_extrinsics,
+    lensmodel_metadata_and_config,
+    lensmodel_num_params,
+    num_intrinsics_optimization_params,
+    num_states,
+    num_states_frames,
+    state_index_extrinsics,
+    state_index_frames,
+    state_index_intrinsics,
+)
+from .projections import unproject
+from .model_analysis import _propagate_calibration_uncertainty
+
+from .poseutils import (
+    compose_Rt,
+    compose_rt,
+    invert_rt,
+    rotate_point_R,
+    rotate_point_r,
+    transform_point_rt,
+)
+from .bindings_triangulation_npsp import (
+    _triangulate_geometric,
+    _triangulate_geometric_withgrad,
+    _triangulate_leecivera_l1,
+    _triangulate_leecivera_l1_withgrad,
+    _triangulate_leecivera_linf,
+    _triangulate_leecivera_linf_withgrad,
+    _triangulate_leecivera_mid2,
+    _triangulate_leecivera_mid2_withgrad,
+    _triangulate_leecivera_wmid2,
+    _triangulate_leecivera_wmid2_withgrad,
+    _triangulate_lindstrom,
+    _triangulate_lindstrom_withgrad,
+    _triangulated_error,
+    _triangulated_error_withgrad,
+)
 
 
 def _parse_args(v1, t01, get_gradients, v_are_local, Rt01):
@@ -179,11 +216,9 @@ if get_gradients: we return a tuple:
     v1, t01 = _parse_args(v1, t01, get_gradients, v_are_local, Rt01)
 
     if not get_gradients:
-        return mrcal._triangulation_npsp._triangulate_geometric(v0, v1, t01, out=out)
+        return _triangulate_geometric(v0, v1, t01, out=out)
     else:
-        return mrcal._triangulation_npsp._triangulate_geometric_withgrad(
-            v0, v1, t01, out=out
-        )
+        return _triangulate_geometric_withgrad(v0, v1, t01, out=out)
 
 
 def triangulate_leecivera_l1(
@@ -325,11 +360,9 @@ if get_gradients: we return a tuple:
     v1, t01 = _parse_args(v1, t01, get_gradients, v_are_local, Rt01)
 
     if not get_gradients:
-        return mrcal._triangulation_npsp._triangulate_leecivera_l1(v0, v1, t01, out=out)
+        return _triangulate_leecivera_l1(v0, v1, t01, out=out)
     else:
-        return mrcal._triangulation_npsp._triangulate_leecivera_l1_withgrad(
-            v0, v1, t01, out=out
-        )
+        return _triangulate_leecivera_l1_withgrad(v0, v1, t01, out=out)
 
 
 def triangulate_leecivera_linf(
@@ -472,13 +505,9 @@ if get_gradients: we return a tuple:
     v1, t01 = _parse_args(v1, t01, get_gradients, v_are_local, Rt01)
 
     if not get_gradients:
-        return mrcal._triangulation_npsp._triangulate_leecivera_linf(
-            v0, v1, t01, out=out
-        )
+        return _triangulate_leecivera_linf(v0, v1, t01, out=out)
     else:
-        return mrcal._triangulation_npsp._triangulate_leecivera_linf_withgrad(
-            v0, v1, t01, out=out
-        )
+        return _triangulate_leecivera_linf_withgrad(v0, v1, t01, out=out)
 
 
 def triangulate_leecivera_mid2(
@@ -616,13 +645,9 @@ if get_gradients: we return a tuple:
     v1, t01 = _parse_args(v1, t01, get_gradients, v_are_local, Rt01)
 
     if not get_gradients:
-        return mrcal._triangulation_npsp._triangulate_leecivera_mid2(
-            v0, v1, t01, out=out
-        )
+        return _triangulate_leecivera_mid2(v0, v1, t01, out=out)
     else:
-        return mrcal._triangulation_npsp._triangulate_leecivera_mid2_withgrad(
-            v0, v1, t01, out=out
-        )
+        return _triangulate_leecivera_mid2_withgrad(v0, v1, t01, out=out)
 
 
 def triangulate_leecivera_wmid2(
@@ -760,13 +785,9 @@ if get_gradients: we return a tuple:
     v1, t01 = _parse_args(v1, t01, get_gradients, v_are_local, Rt01)
 
     if not get_gradients:
-        return mrcal._triangulation_npsp._triangulate_leecivera_wmid2(
-            v0, v1, t01, out=out
-        )
+        return _triangulate_leecivera_wmid2(v0, v1, t01, out=out)
     else:
-        return mrcal._triangulation_npsp._triangulate_leecivera_wmid2_withgrad(
-            v0, v1, t01, out=out
-        )
+        return _triangulate_leecivera_wmid2_withgrad(v0, v1, t01, out=out)
 
 
 def triangulate_lindstrom(
@@ -916,14 +937,12 @@ if get_gradients: we return a tuple:
     if not v_are_local:
         if get_gradients:
             raise Exception("get_gradients is True, so v_are_local MUST be True")
-        v1 = mrcal.rotate_point_R(nps.transpose(Rt01[:3, :]), v1)
+        v1 = rotate_point_R(nps.transpose(Rt01[:3, :]), v1)
 
     if not get_gradients:
-        return mrcal._triangulation_npsp._triangulate_lindstrom(v0, v1, Rt01, out=out)
+        return _triangulate_lindstrom(v0, v1, Rt01, out=out)
     else:
-        return mrcal._triangulation_npsp._triangulate_lindstrom_withgrad(
-            v0, v1, Rt01, out=out
-        )
+        return _triangulate_lindstrom_withgrad(v0, v1, Rt01, out=out)
 
 
 def triangulated_error(
@@ -1054,11 +1073,9 @@ if get_gradients: we return a tuple:
     v1, t01 = _parse_args(v1, t01, get_gradients, v_are_local, Rt01)
 
     if not get_gradients:
-        return mrcal._triangulation_npsp._triangulated_error(v0, v1, t01, out=out)
+        return _triangulated_error(v0, v1, t01, out=out)
     else:
-        return mrcal._triangulation_npsp._triangulated_error_withgrad(
-            v0, v1, t01, out=out
-        )
+        return _triangulated_error_withgrad(v0, v1, t01, out=out)
 
 
 def _compute_Var_q_triangulation(sigma, stdev_cross_camera_correlation):
@@ -1107,25 +1124,25 @@ def _triangulate_grad_simple(q, models, out, method=triangulate_leecivera_mid2):
 
     # Simplified path. We don't need most of the gradients
 
-    rt01 = mrcal.compose_rt(
+    rt01 = compose_rt(
         models[0].extrinsics_rt_fromref(), models[1].extrinsics_rt_toref()
     )
 
     # all the v have shape (3,)
-    vlocal0, dvlocal0_dq0, _ = mrcal.unproject(
+    vlocal0, dvlocal0_dq0, _ = unproject(
         q[0, :], *models[0].intrinsics(), get_gradients=True
     )
-    vlocal1, dvlocal1_dq1, _ = mrcal.unproject(
+    vlocal1, dvlocal1_dq1, _ = unproject(
         q[1, :], *models[1].intrinsics(), get_gradients=True
     )
 
     v0 = vlocal0
-    v1, _, dv1_dvlocal1 = mrcal.rotate_point_r(rt01[:3], vlocal1, get_gradients=True)
+    v1, _, dv1_dvlocal1 = rotate_point_r(rt01[:3], vlocal1, get_gradients=True)
 
     dp_triangulated_dv0 = np.zeros(out.shape + (3,), dtype=float)
     dp_triangulated_dv1 = np.zeros(out.shape + (3,), dtype=float)
     dp_triangulated_dt01 = np.zeros(out.shape + (3,), dtype=float)
-    if method is mrcal.triangulate_lindstrom:
+    if method is triangulate_lindstrom:
         raise Exception(
             "Triangulation gradients not supported (yet?) with method=triangulate_lindstrom. It has slightly different inputs and slightly different gradients"
         )
@@ -1170,23 +1187,23 @@ def _triangulation_uncertainty_internal(
 
     def _triangulate_grad(models, q, out, method):
         # Full path. Compute and return the gradients for most things
-        rt_ref1, drt_ref1_drt_1ref = mrcal.invert_rt(
+        rt_ref1, drt_ref1_drt_1ref = invert_rt(
             models[1].extrinsics_rt_fromref(), get_gradients=True
         )
-        rt01, drt01_drt_0ref, drt01_drt_ref1 = mrcal.compose_rt(
+        rt01, drt01_drt_0ref, drt01_drt_ref1 = compose_rt(
             models[0].extrinsics_rt_fromref(), rt_ref1, get_gradients=True
         )
 
         # all the v have shape (3,)
-        vlocal0, dvlocal0_dq0, dvlocal0_dintrinsics0 = mrcal.unproject(
+        vlocal0, dvlocal0_dq0, dvlocal0_dintrinsics0 = unproject(
             q[0, :], *models[0].intrinsics(), get_gradients=True
         )
-        vlocal1, dvlocal1_dq1, dvlocal1_dintrinsics1 = mrcal.unproject(
+        vlocal1, dvlocal1_dq1, dvlocal1_dintrinsics1 = unproject(
             q[1, :], *models[1].intrinsics(), get_gradients=True
         )
 
         v0 = vlocal0
-        v1, dv1_dr01, dv1_dvlocal1 = mrcal.rotate_point_r(
+        v1, dv1_dr01, dv1_dvlocal1 = rotate_point_r(
             rt01[:3], vlocal1, get_gradients=True
         )
 
@@ -1194,7 +1211,7 @@ def _triangulation_uncertainty_internal(
         dp_triangulated_dv1 = np.zeros(out.shape + (3,), dtype=float)
         dp_triangulated_dt01 = np.zeros(out.shape + (3,), dtype=float)
 
-        if method is mrcal.triangulate_lindstrom:
+        if method is triangulate_lindstrom:
             raise Exception(
                 "Triangulation gradients not supported (yet?) with method=triangulate_lindstrom. It has slightly different inputs and slightly different gradients"
             )
@@ -1323,7 +1340,7 @@ def _triangulation_uncertainty_internal(
         #     dpoint_ref/dparam
 
         # triangulated point in the perturbed reference coordinate system
-        p_ref, dp_ref_drt_0ref, dp_ref_dp_cam0 = mrcal.transform_point_rt(
+        p_ref, dp_ref_drt_0ref, dp_ref_dp_cam0 = transform_point_rt(
             rt_cam0_ref, p_cam0, get_gradients=True, inverted=True
         )
 
@@ -1334,7 +1351,7 @@ def _triangulation_uncertainty_internal(
 
             # dp_frames_drtrf  has shape (..., Nframes, 3,6)
             # dp_frames_dp_ref has shape (..., Nframes, 3,3)
-            _, dp_frames_drtrf, dp_frames_dp_ref = mrcal.transform_point_rt(
+            _, dp_frames_drtrf, dp_frames_dp_ref = transform_point_rt(
                 rt_ref_frame, nps.dummy(p_ref, -2), get_gradients=True, inverted=True
             )
 
@@ -1362,8 +1379,8 @@ def _triangulation_uncertainty_internal(
     p = np.zeros((Npoints, 3), dtype=float)
 
     if optimization_inputs is not None:
-        Nintrinsics = mrcal.num_intrinsics_optimization_params(**optimization_inputs)
-        Nstate = mrcal.num_states(**optimization_inputs)
+        Nintrinsics = num_intrinsics_optimization_params(**optimization_inputs)
+        Nstate = num_states(**optimization_inputs)
 
         # I store dp_triangulated_db initially, without worrying about the
         # "packed" part. I'll scale the thing when done to pack it
@@ -1374,8 +1391,8 @@ def _triangulation_uncertainty_internal(
             # are optimizing the frames AND we have stabilization enabled.
             # Without stabilization, there's no dependence on rt_ref_frame
             rt_ref_frame = optimization_inputs["frames_rt_toref"]
-            istate_f0 = mrcal.state_index_frames(0, **optimization_inputs)
-            Nstate_frames = mrcal.num_states_frames(**optimization_inputs)
+            istate_f0 = state_index_frames(0, **optimization_inputs)
+            Nstate_frames = num_states_frames(**optimization_inputs)
         else:
             rt_ref_frame = None
             istate_f0 = None
@@ -1449,13 +1466,11 @@ def _triangulation_uncertainty_internal(
 
         # Do the right thing is we're optimizing partial intrinsics only
         i0, i1 = None, None  # everything by default
-        has_core = mrcal.lensmodel_metadata_and_config(
-            optimization_inputs["lensmodel"]
-        )["has_core"]
+        has_core = lensmodel_metadata_and_config(optimization_inputs["lensmodel"])[
+            "has_core"
+        ]
         Ncore = 4 if has_core else 0
-        Ndistortions = (
-            mrcal.lensmodel_num_params(optimization_inputs["lensmodel"]) - Ncore
-        )
+        Ndistortions = lensmodel_num_params(optimization_inputs["lensmodel"]) - Ncore
         if not optimization_inputs.get("do_optimize_intrinsics_core"):
             i0 = Ncore
         if not optimization_inputs.get("do_optimize_intrinsics_distortions"):
@@ -1475,12 +1490,8 @@ def _triangulation_uncertainty_internal(
         icam_intrinsics0 = models01[0].icam_intrinsics()
         icam_intrinsics1 = models01[1].icam_intrinsics()
 
-        istate_i0 = mrcal.state_index_intrinsics(
-            icam_intrinsics0, **optimization_inputs
-        )
-        istate_i1 = mrcal.state_index_intrinsics(
-            icam_intrinsics1, **optimization_inputs
-        )
+        istate_i0 = state_index_intrinsics(icam_intrinsics0, **optimization_inputs)
+        istate_i1 = state_index_intrinsics(icam_intrinsics1, **optimization_inputs)
         if istate_i0 is not None:
             # dp_triangulated_di0 = dp_triangulated_dv0              dvlocal0_di0
             # dp_triangulated_di1 = dp_triangulated_dv1 dv1_dvlocal1 dvlocal1_di1
@@ -1497,23 +1508,19 @@ def _triangulation_uncertainty_internal(
                 out=dp_triangulated_db[ipt, :, istate_i1 : istate_i1 + Nintrinsics],
             )
 
-        icam_extrinsics0 = mrcal.corresponding_icam_extrinsics(
+        icam_extrinsics0 = corresponding_icam_extrinsics(
             icam_intrinsics0, **optimization_inputs
         )
-        icam_extrinsics1 = mrcal.corresponding_icam_extrinsics(
+        icam_extrinsics1 = corresponding_icam_extrinsics(
             icam_intrinsics1, **optimization_inputs
         )
 
         if icam_extrinsics0 >= 0:
-            istate_e0 = mrcal.state_index_extrinsics(
-                icam_extrinsics0, **optimization_inputs
-            )
+            istate_e0 = state_index_extrinsics(icam_extrinsics0, **optimization_inputs)
         else:
             istate_e0 = None
         if icam_extrinsics1 >= 0:
-            istate_e1 = mrcal.state_index_extrinsics(
-                icam_extrinsics1, **optimization_inputs
-            )
+            istate_e1 = state_index_extrinsics(icam_extrinsics1, **optimization_inputs)
         else:
             istate_e1 = None
 
@@ -1852,13 +1859,13 @@ Complete logic:
 
         @nps.broadcast_define(((2, 2), (2,)), (3,))
         def triangulate_slice(q01, m01):
-            Rt01 = mrcal.compose_Rt(
+            Rt01 = compose_Rt(
                 m01[0].extrinsics_Rt_fromref(), m01[1].extrinsics_Rt_toref()
             )
 
             # all the v have shape (3,)
-            vlocal0 = mrcal.unproject(q01[0, :], *m01[0].intrinsics())
-            vlocal1 = mrcal.unproject(q01[1, :], *m01[1].intrinsics())
+            vlocal0 = unproject(q01[0, :], *m01[0].intrinsics())
+            vlocal1 = unproject(q01[1, :], *m01[1].intrinsics())
 
             return method(vlocal0, vlocal1, v_are_local=True, Rt01=Rt01)
 
@@ -1940,13 +1947,11 @@ Complete logic:
             observed_pixel_uncertainty = None
 
         # Var_p_calibration_flat has shape (Npoints*3,Npoints*3)
-        Var_p_calibration_flat = (
-            mrcal.model_analysis._propagate_calibration_uncertainty(
-                "covariance",
-                dF_dbunpacked=dp_triangulated_db,
-                observed_pixel_uncertainty=observed_pixel_uncertainty,
-                optimization_inputs=optimization_inputs,
-            )
+        Var_p_calibration_flat = _propagate_calibration_uncertainty(
+            "covariance",
+            dF_dbunpacked=dp_triangulated_db,
+            observed_pixel_uncertainty=observed_pixel_uncertainty,
+            optimization_inputs=optimization_inputs,
         )
 
     else:
