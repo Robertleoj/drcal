@@ -9,7 +9,7 @@ import gnuplotlib as gp
 import numpy as np
 import scipy.optimize
 import cv2
-import matplotlib.pyplot as plt
+from typing import Any, Literal
 from scipy.special import erf
 import numpysane as nps
 import sys
@@ -2831,18 +2831,18 @@ def show_valid_intrinsics_region(
 
 
 def show_splined_model_correction(
-    model,
+    model: cameramodel,
     *,
-    vectorfield=False,
-    xy=None,
-    imager_domain=False,
-    vectorscale=1.0,
-    valid_intrinsics_region=True,
-    observations=False,
-    gridn_width=60,
-    gridn_height=None,
-    extratitle=None,
-    return_plot_args=False,
+    vectorfield: bool = False,
+    xy: Literal["x"] | Literal["y"] | None = None,
+    imager_domain: bool = False,
+    vectorscale: float = 1.0,
+    valid_intrinsics_region: bool = True,
+    observations: bool = False,
+    gridn_width: int = 60,
+    gridn_height: int | None = None,
+    extratitle: str | None = None,
+    return_plot_args: bool = False,
     **kwargs,
 ):
     r"""Visualize the projection corrections defined by a splined model
@@ -3007,7 +3007,10 @@ def show_splined_model_correction(
         if not (xy == "x" or xy == "y"):
             raise Exception("If given, xy should be either 'x' or 'y'")
 
-    lensmodel, intrinsics_data = model.intrinsics()
+    intrinsics = model.intrinsics()
+    assert intrinsics is not None
+
+    lensmodel, intrinsics_data = intrinsics
     W, H = model.imagersize()
 
     if not re.match("LENSMODEL_SPLINED_STEREOGRAPHIC", lensmodel):
@@ -3087,7 +3090,7 @@ def show_splined_model_correction(
             )
         )
 
-    plot_options = dict(kwargs, square=True, yinv=True, ascii=True)
+    plot_options: dict[str, Any] = dict(kwargs, square=True, yinv=True, ascii=True)
 
     if imager_domain:
         plot_options["xlabel"] = "X pixel coord"

@@ -210,7 +210,13 @@ def main():
     except Exception as e:
         print(f"Couldn't load camera model '{args.model}': {e}", file=sys.stderr)
         sys.exit(1)
-    lensmodel = model.intrinsics()[0]
+
+    intrinsics = model.intrinsics()
+    if intrinsics is None:
+        print("Intrinsics are None")
+        sys.exit(1)
+
+    lensmodel = intrinsics[0]
 
     if not re.match("LENSMODEL_SPLINED", lensmodel):
         print(
