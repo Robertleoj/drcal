@@ -1,13 +1,3 @@
-#!/usr/bin/python3
-
-# Copyright (c) 2017-2023 California Institute of Technology ("Caltech"). U.S.
-# Government sponsorship acknowledged. All rights reserved.
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-
 r"""Read/write camera models using the legacy .cahvor file format
 
 The .cahvor functionality is available via the mrcal.cameramodel class. There's
@@ -36,7 +26,11 @@ import re
 import numpy as np
 import numpysane as nps
 
-import mrcal
+from .poseutils import Rt_from_qt
+
+from .bindings import lensmodel_num_params
+
+from .cameramodel import cameramodel
 
 
 def _HVs_HVc_HVp(A, H, V):
@@ -118,6 +112,7 @@ def _construct_model(
                 raise Exception(
                     "Cahvor file {} LOOKS like a cahvore, but lacks the E".format(name)
                 )
+            assert R is not None
             R0, R1, R2 = R.ravel()
             E0, E1, E2 = E.ravel()
 
@@ -140,7 +135,7 @@ def _construct_model(
                 distortions = np.array((alpha, beta, R0, R1, R2), dtype=float)
                 lensmodel = "LENSMODEL_CAHVOR"
 
-    return mrcal.cameramodel(
+    return cameramodel(
         imagersize=Dimensions[:2].astype(np.int32),
         intrinsics=(
             lensmodel,
@@ -157,9 +152,6 @@ def _read(s, name):
     The input is the .cahvor file contents as a string"""
 
     re_f = r"[-+]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][-+]?\d+)?"
-    re_u = r"\d+"
-    re_d = r"[-+]?\d+"
-    re_s = r".+"
 
     # I parse all key=value lines into my dict as raw text. Further I
     # post-process some of these raw lines.
@@ -310,7 +302,7 @@ def read(f):
 
     The input is a filename or an opened file"""
 
-    if type(f) is mrcal.cameramodel:
+    if type(f) is cameramodel:
         return f
 
     if type(f) is str:
@@ -414,7 +406,7 @@ def _write(f, m, note=None):
             f.write(("{} =" + (" {:15.10f}" * 3) + "\n").format("E", *x["E"]))
 
     elif re.match("LENSMODEL_OPENCV", lensmodel):
-        Ndistortions = mrcal.lensmodel_num_params(lensmodel) - 4
+        Ndistortions = lensmodel_num_params(lensmodel) - 4
         f.write(
             ("{} =" + (" {:15.10f}" * Ndistortions) + "\n").format(
                 lensmodel, *intrinsics[4:]
@@ -493,8 +485,6 @@ def read_transforms(f):
 
         re_f = r"[-+]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][-+]?\d+)?"
         re_u = r"\d+"
-        re_d = r"[-+]?\d+"
-        re_s = r".+"
 
         re_pos = r"\(\s*({f})\s+({f})\s+({f})\s*\)".format(f=re_f)
         re_quat = r"\(\s*({f})\s+({f})\s+({f})\s+({f})\s*\)".format(f=re_f)
@@ -503,9 +493,11 @@ def read_transforms(f):
         )
         if m:
             if x["veh_from_ins"] is not None:
-                raise ("'{}' is corrupt: more than one 'ins2veh'".format(f.name))
+                raise RuntimeError(
+                    "'{}' is corrupt: more than one 'ins2veh'".format(f.name)
+                )
 
-            x["veh_from_ins"] = mrcal.Rt_from_qt(
+            x["veh_from_ins"] = Rt_from_qt(
                 np.array(
                     (
                         float(m.group(4)),
@@ -529,9 +521,11 @@ def read_transforms(f):
         if m:
             i = int(m.group(1))
             if x["ins_from_camera"].get(i) is not None:
-                raise ("'{}' is corrupt: more than one 'cam2ins'[{}]".format(f.name, i))
+                raise RuntimeError(
+                    "'{}' is corrupt: more than one 'cam2ins'[{}]".format(f.name, i)
+                )
 
-            x["ins_from_camera"][i] = mrcal.Rt_from_qt(
+            x["ins_from_camera"][i] = Rt_from_qt(
                 np.array(
                     (
                         float(m.group(5)),
