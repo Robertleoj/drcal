@@ -1,0 +1,150 @@
+name: Upload Python Package to PyPI when a Release is Created
+
+# on:
+#   release:
+#     types: [created]
+
+on:
+  release:
+    types: [created]
+  push:
+    branches:
+      - master
+
+jobs:
+  build-linux:
+    name: Build wheels on Linux (manylinux_2_28, x86_64)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Set up Python (runner tool for cibuildwheel)
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install build tooling
+        run: |
+          python -m pip install --upgrade pip
+          pip install cibuildwheel
+
+      - name: Build wheels with cibuildwheel
+        env:
+          # Build only CPython 3.11–3.13 (your package requires >=3.11)
+          CIBW_BUILD: 'cp311-* cp312-* cp313-*'
+          # Linux specifics
+          CIBW_ARCHS_LINUX: 'x86_64'
+          CIBW_MANYLINUX_X86_64_IMAGE: manylinux_2_28
+          # Prepare toolchain & deps before build (runs inside manylinux container)
+          CIBW_BEFORE_ALL_LINUX: |
+            yum -y install git curl zip tar pkgconfig gcc gcc-c++ make
+            git clone https://github.com/microsoft/vcpkg /opt/vcpkg
+            /opt/vcpkg/bootstrap-vcpkg.sh -disableMetrics
+            # Install vcpkg ports needed by CMake find_package() calls
+            /opt/vcpkg/vcpkg install freeimage suitesparse-cholmod lapack-reference openblas
+          # Make CMake pick up vcpkg automatically (your CMakeLists checks VCPKG_ROOT)
+          CIBW_ENVIRONMENT_LINUX: 'VCPKG_ROOT=/opt/vcpkg'
+          # Respect your pyproject skip rules; no musllinux or windows anyway
+        run: |
+          cibuildwheel --output-dir dist
+
+      - name: Upload Linux wheels
+        uses: actions/upload-artifact@v4
+        with:
+          name: dist-linux
+          path: dist
+
+  build-macos:
+    name: Build wheels on macOS (x86_64 + arm64)
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Set up Python (runner tool for cibuildwheel)
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install build tooling
+        run: |
+          python -m pip install --upgrade pip
+          pip install cibuildwheel
+
+      - name: Build wheels with cibuildwheel
+        env:
+          CIBW_BUILD: 'cp311-* cp312-* cp313-*'
+          CIBW_ARCHS_MACOS: 'x86_64 arm64'
+          CIBW_BEFORE_ALL_MACOS: |
+            git clone https://github.com/microsoft/vcpkg /opt/vcpkg
+            /opt/vcpkg/bootstrap-vcpkg.sh -disableMetrics
+            /opt/vcpkg/vcpkg install freeimage suitesparse-cholmod lapack-reference openblas
+          CIBW_ENVIRONMENT_MACOS: 'VCPKG_ROOT=/opt/vcpkg'
+        run: |
+          cibuildwheel --output-dir dist
+
+      - name: Upload macOS wheels
+        uses: actions/upload-artifact@v4
+        with:
+          name: dist-macos
+          path: dist
+
+  build-sdist:
+    name: Build sdist
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Build sdist
+        run: |
+          python -m pip install --upgrade pip
+          pip install build
+          python -m build --sdist --outdir dist
+
+      - name: Upload sdist
+        uses: actions/upload-artifact@v4
+        with:
+          name: dist-sdist
+          path: dist/*.tar.gz
+
+  publish:
+    name: Publish to PyPI
+    runs-on: ubuntu-latest
+    needs: [build-linux, build-macos, build-sdist]
+    environment:
+      name: pypi
+    permissions:
+      id-token: write
+    steps:
+      - name: Download Linux wheels
+        uses: actions/download-artifact@v4
+        with:
+          name: dist-linux
+          path: dist
+
+      - name: Download macOS wheels
+        uses: actions/download-artifact@v4
+        with:
+          name: dist-macos
+          path: dist
+
+      - name: Download sdist
+        uses: actions/download-artifact@v4
+        with:
+          name: dist-sdist
+          path: dist
+
+      - name: Publish to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          packages-dir: dist
