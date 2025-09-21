@@ -23,13 +23,21 @@ import sys
 import numpy as np
 import numpysane as nps
 import numbers
+import yaml
 import ast
 import re
 import warnings
 import io
 import base64
 
-import drcal
+from .poseutils import Rt_from_rt, invert_Rt, invert_rt, rt_from_Rt
+from .bindings_poseutils_npsp import identity_R, identity_rt
+from .bindings import (
+    corresponding_icam_extrinsics,
+    lensmodel_num_params,
+    lensmodel_metadata_and_config,
+)
+from .utils import close_contour
 
 
 def _validateExtrinsics(e):
@@ -84,7 +92,7 @@ def _validateIntrinsics(imagersize, i, optimization_inputs=None, icam_intrinsics
     intrinsics = i[1]
 
     # If this fails, I keep the exception and let it fall through
-    Nintrinsics_want = drcal.lensmodel_num_params(lensmodel)
+    Nintrinsics_want = lensmodel_num_params(lensmodel)
 
     try:
         Nintrinsics_have = len(intrinsics)
@@ -459,7 +467,7 @@ class cameramodel(object):
         f.write("\n")
 
         N = len(self._intrinsics[1])
-        if drcal.lensmodel_metadata_and_config(self._intrinsics[0])["has_core"]:
+        if lensmodel_metadata_and_config(self._intrinsics[0])["has_core"]:
             f.write("    # intrinsics are fx,fy,cx,cy,distortion0,distortion1,....\n")
         f.write(
             ("    'intrinsics': [" + (" {:.10g}," * N) + "],\n").format(
@@ -584,7 +592,7 @@ class cameramodel(object):
         _validateExtrinsics(model["extrinsics"])
 
         self._intrinsics = intrinsics
-        self._valid_intrinsics_region = drcal.close_contour(valid_intrinsics_region)
+        self._valid_intrinsics_region = close_contour(valid_intrinsics_region)
         self._extrinsics = np.array(model["extrinsics"], dtype=float)
         self._imagersize = np.array(model["imagersize"], dtype=np.int32)
 
@@ -774,7 +782,7 @@ class cameramodel(object):
                 )
                 if file_or_model._valid_intrinsics_region is not None:
                     self._valid_intrinsics_region = np.array(
-                        drcal.close_contour(file_or_model._valid_intrinsics_region),
+                        close_contour(file_or_model._valid_intrinsics_region),
                         dtype=float,
                     )
                 else:
@@ -862,8 +870,6 @@ class cameramodel(object):
 
                 def load():
                     try:
-                        import yaml
-
                         loaded = yaml.safe_load(modelstring)
                         if not isinstance(loaded, dict):
                             raise CameramodelParseException(
@@ -1002,8 +1008,7 @@ class cameramodel(object):
                         model=model_in,
                     )
                 except:
-                    R = drcal.identity_R()
-                    R_at = "default"
+                    R = identity_R()
 
                 # Special-case P=0 or R=0. Sometimes I see this. Set everything to identity
                 if nps.norm2(P.ravel()) == 0:
@@ -1077,7 +1082,7 @@ class cameramodel(object):
 
                 # extrinsics are rt_fromref
                 model["extrinsics"] = [
-                    float(x) for x in drcal.rt_from_Rt(drcal.invert_Rt(Rt_ref_cam))
+                    float(x) for x in rt_from_Rt(invert_Rt(Rt_ref_cam))
                 ]
 
                 return repr(model)
@@ -1202,11 +1207,11 @@ class cameramodel(object):
             )
 
             if icam_extrinsics is None:
-                icam_extrinsics = drcal.corresponding_icam_extrinsics(
+                icam_extrinsics = corresponding_icam_extrinsics(
                     icam_intrinsics, **optimization_inputs
                 )
             if icam_extrinsics < 0:
-                self.extrinsics_rt_fromref(drcal.identity_rt())
+                self.extrinsics_rt_fromref(identity_rt())
             else:
                 self.extrinsics_rt_fromref(
                     optimization_inputs["extrinsics_rt_fromref"][icam_extrinsics]
@@ -1359,11 +1364,6 @@ class cameramodel(object):
                     f'OpenCV yaml can\'t store the "{self._intrinsics[0]}" model'
                 )
             fxycxy = self._intrinsics[1][:4]
-
-            M = np.array(
-                ((fxycxy[0], 0, fxycxy[2]), (0, fxycxy[1], fxycxy[3]), (0, 0, 1)),
-                dtype=float,
-            )
 
             f.write(
                 f"image_width: {self._imagersize[0]}\nimage_height: {self._imagersize[1]}\ncamera_name: drcalmodel\n"
@@ -1565,14 +1565,14 @@ projection_matrix:
             # getter
             if not toref:
                 return np.array(self._extrinsics)
-            return drcal.invert_rt(self._extrinsics)
+            return invert_rt(self._extrinsics)
 
         # setter
         if not toref:
             self._extrinsics = np.array(rt, dtype=float)
             return True
 
-        self._extrinsics = drcal.invert_rt(rt.astype(float))
+        self._extrinsics = invert_rt(rt.astype(float))
         return True
 
     def extrinsics_rt_toref(self, rt=None):
@@ -1669,18 +1669,18 @@ projection_matrix:
         if Rt is None:
             # getter
             rt_fromref = self._extrinsics
-            Rt_fromref = drcal.Rt_from_rt(rt_fromref)
+            Rt_fromref = Rt_from_rt(rt_fromref)
             if not toref:
                 return Rt_fromref
-            return drcal.invert_Rt(Rt_fromref)
+            return invert_Rt(Rt_fromref)
 
         # setter
         if toref:
-            Rt_fromref = drcal.invert_Rt(Rt.astype(float))
-            self._extrinsics = drcal.rt_from_Rt(Rt_fromref)
+            Rt_fromref = invert_Rt(Rt.astype(float))
+            self._extrinsics = rt_from_Rt(Rt_fromref)
             return True
 
-        self._extrinsics = drcal.rt_from_Rt(Rt.astype(float))
+        self._extrinsics = rt_from_Rt(Rt.astype(float))
         return True
 
     def extrinsics_Rt_toref(self, Rt=None):
@@ -1819,7 +1819,7 @@ projection_matrix:
             self._valid_intrinsics_region = None
             return True
 
-        valid_intrinsics_region = drcal.close_contour(valid_intrinsics_region)
+        valid_intrinsics_region = close_contour(valid_intrinsics_region)
 
         # raises exception on error
         _validateValidIntrinsicsRegion(valid_intrinsics_region)
@@ -1900,7 +1900,7 @@ projection_matrix:
 
     def _extrinsics_moved_since_calibration(self):
         optimization_inputs = self.optimization_inputs()
-        icam_extrinsics = drcal.corresponding_icam_extrinsics(
+        icam_extrinsics = corresponding_icam_extrinsics(
             self.icam_intrinsics(), **optimization_inputs
         )
 
