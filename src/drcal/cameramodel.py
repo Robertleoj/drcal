@@ -1,21 +1,11 @@
-#!/usr/bin/python3
-
-# Copyright (c) 2017-2023 California Institute of Technology ("Caltech"). U.S.
-# Government sponsorship acknowledged. All rights reserved.
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-
 """A class to read/write/manipulate camera models
 
 SYNOPSIS
 
-    model_for_intrinsics = mrcal.cameramodel('model0.cameramodel')
-    model_for_extrinsics = mrcal.cameramodel('model1.cameramodel')
+    model_for_intrinsics = drcal.cameramodel('model0.cameramodel')
+    model_for_extrinsics = drcal.cameramodel('model1.cameramodel')
 
-    model_joint = mrcal.cameramodel( model_for_intrinsics )
+    model_joint = drcal.cameramodel( model_for_intrinsics )
 
     extrinsics = model_for_extrinsics.extrinsics_rt_fromref()
     model_joint.extrinsics_rt_fromref(extrinsics)
@@ -24,8 +14,8 @@ SYNOPSIS
     # from 'model1.cameramodel'. I write it to disk
     model_joint.write('model-joint.cameramodel')
 
-All functions are exported into the mrcal module. So you can call these via
-mrcal.cameramodel.fff() or mrcal.fff(). The latter is preferred.
+All functions are exported into the drcal module. So you can call these via
+drcal.cameramodel.fff() or drcal.fff(). The latter is preferred.
 
 """
 
@@ -39,7 +29,7 @@ import warnings
 import io
 import base64
 
-import mrcal
+import drcal
 
 
 def _validateExtrinsics(e):
@@ -94,7 +84,7 @@ def _validateIntrinsics(imagersize, i, optimization_inputs=None, icam_intrinsics
     intrinsics = i[1]
 
     # If this fails, I keep the exception and let it fall through
-    Nintrinsics_want = mrcal.lensmodel_num_params(lensmodel)
+    Nintrinsics_want = drcal.lensmodel_num_params(lensmodel)
 
     try:
         Nintrinsics_have = len(intrinsics)
@@ -276,7 +266,7 @@ future
 
         # Skip the default do_apply_regularization_unity_cam01 value when
         # writing to the model on disk. This isn't required, since it is
-        # default. And its presense will make the older mrcal.cameramodel()
+        # default. And its presense will make the older drcal.cameramodel()
         # parsers complain
         if k == "do_apply_regularization_unity_cam01" and not v:
             continue
@@ -346,7 +336,7 @@ class cameramodel(object):
 
     SYNOPSIS
 
-        model = mrcal.cameramodel('xxx.cameramodel')
+        model = drcal.cameramodel('xxx.cameramodel')
 
         extrinsics_Rt_toref = model.extrinsics_Rt_toref()
 
@@ -366,10 +356,10 @@ class cameramodel(object):
       (lensmodel,intrinsics_data)
 
       - lensmodel: a string "LENSMODEL_...". The full list of supported models is
-        returned by mrcal.supported_lensmodels()
+        returned by drcal.supported_lensmodels()
 
       - intrinsics_data: a numpy array of shape
-        (mrcal.lensmodel_num_params(lensmodel),). For lensmodels that have an
+        (drcal.lensmodel_num_params(lensmodel),). For lensmodels that have an
         "intrinsics core" (all of them, currently) the first 4 elements are
 
         - fx: the focal-length along the x axis, in pixels
@@ -385,7 +375,7 @@ class cameramodel(object):
 
     - The extrinsics: the pose of this camera in respect to some reference
       coordinate system. The meaning of this "reference" coordinate system is
-      user-defined, and means nothing to mrcal.cameramodel. If we have multiple
+      user-defined, and means nothing to drcal.cameramodel. If we have multiple
       cameramodels, they generally share this "reference" coordinate system, and it
       is used as an anchor to position the cameras in respect to one another.
       Internally this is stored as an rt transformation converting points
@@ -402,18 +392,18 @@ class cameramodel(object):
       to/from reference direction.
 
     - The valid-intrinsics region: a contour in the imager where the projection
-      behavior is "reliable". The meaning of "reliable" is user-defined. mrcal is
+      behavior is "reliable". The meaning of "reliable" is user-defined. drcal is
       able to report the projection uncertainty anywhere in space, and this is a
       more fine-grained way to measure "reliability", but sometimes it is convenient
       to define an uncertainty limit, and to compute a region where this limit is
-      met. This region can then be stored in the mrcal.cameramodel object. A missing
+      met. This region can then be stored in the drcal.cameramodel object. A missing
       valid-intrinsics region means "unknown". An empty valid-intrinsics region
       (array of length 0) means "intrinsics are valid nowhere". Storing this is
       optional.
 
     - The optimization inputs: this is a dict containing all the data that was used
       to compute the contents of this model. These are optional. These are the
-      kwargs passable to mrcal.optimize() and mrcal.optimizer_callback() that
+      kwargs passable to drcal.optimize() and drcal.optimizer_callback() that
       describe the optimization problem at its final optimum. Storing these is
       optional, but they are very useful for diagnostics, since everything in the
       model can be re-generated from this data. Some things (most notably the
@@ -469,7 +459,7 @@ class cameramodel(object):
         f.write("\n")
 
         N = len(self._intrinsics[1])
-        if mrcal.lensmodel_metadata_and_config(self._intrinsics[0])["has_core"]:
+        if drcal.lensmodel_metadata_and_config(self._intrinsics[0])["has_core"]:
             f.write("    # intrinsics are fx,fy,cx,cy,distortion0,distortion1,....\n")
         f.write(
             ("    'intrinsics': [" + (" {:.10g}," * N) + "],\n").format(
@@ -594,7 +584,7 @@ class cameramodel(object):
         _validateExtrinsics(model["extrinsics"])
 
         self._intrinsics = intrinsics
-        self._valid_intrinsics_region = mrcal.close_contour(valid_intrinsics_region)
+        self._valid_intrinsics_region = drcal.close_contour(valid_intrinsics_region)
         self._extrinsics = np.array(model["extrinsics"], dtype=float)
         self._imagersize = np.array(model["imagersize"], dtype=np.int32)
 
@@ -644,15 +634,15 @@ class cameramodel(object):
         SYNOPSIS
 
             # reading from a file on disk
-            model0 = mrcal.cameramodel('xxx.cameramodel')
+            model0 = drcal.cameramodel('xxx.cameramodel')
 
             # using discrete arguments
-            model1 = mrcal.cameramodel( intrinsics = ('LENSMODEL_PINHOLE',
+            model1 = drcal.cameramodel( intrinsics = ('LENSMODEL_PINHOLE',
                                                       np.array((fx,fy,cx,cy))),
                                         imagersize = (640,480) )
 
             # using a optimization_inputs dict
-            model2 = mrcal.cameramodel( optimization_inputs = optimization_inputs,
+            model2 = drcal.cameramodel( optimization_inputs = optimization_inputs,
                                         icam_intrinsics     = 0 )
 
         We can initialize using one of several methods, depending on which arguments are
@@ -714,7 +704,7 @@ class cameramodel(object):
           arguments are given, an identity transformation is set. This may be given only
           as a keyword argument.
 
-        - optimization_inputs: a dict of arguments to mrcal.optimize() at the optimum.
+        - optimization_inputs: a dict of arguments to drcal.optimize() at the optimum.
           These contain all the information needed to populate the camera model (and
           more!). If given, 'icam_intrinsics' is also required. This may be given only
           as a keyword argument.
@@ -784,7 +774,7 @@ class cameramodel(object):
                 )
                 if file_or_model._valid_intrinsics_region is not None:
                     self._valid_intrinsics_region = np.array(
-                        mrcal.close_contour(file_or_model._valid_intrinsics_region),
+                        drcal.close_contour(file_or_model._valid_intrinsics_region),
                         dtype=float,
                     )
                 else:
@@ -1012,7 +1002,7 @@ class cameramodel(object):
                         model=model_in,
                     )
                 except:
-                    R = mrcal.identity_R()
+                    R = drcal.identity_R()
                     R_at = "default"
 
                 # Special-case P=0 or R=0. Sometimes I see this. Set everything to identity
@@ -1087,7 +1077,7 @@ class cameramodel(object):
 
                 # extrinsics are rt_fromref
                 model["extrinsics"] = [
-                    float(x) for x in mrcal.rt_from_Rt(mrcal.invert_Rt(Rt_ref_cam))
+                    float(x) for x in drcal.rt_from_Rt(drcal.invert_Rt(Rt_ref_cam))
                 ]
 
                 return repr(model)
@@ -1141,7 +1131,7 @@ class cameramodel(object):
                 if file_or_model == "-":
                     if sys.stdin.isatty():
                         # This isn't an error per-se. But most likely the user
-                        # ran something like "mrcal-to-cahvor" without
+                        # ran something like "drcal-to-cahvor" without
                         # redirecting any data into it. Without this check the
                         # program will sit there, waiting for input. Which will
                         # look strange to an unsuspecting user
@@ -1212,11 +1202,11 @@ class cameramodel(object):
             )
 
             if icam_extrinsics is None:
-                icam_extrinsics = mrcal.corresponding_icam_extrinsics(
+                icam_extrinsics = drcal.corresponding_icam_extrinsics(
                     icam_intrinsics, **optimization_inputs
                 )
             if icam_extrinsics < 0:
-                self.extrinsics_rt_fromref(mrcal.identity_rt())
+                self.extrinsics_rt_fromref(drcal.identity_rt())
             else:
                 self.extrinsics_rt_fromref(
                     optimization_inputs["extrinsics_rt_fromref"][icam_extrinsics]
@@ -1258,7 +1248,7 @@ class cameramodel(object):
         )
 
         return (
-            "mrcal.cameramodel("
+            "drcal.cameramodel("
             + ", ".join(f.__func__.__code__.co_name + "=" + repr(f()) for f in funcs)
             + ")"
         )
@@ -1270,7 +1260,7 @@ class cameramodel(object):
 
             model.write('left.cameramodel')
 
-        We write the contents of the given mrcal.cameramodel object to the given
+        We write the contents of the given drcal.cameramodel object to the given
         filename or a given pre-opened file. If the filename is 'xxx.cahv' or
         'xxx.cahvor' or 'xxx.cahvore' or if cahvor: we use the legacy cahvor file format
         for output
@@ -1376,7 +1366,7 @@ class cameramodel(object):
             )
 
             f.write(
-                f"image_width: {self._imagersize[0]}\nimage_height: {self._imagersize[1]}\ncamera_name: mrcalmodel\n"
+                f"image_width: {self._imagersize[0]}\nimage_height: {self._imagersize[1]}\ncamera_name: drcalmodel\n"
             )
 
             f.write(
@@ -1455,10 +1445,10 @@ projection_matrix:
           (lensmodel, intrinsics_data) tuple only.
 
           - lensmodel: a string "LENSMODEL_...". The full list of supported models is
-            returned by mrcal.supported_lensmodels()
+            returned by drcal.supported_lensmodels()
 
           - intrinsics_data: a numpy array of shape
-            (mrcal.lensmodel_num_params(lensmodel),). For lensmodels that have an
+            (drcal.lensmodel_num_params(lensmodel),). For lensmodels that have an
             "intrinsics core" (all of them, currently) the first 4 elements are
 
             - fx: the focal-length along the x axis, in pixels
@@ -1493,7 +1483,7 @@ projection_matrix:
           This is useful if a valid cameramodel object already exists, and I want to
           update it with new lens parameters
 
-        - optimization_inputs: optional dict of arguments to mrcal.optimize() at the
+        - optimization_inputs: optional dict of arguments to drcal.optimize() at the
           optimum. These contain all the information needed to populate the camera model
           (and more!). If given, 'icam_intrinsics' is also required. If omitted, no
           optimization_inputs are stored; re-solving and computing of uncertainties is
@@ -1510,7 +1500,7 @@ projection_matrix:
         - lensmodel is a string "LENSMODEL_..."
 
         - intrinsics_data is a numpy array of shape
-          (mrcal.lensmodel_num_params(lensmodel),)
+          (drcal.lensmodel_num_params(lensmodel),)
 
         """
 
@@ -1554,7 +1544,7 @@ projection_matrix:
 
           r = rt[:3]
           t = rt[3:]
-          R = mrcal.R_from_r(r)
+          R = drcal.R_from_r(r)
 
         The transformation is b <-- R*a + t:
 
@@ -1575,14 +1565,14 @@ projection_matrix:
             # getter
             if not toref:
                 return np.array(self._extrinsics)
-            return mrcal.invert_rt(self._extrinsics)
+            return drcal.invert_rt(self._extrinsics)
 
         # setter
         if not toref:
             self._extrinsics = np.array(rt, dtype=float)
             return True
 
-        self._extrinsics = mrcal.invert_rt(rt.astype(float))
+        self._extrinsics = drcal.invert_rt(rt.astype(float))
         return True
 
     def extrinsics_rt_toref(self, rt=None):
@@ -1679,18 +1669,18 @@ projection_matrix:
         if Rt is None:
             # getter
             rt_fromref = self._extrinsics
-            Rt_fromref = mrcal.Rt_from_rt(rt_fromref)
+            Rt_fromref = drcal.Rt_from_rt(rt_fromref)
             if not toref:
                 return Rt_fromref
-            return mrcal.invert_Rt(Rt_fromref)
+            return drcal.invert_Rt(Rt_fromref)
 
         # setter
         if toref:
-            Rt_fromref = mrcal.invert_Rt(Rt.astype(float))
-            self._extrinsics = mrcal.rt_from_Rt(Rt_fromref)
+            Rt_fromref = drcal.invert_Rt(Rt.astype(float))
+            self._extrinsics = drcal.rt_from_Rt(Rt_fromref)
             return True
 
-        self._extrinsics = mrcal.rt_from_Rt(Rt.astype(float))
+        self._extrinsics = drcal.rt_from_Rt(Rt.astype(float))
         return True
 
     def extrinsics_Rt_toref(self, Rt=None):
@@ -1829,7 +1819,7 @@ projection_matrix:
             self._valid_intrinsics_region = None
             return True
 
-        valid_intrinsics_region = mrcal.close_contour(valid_intrinsics_region)
+        valid_intrinsics_region = drcal.close_contour(valid_intrinsics_region)
 
         # raises exception on error
         _validateValidIntrinsicsRegion(valid_intrinsics_region)
@@ -1841,11 +1831,11 @@ projection_matrix:
 
         SYNOPSIS
 
-            b,x,j = mrcal.optimizer_callback(**model.optimization_inputs())[:3]
+            b,x,j = drcal.optimizer_callback(**model.optimization_inputs())[:3]
 
         This function retrieves the optimization inputs: a dict containing all the data
         that was used to compute the contents of this model. These are the kwargs
-        passable to mrcal.optimize() and mrcal.optimizer_callback(), that describe the
+        passable to drcal.optimize() and drcal.optimizer_callback(), that describe the
         optimization problem at its final optimum. A cameramodel object may not contain
         this data, in which case we return None.
 
@@ -1910,7 +1900,7 @@ projection_matrix:
 
     def _extrinsics_moved_since_calibration(self):
         optimization_inputs = self.optimization_inputs()
-        icam_extrinsics = mrcal.corresponding_icam_extrinsics(
+        icam_extrinsics = drcal.corresponding_icam_extrinsics(
             self.icam_intrinsics(), **optimization_inputs
         )
 
@@ -1929,14 +1919,14 @@ projection_matrix:
 
 SYNOPSIS
 
-    m = mrcal.cameramodel('xxx.cameramodel')
+    m = drcal.cameramodel('xxx.cameramodel')
 
     optimization_inputs = m.optimization_inputs()
 
     icam_intrinsics = m.icam_intrinsics()
 
     icam_extrinsics = \
-        mrcal.corresponding_icam_extrinsics(icam_intrinsics,
+        drcal.corresponding_icam_extrinsics(icam_intrinsics,
                                             **optimization_inputs)
 
     if icam_extrinsics >= 0:
@@ -1944,7 +1934,7 @@ SYNOPSIS
             optimization_inputs['extrinsics_rt_fromref'][icam_extrinsics]
     else:
         extrinsics_rt_fromref_at_calibration_time = \
-            mrcal.identity_rt()
+            drcal.identity_rt()
 
 This function retrieves the integer identifying this camera in the solve defined
 by 'optimization_inputs'. When the optimization happened, we may have been

@@ -12,7 +12,6 @@ import numpy as np
 import numpysane as nps
 import sys
 
-import drcal
 
 
 def project(v, lensmodel, intrinsics_data, *, get_gradients=False, out=None):

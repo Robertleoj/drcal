@@ -25,7 +25,9 @@ import numpysane as nps
 # for python3
 from functools import reduce
 
-from . import _poseutils_npsp
+import bindings_poseutils_npsp as pose_npsp
+
+# from . import _poseutils_npsp
 from . import _poseutils_scipy
 
 

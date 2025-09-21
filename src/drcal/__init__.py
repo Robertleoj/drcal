@@ -17,22 +17,32 @@ mrcal.mmm.fff() can be called as mrcal.fff() instead. The latter is preferred.
 """
 
 # The C wrapper is written by us in mrcal-pywrap.c
-from .bindings import *
+from .bindings import optimize
 
 # The C wrapper is generated from mrcal-genpywrap.py
-from .bindings_npsp import *
+from . import bindings_npsp as _drcal_npsp
 
 from .projections import *
-from .cameramodel import *
-from .poseutils import *
+from .cameramodel import cameramodel
+from .poseutils import rt_from_Rt
 
 # The C wrapper is generated from poseutils-genpywrap.py
-from .bindings_poseutils_npsp import *
+from . import bindings_poseutils_npsp as _poseutils_npsp
 from .stereo import *
 from .visualization import *
 from .model_analysis import *
 from .synthetic_data import *
-from .calibration import *
+from .calibration import compute_chessboard_corners
 from .image_transforms import *
 from .utils import *
 from .triangulation import *
+
+
+__all__ = [
+    "_drcal_npsp",
+    "_poseutils_npsp",
+    "rt_from_Rt",
+    "optimize",
+    "cameramodel",
+    "compute_chessboard_corners",
+]
