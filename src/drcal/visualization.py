@@ -1,13 +1,3 @@
-#!/usr/bin/python3
-
-# Copyright (c) 2017-2023 California Institute of Technology ("Caltech"). U.S.
-# Government sponsorship acknowledged. All rights reserved.
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-
 """Visualization routines
 
 All functions are exported into the mrcal module. So you can call these via
@@ -19,8 +9,49 @@ import numpy as np
 import numpysane as nps
 import sys
 import re
+import gnuplotlib as gp
 import os
-import mrcal
+
+from drcal.bindings import (
+    corresponding_icam_extrinsics,
+    knots_for_splined_models,
+    lensmodel_metadata_and_config,
+    optimizer_callback,
+)
+from .calibration import _report_regional_statistics
+from drcal.bindings_poseutils_npsp import identity_Rt, identity_rt
+from drcal.model_analysis import (
+    projection_diff,
+    projection_uncertainty,
+    stereo_pair_diff,
+)
+from .utils import (
+    _densify_polyline,
+    hypothesis_board_corner_positions,
+    measurements_board,
+    measurements_point,
+    polygon_difference,
+    sample_imager,
+    _splined_stereographic_domain,
+)
+from drcal.poseutils import (
+    Rt_from_rt,
+    compose_Rt,
+    compose_rt,
+    invert_Rt,
+    rt_from_Rt,
+    transform_point_Rt,
+    transform_point_rt,
+)
+from drcal.projections import (
+    project,
+    project_stereographic,
+    unproject,
+    unproject_stereographic,
+)
+from drcal.synthetic_data import ref_calibration_object
+
+from .cameramodel import cameramodel
 
 
 def show_geometry(
@@ -195,15 +226,13 @@ plot
 
     """
 
-    import gnuplotlib as gp
-
     # First one with optimization_inputs. If we're not given frames and/or
     # points, we get them from the optimization inputs in this model
     i_model_with_optimization_inputs = next(
         (
             i
             for i in range(len(models_or_extrinsics_rt_fromref))
-            if isinstance(models_or_extrinsics_rt_fromref[i], mrcal.cameramodel)
+            if isinstance(models_or_extrinsics_rt_fromref[i], cameramodel)
             and models_or_extrinsics_rt_fromref[i].optimization_inputs() is not None
         ),
         None,
@@ -264,10 +293,10 @@ plot
             )
 
     def get_extrinsics_Rt_toref_one(m):
-        if isinstance(m, mrcal.cameramodel):
+        if isinstance(m, cameramodel):
             return m.extrinsics_Rt_toref()
         else:
-            return mrcal.invert_Rt(mrcal.Rt_from_rt(m))
+            return invert_Rt(Rt_from_rt(m))
 
     extrinsics_Rt_toref = nps.cat(
         *[get_extrinsics_Rt_toref_one(m) for m in models_or_extrinsics_rt_fromref]
@@ -372,18 +401,18 @@ plot
         # The current frames_rt_toref uses the calibration-time ref, NOT
         # the current ref. I transform. frames_rt_toref = T_rcal_f
         # I want T_rnow_rcal T_rcal_f
-        icam_extrinsics = mrcal.corresponding_icam_extrinsics(
+        icam_extrinsics = corresponding_icam_extrinsics(
             icam_intrinsics, **optimization_inputs
         )
         if icam_extrinsics >= 0:
-            _frames_rt_toref = mrcal.compose_rt(
-                mrcal.rt_from_Rt(extrinsics_Rt_toref[i_model_with_optimization_inputs]),
+            _frames_rt_toref = compose_rt(
+                rt_from_Rt(extrinsics_Rt_toref[i_model_with_optimization_inputs]),
                 optimization_inputs["extrinsics_rt_fromref"][icam_extrinsics],
                 _frames_rt_toref,
             )
         else:
-            _frames_rt_toref = mrcal.compose_rt(
-                mrcal.rt_from_Rt(extrinsics_Rt_toref[i_model_with_optimization_inputs]),
+            _frames_rt_toref = compose_rt(
+                rt_from_Rt(extrinsics_Rt_toref[i_model_with_optimization_inputs]),
                 _frames_rt_toref,
             )
 
@@ -444,19 +473,19 @@ plot
 
         # The current points uses the calibration-time ref, NOT
         # the current ref. I transform.
-        icam_extrinsics = mrcal.corresponding_icam_extrinsics(
+        icam_extrinsics = corresponding_icam_extrinsics(
             icam_intrinsics, **optimization_inputs
         )
 
         if icam_extrinsics >= 0:
-            _points = mrcal.transform_point_rt(
+            _points = transform_point_rt(
                 optimization_inputs["extrinsics_rt_fromref"][icam_extrinsics], _points
             )
-            _points = mrcal.transform_point_Rt(
+            _points = transform_point_Rt(
                 extrinsics_Rt_toref[i_model_with_optimization_inputs], _points
             )
         else:
-            _points = mrcal.transform_point_Rt(
+            _points = transform_point_Rt(
                 extrinsics_Rt_toref[i_model_with_optimization_inputs], _points
             )
         # All good. Done
@@ -511,13 +540,13 @@ plot
             * scale
         )
 
-        transform = mrcal.identity_Rt()
+        transform = identity_Rt()
 
         for x in transforms:
-            transform = mrcal.compose_Rt(transform, x)
+            transform = compose_Rt(transform, x)
 
         return (
-            extend_axes_for_plotting(mrcal.transform_point_Rt(transform, axes)),
+            extend_axes_for_plotting(transform_point_Rt(transform, axes)),
             dict(_with="vectors", tuplesize=-6, legend=legend),
         )
 
@@ -542,13 +571,13 @@ plot
             * scale
         )
 
-        transform = mrcal.identity_Rt()
+        transform = identity_Rt()
 
         for x in transforms:
-            transform = mrcal.compose_Rt(transform, x)
+            transform = compose_Rt(transform, x)
 
         return tuple(
-            nps.transpose(mrcal.transform_point_Rt(transform, axes[1:, :] * 1.01))
+            nps.transpose(transform_point_Rt(transform, axes[1:, :] * 1.01))
         ) + (
             np.array(("x", "y", "z")),
             dict(_with="labels", tuplesize=4, legend=None),
@@ -564,7 +593,7 @@ plot
             Rt_ref_cam = extrinsics_Rt_toref[i]
             if cameras_Rt_plot_ref is None:
                 return Rt_ref_cam
-            return mrcal.compose_Rt(cameras_Rt_plot_ref[i], Rt_ref_cam)
+            return compose_Rt(cameras_Rt_plot_ref[i], Rt_ref_cam)
 
         def camera_name(i):
             try:
@@ -619,7 +648,7 @@ plot
         #     i_observations, iframes = nps.transpose(np.array(i_observations_frames))
         #     frames_rt_toref = frames_rt_toref[iframes, ...]
 
-        calobject_ref = mrcal.ref_calibration_object(
+        calobject_ref = ref_calibration_object(
             object_width_n,
             object_height_n,
             object_spacing,
@@ -628,7 +657,7 @@ plot
 
         # object in the ref coord system.
         # shape (Nframes, object_height_n, object_width_n, 3)
-        calobject_ref = mrcal.transform_point_rt(
+        calobject_ref = transform_point_rt(
             nps.mv(frames_rt_toref, -2, -4), calobject_ref
         )
 
@@ -636,7 +665,7 @@ plot
             # I checked earlier that if separate frames_rt_toref or points are
             # given, then only a single cameras_Rt_plot_ref may be given.
             # They're all the same, so I use 0 here arbitrarily
-            calobject_ref = mrcal.transform_point_Rt(
+            calobject_ref = transform_point_Rt(
                 cameras_Rt_plot_ref[
                     i_model_with_optimization_inputs
                     if i_model_with_optimization_inputs is not None
@@ -688,7 +717,7 @@ plot
             # I checked earlier that if separate frames_rt_toref or points are
             # given, then only a single cameras_Rt_plot_ref may be given.
             # They're all the same, so I use 0 here arbitrarily
-            points = mrcal.transform_point_Rt(
+            points = transform_point_Rt(
                 cameras_Rt_plot_ref[
                     i_model_with_optimization_inputs
                     if i_model_with_optimization_inputs is not None
@@ -1018,7 +1047,7 @@ def _append_observation_visualizations(
     ):
         if q is not None and len(q) > 0:
             if reproject_to_stereographic:
-                q = mrcal.project_stereographic(mrcal.unproject(q, *model.intrinsics()))
+                q = project_stereographic(unproject(q, *model.intrinsics()))
 
             if pointtype < 0:
                 _with = f'dots lc "{color}"'
@@ -1291,7 +1320,7 @@ def show_projection_diff(
         )
 
     # Now do all the actual work
-    difflen, diff, q0, Rt10 = mrcal.projection_diff(
+    difflen, diff, q0, Rt10 = projection_diff(
         models,
         implied_Rt10=implied_Rt10,
         gridn_width=gridn_width,
@@ -1414,8 +1443,8 @@ def show_projection_diff(
         # straight lines will not remain straight. I thus resample the polyline
         # more densely.
         if not intrinsics_only:
-            v1 = mrcal.unproject(
-                mrcal.utils._densify_polyline(valid_region1, spacing=50),
+            v1 = unproject(
+                _densify_polyline(valid_region1, spacing=50),
                 *models[1].intrinsics(),
                 normalize=True,
             )
@@ -1426,8 +1455,8 @@ def show_projection_diff(
                 except:
                     v1 *= distance[0]
 
-            valid_region1 = mrcal.project(
-                mrcal.transform_point_Rt(mrcal.invert_Rt(Rt10), v1),
+            valid_region1 = project(
+                transform_point_Rt(invert_Rt(Rt10), v1),
                 *models[0].intrinsics(),
             )
 
@@ -1625,7 +1654,7 @@ def show_stereo_pair_diff(
             )
 
     # Now do all the actual work
-    difflen, diff, q0 = mrcal.stereo_pair_diff(
+    difflen, diff, q0 = stereo_pair_diff(
         model_pairs,
         gridn_width=gridn_width,
         gridn_height=gridn_height,
@@ -1729,8 +1758,8 @@ def show_stereo_pair_diff(
         # first camera to make sense. The transformation is complex, and
         # straight lines will not remain straight. I thus resample the polyline
         # more densely.
-        v1 = mrcal.unproject(
-            mrcal.utils._densify_polyline(valid_region1, spacing=50),
+        v1 = unproject(
+            _densify_polyline(valid_region1, spacing=50),
             *model_pairs[1].intrinsics(),
             normalize=True,
         )
@@ -1738,8 +1767,8 @@ def show_stereo_pair_diff(
         if distance is not None:
             v1 *= distance
 
-        valid_region1 = mrcal.project(
-            mrcal.transform_point_Rt(mrcal.invert_Rt(Rt10), v1),
+        valid_region1 = project(
+            transform_point_Rt(invert_Rt(Rt10), v1),
             *model_pairs[0].intrinsics(),
         )
 
@@ -1771,14 +1800,6 @@ def show_stereo_pair_diff(
 
     if observations:
         raise Exception("finish this")
-        for i in range(len(model_pairs)):
-            _append_observation_visualizations(
-                plot_data_args,
-                model=model_pairs[i],
-                legend_prefix=f"Camera {i} ",
-                pointtype=-1 if observations == "dots" else (1 + i),
-                _2d=bool(vectorfield),
-            )
 
     data_tuples = plot_data_args
 
@@ -1950,10 +1971,10 @@ def show_projection_uncertainty(
     if gridn_height is None:
         gridn_height = int(round(H / W * gridn_width))
 
-    q = mrcal.sample_imager(gridn_width, gridn_height, W, H)
-    pcam = mrcal.unproject(q, *model.intrinsics(), normalize=True)
+    q = sample_imager(gridn_width, gridn_height, W, H)
+    pcam = unproject(q, *model.intrinsics(), normalize=True)
 
-    err = mrcal.projection_uncertainty(
+    err = projection_uncertainty(
         pcam * (distance if distance is not None else 1.0),
         model=model,
         method=method,
@@ -2038,7 +2059,7 @@ def _observed_hypothesis_points_and_boards_at_calibration_time(model):
 
     try:
         # [-2] means "inliers"
-        p_cam_observed_at_calibration_time = mrcal.hypothesis_board_corner_positions(
+        p_cam_observed_at_calibration_time = hypothesis_board_corner_positions(
             model.icam_intrinsics(), **optimization_inputs
         )[-2]
     except:
@@ -2064,13 +2085,13 @@ def _observed_hypothesis_points_and_boards_at_calibration_time(model):
 
         icame[icame < 0] = -1
         rt_cam_ref = nps.glue(
-            mrcal.identity_rt(), optimization_inputs["extrinsics_rt_fromref"], axis=-2
+            identity_rt(), optimization_inputs["extrinsics_rt_fromref"], axis=-2
         )[icame + 1]
 
         rt_cam_ref = optimization_inputs["extrinsics_rt_fromref"][icame]
 
         p_ref_points = points[ipoint]
-        p_cam_points = mrcal.transform_point_rt(rt_cam_ref, p_ref_points)
+        p_cam_points = transform_point_rt(rt_cam_ref, p_ref_points)
 
         p_cam_observed_at_calibration_time = nps.glue(
             p_cam_observed_at_calibration_time, p_cam_points, axis=-2
@@ -2208,7 +2229,7 @@ def show_projection_uncertainty_vs_distance(
         if where == "center":
             q = (model.imagersize() - 1.0) / 2.0
 
-            vcam = mrcal.unproject(q, *model.intrinsics(), normalize=True)
+            vcam = unproject(q, *model.intrinsics(), normalize=True)
 
         elif where == "centroid":
             p = np.mean(p_cam_observed_at_calibration_time, axis=-2)
@@ -2219,7 +2240,7 @@ def show_projection_uncertainty_vs_distance(
 
     elif isinstance(where, np.ndarray):
         q = where
-        vcam = mrcal.unproject(q, *model.intrinsics(), normalize=True)
+        vcam = unproject(q, *model.intrinsics(), normalize=True)
     else:
         raise Exception("'where' should be 'center' or an array specifying a pixel")
 
@@ -2241,7 +2262,7 @@ def show_projection_uncertainty_vs_distance(
     pcam = vcam * nps.dummy(distances, -1)
 
     # shape (Ndistances)
-    uncertainty = mrcal.projection_uncertainty(
+    uncertainty = projection_uncertainty(
         pcam,
         model=model,
         method=method,
@@ -2397,9 +2418,9 @@ def show_distortion_off_pinhole_radial(
     q_centersx = np.array(((cxy[0], y0), (cxy[0], y1)), dtype=float)
     q_centersy = np.array(((x0, cxy[1]), (x1, cxy[1])), dtype=float)
 
-    v_corners = mrcal.unproject(q_corners, lensmodel, intrinsics_data)
-    v_centersx = mrcal.unproject(q_centersx, lensmodel, intrinsics_data)
-    v_centersy = mrcal.unproject(q_centersy, lensmodel, intrinsics_data)
+    v_corners = unproject(q_corners, lensmodel, intrinsics_data)
+    v_centersx = unproject(q_centersx, lensmodel, intrinsics_data)
+    v_centersy = unproject(q_centersy, lensmodel, intrinsics_data)
 
     # some unprojections may be nan (we're looking beyond where the projection
     # is valid), so I explicitly ignore those
@@ -2579,7 +2600,7 @@ def show_distortion_off_pinhole(
     if gridn_height is None:
         gridn_height = int(round(H / W * gridn_width))
 
-    if not mrcal.lensmodel_metadata_and_config(lensmodel)["has_core"]:
+    if not lensmodel_metadata_and_config(lensmodel)["has_core"]:
         raise Exception(
             "This currently works only with models that have an fxfycxcy core. It might not be required. Take a look at the following code if you want to add support"
         )
@@ -2601,7 +2622,7 @@ def show_distortion_off_pinhole(
         dtype=float,
     )
 
-    dgrid = mrcal.project(
+    dgrid = project(
         nps.glue(
             (grid - cxy) / fxy, np.ones(grid.shape[:-1] + (1,), dtype=float), axis=-1
         ),
@@ -2760,7 +2781,7 @@ def show_valid_intrinsics_region(
       this as a part of a more complex plot
 
     """
-    if isinstance(models, mrcal.cameramodel):
+    if isinstance(models, cameramodel):
         models = (models,)
 
     if cameranames is None:
@@ -3024,7 +3045,7 @@ def show_splined_model_correction(
             title += ": " + extratitle
         kwargs["title"] = title
 
-    ux_knots, uy_knots = mrcal.knots_for_splined_models(lensmodel)
+    ux_knots, uy_knots = knots_for_splined_models(lensmodel)
 
     if imager_domain:
         # Shape (Ny,Nx,2); contains (x,y) rows
@@ -3038,8 +3059,8 @@ def show_splined_model_correction(
             0,
             -1,
         )
-        v = mrcal.unproject(np.ascontiguousarray(q), lensmodel, intrinsics_data)
-        u = mrcal.project_stereographic(v)
+        v = unproject(np.ascontiguousarray(q), lensmodel, intrinsics_data)
+        u = project_stereographic(v)
     else:
         # Shape (gridn_height,gridn_width,2); contains (x,y) rows
         u = nps.mv(
@@ -3055,8 +3076,8 @@ def show_splined_model_correction(
 
         # My projection is q = (u + deltau) * fxy + cxy. deltau is queried from the
         # spline surface
-        v = mrcal.unproject_stereographic(np.ascontiguousarray(u))
-        q = mrcal.project(v, lensmodel, intrinsics_data)
+        v = unproject_stereographic(np.ascontiguousarray(u))
+        q = project(v, lensmodel, intrinsics_data)
 
     fxy = intrinsics_data[0:2]
     cxy = intrinsics_data[2:4]
@@ -3077,9 +3098,9 @@ def show_splined_model_correction(
     if imager_domain:
         imager_boundary = imager_boundary_sparse
     else:
-        imager_boundary = mrcal.project_stereographic(
-            mrcal.unproject(
-                mrcal.utils._densify_polyline(imager_boundary_sparse, spacing=50),
+        imager_boundary = project_stereographic(
+            unproject(
+                _densify_polyline(imager_boundary_sparse, spacing=50),
                 lensmodel,
                 intrinsics_data,
             )
@@ -3152,14 +3173,14 @@ def show_splined_model_correction(
                 ),
             )
 
-    domain_contour_u = mrcal.utils._splined_stereographic_domain(lensmodel)
+    domain_contour_u = _splined_stereographic_domain(lensmodel)
     knots_u = nps.clump(nps.mv(nps.cat(*np.meshgrid(ux_knots, uy_knots)), 0, -1), n=2)
     if imager_domain:
-        domain_contour = mrcal.project(
-            mrcal.unproject_stereographic(domain_contour_u), lensmodel, intrinsics_data
+        domain_contour = project(
+            unproject_stereographic(domain_contour_u), lensmodel, intrinsics_data
         )
-        knots = mrcal.project(
-            mrcal.unproject_stereographic(np.ascontiguousarray(knots_u)),
+        knots = project(
+            unproject_stereographic(np.ascontiguousarray(knots_u)),
             lensmodel,
             intrinsics_data,
         )
@@ -3210,9 +3231,7 @@ def show_splined_model_correction(
     ]
 
     try:
-        invalid_regions = mrcal.polygon_difference(
-            imager_boundary_nonan, domain_contour
-        )
+        invalid_regions = polygon_difference(imager_boundary_nonan, domain_contour)
     except Exception:
         # sometimes the domain_contour self-intersects, and this makes us
         # barf
@@ -3524,7 +3543,7 @@ def show_residuals_board_observation(
     if x is None:
         # Flattened residuals. The board measurements are at the start of the
         # array
-        x = mrcal.optimizer_callback(
+        x = optimizer_callback(
             **optimization_inputs, no_jacobian=True, no_factorization=True
         )[1]
 
@@ -3724,7 +3743,7 @@ def show_residuals_histogram(
         "observations_board" in optimization_inputs
         and optimization_inputs["observations_board"] is not None
     ):
-        x_chessboard = mrcal.measurements_board(
+        x_chessboard = measurements_board(
             optimization_inputs=optimization_inputs,
             icam_intrinsics=icam_intrinsics,
             x=x,
@@ -3736,7 +3755,7 @@ def show_residuals_histogram(
         "observations_point" in optimization_inputs
         and optimization_inputs["observations_point"] is not None
     ):
-        x_point = mrcal.measurements_point(
+        x_point = measurements_point(
             optimization_inputs=optimization_inputs,
             icam_intrinsics=icam_intrinsics,
             x=x,
@@ -3807,7 +3826,7 @@ def _get_show_residuals_data_onecam(
         and optimization_inputs["observations_board"] is not None
     ):
         # shape (N,2), (N,2)
-        err_chessboard, obs_chessboard = mrcal.measurements_board(
+        err_chessboard, obs_chessboard = measurements_board(
             optimization_inputs=optimization_inputs,
             icam_intrinsics=icam_intrinsics,
             x=x,
@@ -3821,7 +3840,7 @@ def _get_show_residuals_data_onecam(
         and optimization_inputs["observations_point"] is not None
     ):
         # shape (N,2), (N,2)
-        err_point, obs_point = mrcal.measurements_point(
+        err_point, obs_point = measurements_point(
             optimization_inputs=optimization_inputs,
             icam_intrinsics=icam_intrinsics,
             x=x,
@@ -4367,7 +4386,7 @@ def show_residuals_regional(
     )
 
     # Each has shape (Nheight,Nwidth)
-    mean, stdev, count, using = mrcal.calibration._report_regional_statistics(model)
+    mean, stdev, count, using = _report_regional_statistics(model)
 
     def mkplot(x, title, **plot_options):
         plot_options.update(kwargs)
