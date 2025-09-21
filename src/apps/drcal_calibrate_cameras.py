@@ -593,7 +593,7 @@ def solve_initial(
                 # are ~0, then the denominator is always ~1, and this problematic case
                 # can't happen. I favor that.
                 newDistortions[..., 5:8] *= 1e-3
-        return nps.glue(intrinsics_data, newDistortions, axis=-1)
+        return np.concatenate([intrinsics_data, newDistortions], axis=-1)
 
     # Alrighty. All the preliminary business is finished. I should have a usable
     # seed now. And thus I now run the main optimization loop
