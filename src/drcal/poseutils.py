@@ -1,13 +1,3 @@
-#!/usr/bin/python3
-
-# Copyright (c) 2017-2023 California Institute of Technology ("Caltech"). U.S.
-# Government sponsorship acknowledged. All rights reserved.
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-
 """Routines to manipulate poses, transformations and points
 
 Most of these are Python wrappers around the written-in-C Python extension
@@ -22,12 +12,39 @@ mrcal.poseutils.fff() or mrcal.fff(). The latter is preferred.
 import numpy as np
 import numpysane as nps
 
-# for python3
 from functools import reduce
 
-import bindings_poseutils_npsp as pose_npsp
+from .bindings_poseutils_npsp import (
+    _r_from_R_withgrad,
+    _r_from_R,
+    _R_from_r_withgrad,
+    _R_from_r,
+    _invert_R,
+    _rt_from_Rt,
+    _rt_from_Rt_withgrad,
+    _Rt_from_rt,
+    _Rt_from_rt_withgrad,
+    _invert_Rt,
+    _invert_rt_withgrad,
+    _invert_rt,
+    _compose_Rt,
+    _compose_r,
+    _compose_r_withgrad,
+    _compose_rt,
+    _compose_rt_withgrad,
+    compose_r_tinyr0_gradientr0,
+    skew_symmetric,
+    _rotate_point_R,
+    _rotate_point_r,
+    _rotate_point_R_withgrad,
+    _rotate_point_r_withgrad,
+    _transform_point_Rt,
+    _transform_point_rt,
+    _transform_point_Rt_withgrad,
+    _transform_point_rt_withgrad,
+    R_from_quat,
+)
 
-# from . import _poseutils_npsp
 from . import _poseutils_scipy
 
 
@@ -105,8 +122,8 @@ def r_from_R(R, *, get_gradients=False, out=None):
     """
 
     if get_gradients:
-        return _poseutils_npsp._r_from_R_withgrad(R, out=out)
-    return _poseutils_npsp._r_from_R(R, out=out)
+        return _r_from_R_withgrad(R, out=out)
+    return _r_from_R(R, out=out)
 
 
 def R_from_r(r, *, get_gradients=False, out=None):
@@ -163,8 +180,8 @@ def R_from_r(r, *, get_gradients=False, out=None):
     """
 
     if get_gradients:
-        return _poseutils_npsp._R_from_r_withgrad(r, out=out)
-    return _poseutils_npsp._R_from_r(r, out=out)
+        return _R_from_r_withgrad(r, out=out)
+    return _R_from_r(r, out=out)
 
 
 def invert_R(R, *, out=None):
@@ -213,7 +230,7 @@ RETURNED VALUE
 The inverse rotation matrix in an array of shape (3,3).
 
     """
-    return _poseutils_npsp._invert_R(R, out=out)
+    return _invert_R(R, out=out)
 
 
 def rt_from_Rt(Rt, *, get_gradients=False, out=None):
@@ -298,8 +315,8 @@ def rt_from_Rt(Rt, *, get_gradients=False, out=None):
 
     """
     if get_gradients:
-        return _poseutils_npsp._rt_from_Rt_withgrad(Rt, out=out)
-    return _poseutils_npsp._rt_from_Rt(Rt, out=out)
+        return _rt_from_Rt_withgrad(Rt, out=out)
+    return _rt_from_Rt(Rt, out=out)
 
 
 def Rt_from_rt(rt, *, get_gradients=False, out=None):
@@ -379,8 +396,8 @@ def Rt_from_rt(rt, *, get_gradients=False, out=None):
 
     """
     if get_gradients:
-        return _poseutils_npsp._Rt_from_rt_withgrad(rt, out=out)
-    return _poseutils_npsp._Rt_from_rt(rt, out=out)
+        return _Rt_from_rt_withgrad(rt, out=out)
+    return _Rt_from_rt(rt, out=out)
 
 
 def invert_Rt(Rt, *, out=None):
@@ -452,7 +469,7 @@ RETURNED VALUE
 The inverse Rt transformation in an array of shape (4,3).
 
     """
-    return _poseutils_npsp._invert_Rt(Rt, out=out)
+    return _invert_Rt(Rt, out=out)
 
 
 def invert_rt(rt, *, get_gradients=False, out=None):
@@ -557,8 +574,8 @@ def invert_rt(rt, *, get_gradients=False, out=None):
 
     """
     if get_gradients:
-        return _poseutils_npsp._invert_rt_withgrad(rt, out=out)
-    return _poseutils_npsp._invert_rt(rt, out=out)
+        return _invert_rt_withgrad(rt, out=out)
+    return _invert_rt(rt, out=out)
 
 
 def compose_Rt(*Rt, out=None, inverted0=False, inverted1=False):
@@ -627,17 +644,15 @@ def compose_Rt(*Rt, out=None, inverted0=False, inverted1=False):
 
     """
     if len(Rt) == 2:
-        return _poseutils_npsp._compose_Rt(
-            *Rt, out=out, inverted0=inverted0, inverted1=inverted1
-        )
+        return _compose_Rt(*Rt, out=out, inverted0=inverted0, inverted1=inverted1)
 
     if inverted0 or inverted1:
         raise Exception(
             "compose_Rt(..., inverted...=True) is supported only if exactly 2 inputs are given"
         )
 
-    Rt1onwards = reduce(_poseutils_npsp._compose_Rt, Rt[1:])
-    return _poseutils_npsp._compose_Rt(Rt[0], Rt1onwards, out=out)
+    Rt1onwards = reduce(_compose_Rt, Rt[1:])
+    return _compose_Rt(Rt[0], Rt1onwards, out=out)
 
 
 def compose_r(*r, get_gradients=False, out=None, inverted0=False, inverted1=False):
@@ -745,12 +760,12 @@ def compose_r(*r, get_gradients=False, out=None, inverted0=False, inverted1=Fals
             )
 
     if get_gradients:
-        return _poseutils_npsp._compose_r_withgrad(
+        return _compose_r_withgrad(
             *r, out=out, inverted0=inverted0, inverted1=inverted1
         )
 
-    r1onwards = reduce(_poseutils_npsp._compose_r, r[1:])
-    return _poseutils_npsp._compose_r(
+    r1onwards = reduce(_compose_r, r[1:])
+    return _compose_r(
         r[0], r1onwards, out=out, inverted0=inverted0, inverted1=inverted1
     )
 
@@ -891,12 +906,12 @@ def compose_rt(*rt, get_gradients=False, out=None, inverted0=False, inverted1=Fa
             )
 
     if get_gradients:
-        return _poseutils_npsp._compose_rt_withgrad(
+        return _compose_rt_withgrad(
             *rt, out=out, inverted0=inverted0, inverted1=inverted1
         )
 
-    rt1onwards = reduce(_poseutils_npsp._compose_rt, rt[1:])
-    return _poseutils_npsp._compose_rt(
+    rt1onwards = reduce(_compose_rt, rt[1:])
+    return _compose_rt(
         rt[0], rt1onwards, out=out, inverted0=inverted0, inverted1=inverted1
     )
 
@@ -1001,14 +1016,14 @@ def compose_rt_tinyrt0_gradientrt0(rt1, out=None):
             )
         out[:] = 0
 
-    _poseutils_npsp.skew_symmetric(rt1[..., 3:], out=out[..., 3:, :3])
+    skew_symmetric(rt1[..., 3:], out=out[..., 3:, :3])
     out[..., 3:, :3] *= -1
 
     out[..., 0 + 3, 0 + 3] = 1.0
     out[..., 1 + 3, 1 + 3] = 1.0
     out[..., 2 + 3, 2 + 3] = 1.0
 
-    _poseutils_npsp.compose_r_tinyr0_gradientr0(rt1[..., :3], out=out[..., :3, :3])
+    compose_r_tinyr0_gradientr0(rt1[..., :3], out=out[..., :3, :3])
 
     return out
 
@@ -1123,23 +1138,6 @@ def compose_rt_tinyrt1_gradientrt1(rt0, out=None):
         out=(rt01, drt01_drt0, out),
     )[2]
 
-    _poseutils_npsp.skew_symmetric(rt0[..., :3], out=out[..., 3:, 3:])
-
-    th2 = nps.norm2(rt0[..., :3])
-    s = np.array(th2 * 0.0)
-    mask_r0_tiny = th2 < 1e-10
-    if np.any(mask_r0_tiny):
-        s[mask_r0_tiny] = 0.5
-
-    if np.any(~mask_r0_tiny):
-        s[~mask_r0_tiny] = 1 - np.cos(np.sqrt(th2[~mask_r0_tiny])) / th2[~mask_r0_tiny]
-
-    out[..., 3:, 3:] += np.eye(3) + nps.outer(rt0[..., :3], rt0[..., :3]) * s
-
-    _poseutils_npsp.compose_r_tinyr1_gradientr1(rt0[..., :3], out=out[..., :3, :3])
-
-    return out
-
 
 def rotate_point_r(r, x, *, get_gradients=False, out=None, inverted=False):
     r"""Rotate point(s) using a Rodrigues vector
@@ -1222,8 +1220,8 @@ def rotate_point_r(r, x, *, get_gradients=False, out=None, inverted=False):
 
     """
     if not get_gradients:
-        return _poseutils_npsp._rotate_point_r(r, x, out=out, inverted=inverted)
-    return _poseutils_npsp._rotate_point_r_withgrad(r, x, out=out, inverted=inverted)
+        return _rotate_point_r(r, x, out=out, inverted=inverted)
+    return _rotate_point_r_withgrad(r, x, out=out, inverted=inverted)
 
 
 def rotate_point_R(R, x, *, get_gradients=False, out=None, inverted=False):
@@ -1315,8 +1313,8 @@ def rotate_point_R(R, x, *, get_gradients=False, out=None, inverted=False):
     """
 
     if not get_gradients:
-        return _poseutils_npsp._rotate_point_R(R, x, out=out, inverted=inverted)
-    return _poseutils_npsp._rotate_point_R_withgrad(R, x, out=out, inverted=inverted)
+        return _rotate_point_R(R, x, out=out, inverted=inverted)
+    return _rotate_point_R_withgrad(R, x, out=out, inverted=inverted)
 
 
 def transform_point_rt(rt, x, *, get_gradients=False, out=None, inverted=False):
@@ -1413,10 +1411,8 @@ def transform_point_rt(rt, x, *, get_gradients=False, out=None, inverted=False):
     """
 
     if not get_gradients:
-        return _poseutils_npsp._transform_point_rt(rt, x, out=out, inverted=inverted)
-    return _poseutils_npsp._transform_point_rt_withgrad(
-        rt, x, out=out, inverted=inverted
-    )
+        return _transform_point_rt(rt, x, out=out, inverted=inverted)
+    return _transform_point_rt_withgrad(rt, x, out=out, inverted=inverted)
 
 
 def transform_point_Rt(Rt, x, *, get_gradients=False, out=None, inverted=False):
@@ -1514,10 +1510,8 @@ def transform_point_Rt(Rt, x, *, get_gradients=False, out=None, inverted=False):
     """
 
     if not get_gradients:
-        return _poseutils_npsp._transform_point_Rt(Rt, x, out=out, inverted=inverted)
-    return _poseutils_npsp._transform_point_Rt_withgrad(
-        Rt, x, out=out, inverted=inverted
-    )
+        return _transform_point_Rt(Rt, x, out=out, inverted=inverted)
+    return _transform_point_Rt_withgrad(Rt, x, out=out, inverted=inverted)
 
 
 quat_from_R = _poseutils_scipy.quat_from_R
@@ -1645,6 +1639,6 @@ def Rt_from_qt(qt, *, out=None):
     else:
         Rt = np.zeros(qt.shape[:-1] + (4, 3), dtype=float)
 
-    _poseutils_npsp.R_from_quat(qt[..., :4], out=Rt[..., :3, :])
+    R_from_quat(qt[..., :4], out=Rt[..., :3, :])
     Rt[..., 3, :] = qt[..., 4:]
     return Rt
