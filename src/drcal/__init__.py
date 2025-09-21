@@ -37,7 +37,7 @@ mrcal.mmm.fff() can be called as mrcal.fff() instead. The latter is preferred.
 # from .utils import *
 # from .triangulation import *
 
-from .model_analysis import projection_diff
+from .model_analysis import is_within_valid_intrinsics_region, projection_diff
 from . import cahvor
 from .bindings_poseutils_npsp import identity_Rt
 from .projections import unproject
@@ -78,6 +78,7 @@ from .calibration import (
 
 
 __all__ = [
+    "is_within_valid_intrinsics_region",
     "projection_diff",
     "cahvor",
     "identity_Rt",

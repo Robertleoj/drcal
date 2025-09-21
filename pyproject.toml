@@ -33,6 +33,7 @@ drcal-from-cahvor = "apps.drcal_from_cahvor:main"
 drcal-from-kalibr = "apps.drcal_from_kalibr:main"
 drcal-from-ros = "apps.drcal_from_ros:main"
 drcal-graft-models = "apps.drcal_graft_models:main"
+drcal-is-within-valid-intrinsics-region = "apps.drcal_is_within_valid_intrinsics_region:main"
 
 [tool.scikit-build]
 minimum-version = "build-system.requires"
