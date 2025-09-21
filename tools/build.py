@@ -43,6 +43,9 @@ def build(debug: bool) -> None:
     build_path = Path("build")
     build_path.mkdir(exist_ok=True)
 
+    python_executable = _python_exe()
+    print(f"Using python executable {python_executable}")
+
     compile_cmd = [
         "cmake",
         "-B",
@@ -50,8 +53,8 @@ def build(debug: bool) -> None:
         "-G",
         "Ninja",
         *CMAKE_FLAGS,
-        f"-DPython_EXECUTABLE={_python_exe()}",
-        "-DPython_FIND_VIRTUALENV=ONLY",
+        f"-DPython3_EXECUTABLE={python_executable}",
+        "-DPython3_FIND_VIRTUALENV=ONLY",
     ]
 
     if debug:
@@ -74,6 +77,7 @@ def build(debug: bool) -> None:
     env["PYTHONPATH"] = f".:{env.get('PYTHONPATH', '')}"
 
     for module in MODULES:
+        print(f"Generating stubs for {module}")
         subprocess.run(
             [
                 "pybind11-stubgen",

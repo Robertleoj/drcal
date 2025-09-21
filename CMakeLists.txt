@@ -28,41 +28,15 @@ else()
     set(INSTALL_PATH "$ORIGIN")
 endif()
 
+
 find_package(CHOLMOD CONFIG REQUIRED)
 find_package(freeimage CONFIG REQUIRED)
 find_package(BLAS REQUIRED)
 find_package(LAPACK REQUIRED)
 
-# add_subdirectory(external/SuiteSparse/CHOLMOD)
+find_package(Python3 REQUIRED COMPONENTS Interpreter Development.Module NumPy)
 
-find_package(Python3 REQUIRED COMPONENTS Interpreter Development.Module)
-find_package(Python3 COMPONENTS NumPy)
 set(NUMPY_INCLUDE_DIR "${Python3_NumPy_INCLUDE_DIRS}")
-
-
-
-# Try to find installed pybind11
-# find_package(pybind11 REQUIRED)
-# find_package(pybind11 CONFIG QUIET)
-
-# if(NOT pybind11_FOUND)
-#     message(STATUS "pybind11 not found, using FetchContent to grab it")
-#     include(FetchContent)
-#     FetchContent_Declare(
-#         pybind11
-#         GIT_REPOSITORY https://github.com/pybind/pybind11.git
-#         GIT_TAG        stable
-#     )
-#     FetchContent_MakeAvailable(pybind11)
-# endif()
-
-# Build the Python module
-# pybind11_add_module(
-#     bindings 
-
-#     cpp_src/bindings.cpp
-#     cpp_src/dogleg.c
-# )
 
 Python3_add_library(
     bindings MODULE 

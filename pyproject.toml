@@ -47,3 +47,4 @@ dev = ["ruff>=0.13.1"]
 
 [tool.ruff]
 lint.ignore = ["E722"]
+exclude = ["**/*.pyi"]

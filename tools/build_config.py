@@ -10,7 +10,6 @@ shared_flags = [
     '-DCMAKE_EXE_LINKER_FLAGS="-fuse-ld=lld"',
     '-DCMAKE_MODULE_LINKER_FLAGS="-fuse-ld=lld"',
     '-DCMAKE_SHARED_LINKER_FLAGS="-fuse-ld=lld"',
-    # f"-DCMAKE_TOOLCHAIN_FILE={VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake",
 ]
 
 if platform.system() == "Darwin":
