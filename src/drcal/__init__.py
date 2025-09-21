@@ -37,6 +37,7 @@ mrcal.mmm.fff() can be called as mrcal.fff() instead. The latter is preferred.
 # from .utils import *
 # from .triangulation import *
 
+from .model_analysis import projection_diff
 from . import cahvor
 from .bindings_poseutils_npsp import identity_Rt
 from .projections import unproject
@@ -61,7 +62,7 @@ from .utils import (
     measurements_board,
 )
 from .cameramodel import cameramodel
-from .poseutils import rt_from_Rt, Rt_from_rt, compose_Rt, compose_rt
+from .poseutils import invert_Rt, rt_from_Rt, Rt_from_rt, compose_Rt, compose_rt
 from .bindings import (
     lensmodel_metadata_and_config,
     lensmodel_num_params,
@@ -77,6 +78,7 @@ from .calibration import (
 
 
 __all__ = [
+    "projection_diff",
     "cahvor",
     "identity_Rt",
     "unproject",
@@ -97,6 +99,7 @@ __all__ = [
     "hypothesis_board_corner_positions",
     "measurements_board",
     "cameramodel",
+    "invert_Rt",
     "rt_from_Rt",
     "Rt_from_rt",
     "compose_Rt",

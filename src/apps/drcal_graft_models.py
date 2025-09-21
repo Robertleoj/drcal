@@ -1,13 +1,3 @@
-#!/usr/bin/env python3
-
-# Copyright (c) 2017-2023 California Institute of Technology ("Caltech"). U.S.
-# Government sponsorship acknowledged. All rights reserved.
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-
 r"""Combines the intrinsics of one cameramodel with the extrinsics of another
 
 SYNOPSIS
@@ -92,7 +82,12 @@ non-zero argument to compute and apply the implied transformation.
 """
 
 import sys
+import shlex
 import argparse
+import numpy as np
+import numpysane as nps
+import drcal
+import time
 
 
 def parse_args():
@@ -182,72 +177,65 @@ def parse_args():
     return args
 
 
-args = parse_args()
+def main():
+    args = parse_args()
 
-# arg-parsing is done before the imports so that --help works without building
-# stuff, so that I can generate the manpages and README
+    model_intrinsics = drcal.cameramodel(args.intrinsics)
+    model_extrinsics = drcal.cameramodel(args.extrinsics)
 
+    if args.distance is None:
+        distance = None
+    else:
+        try:
+            distance = [float(d) for d in args.distance.split(",")]
+        except:
+            print(
+                "Error: distances must be given a comma-separated list of floats in --distance",
+                file=sys.stderr,
+            )
+            sys.exit(1)
 
-import numpy as np
-import numpysane as nps
-import mrcal
-import time
+    if args.radius == 0:
+        rt_cr = model_extrinsics.extrinsics_rt_fromref()
+        model_intrinsics.extrinsics_rt_fromref(rt_cr)
+    else:
+        difflen, diff, q0, Rt_camoldintrinsics_camnewintrinsics = drcal.projection_diff(
+            (model_intrinsics, model_extrinsics),
+            gridn_width=args.gridn[0],
+            gridn_height=args.gridn[1],
+            intrinsics_only=False,
+            distance=distance,
+            use_uncertainties=not args.no_uncertainties,
+            focus_center=args.where,
+            focus_radius=args.radius,
+        )
 
-
-model_intrinsics = mrcal.cameramodel(args.intrinsics)
-model_extrinsics = mrcal.cameramodel(args.extrinsics)
-
-
-if args.distance is None:
-    distance = None
-else:
-    try:
-        distance = [float(d) for d in args.distance.split(",")]
-    except:
+        rt10 = drcal.rt_from_Rt(Rt_camoldintrinsics_camnewintrinsics)
         print(
-            "Error: distances must be given a comma-separated list of floats in --distance",
+            f"Transformation cam1 <-- cam0:  rotation: {nps.mag(rt10[:3]) * 180.0 / np.pi:.03f} degrees, translation: {rt10[3:]} m",
             file=sys.stderr,
         )
-        sys.exit(1)
 
-if args.radius == 0:
-    rt_cr = model_extrinsics.extrinsics_rt_fromref()
-    model_intrinsics.extrinsics_rt_fromref(rt_cr)
-else:
-    difflen, diff, q0, Rt_camoldintrinsics_camnewintrinsics = mrcal.projection_diff(
-        (model_intrinsics, model_extrinsics),
-        gridn_width=args.gridn[0],
-        gridn_height=args.gridn[1],
-        intrinsics_only=False,
-        distance=distance,
-        use_uncertainties=not args.no_uncertainties,
-        focus_center=args.where,
-        focus_radius=args.radius,
+        rt_camoldintrinsics_ref = model_extrinsics.extrinsics_rt_fromref()
+
+        rt_camnewintrinsics_ref = drcal.compose_rt(
+            drcal.rt_from_Rt(drcal.invert_Rt(Rt_camoldintrinsics_camnewintrinsics)),
+            rt_camoldintrinsics_ref,
+        )
+
+        model_intrinsics.extrinsics_rt_fromref(rt_camnewintrinsics_ref)
+
+    note = "Generated on {} with   {}\n".format(
+        time.strftime("%Y-%m-%d %H:%M:%S"), " ".join(shlex.quote(s) for s in sys.argv)
     )
 
-    rt10 = mrcal.rt_from_Rt(Rt_camoldintrinsics_camnewintrinsics)
     print(
-        f"Transformation cam1 <-- cam0:  rotation: {nps.mag(rt10[:3]) * 180.0 / np.pi:.03f} degrees, translation: {rt10[3:]} m",
+        f"Combined\nIntrinsics from '{args.intrinsics}'\nExtrinsics from '{args.extrinsics}'",
         file=sys.stderr,
     )
 
-    rt_camoldintrinsics_ref = model_extrinsics.extrinsics_rt_fromref()
-
-    rt_camnewintrinsics_ref = mrcal.compose_rt(
-        mrcal.rt_from_Rt(mrcal.invert_Rt(Rt_camoldintrinsics_camnewintrinsics)),
-        rt_camoldintrinsics_ref,
-    )
-
-    model_intrinsics.extrinsics_rt_fromref(rt_camnewintrinsics_ref)
+    model_intrinsics.write(sys.stdout, note=note)
 
 
-note = "Generated on {} with   {}\n".format(
-    time.strftime("%Y-%m-%d %H:%M:%S"), " ".join(shlex.quote(s) for s in sys.argv)
-)
-
-print(
-    f"Combined\nIntrinsics from '{args.intrinsics}'\nExtrinsics from '{args.extrinsics}'",
-    file=sys.stderr,
-)
-
-model_intrinsics.write(sys.stdout, note=note)
+if __name__ == "__main__":
+    main()
