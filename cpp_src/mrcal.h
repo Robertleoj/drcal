@@ -947,14 +947,6 @@ int mrcal_num_states_calobject_warp(
     int Nobservations_board
 );
 
-// if len>0, the string doesn't need to be 0-terminated. If len<=0, the end of
-// the buffer IS indicated by a '\0' byte
-//
-// return NULL on error
-mrcal_cameramodel_t* mrcal_read_cameramodel_string(const char* string, int len);
-mrcal_cameramodel_t* mrcal_read_cameramodel_file(const char* filename);
-void mrcal_free_cameramodel(mrcal_cameramodel_t** cameramodel);
-
 bool mrcal_write_cameramodel_file(
     const char* filename,
     const mrcal_cameramodel_t* cameramodel
