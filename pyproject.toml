@@ -12,6 +12,7 @@ requires-python = ">=3.11"
 dependencies = [
     "fire>=0.7.1",
     "gnuplotlib>=0.42",
+    "matplotlib>=3.10.6",
     "numpy>=1.23",
     "numpysane>=0.40",
     "opencv-contrib-python>=4.11.0.86",

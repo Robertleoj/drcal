@@ -1,13 +1,3 @@
-#!/usr/bin/python3
-
-# Copyright (c) 2017-2023 California Institute of Technology ("Caltech"). U.S.
-# Government sponsorship acknowledged. All rights reserved.
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-
 """Routines for transformation of images
 
 All functions are exported into the mrcal module. So you can call these via
@@ -16,10 +6,19 @@ mrcal.image_transforms.fff() or mrcal.fff(). The latter is preferred.
 """
 
 import numpy as np
+import cv2
 import numpysane as nps
 import sys
 import re
-import mrcal
+
+from matplotlib.path import Path
+
+from .poseutils import compose_Rt, invert_Rt, transform_point_Rt
+
+from .cameramodel import cameramodel
+from .bindings import lensmodel_metadata_and_config
+
+from .projections import project, unproject
 
 
 def scale_focal__best_pinhole_fit(model, fit):
@@ -130,9 +129,9 @@ A scalar scale_focal that can be passed to pinhole_model_for_reprojection()
 
     lensmodel, intrinsics_data = model.intrinsics()
 
-    v_edges = mrcal.unproject(q_edges, lensmodel, intrinsics_data)
+    v_edges = unproject(q_edges, lensmodel, intrinsics_data)
 
-    if not mrcal.lensmodel_metadata_and_config(lensmodel)["has_core"]:
+    if not lensmodel_metadata_and_config(lensmodel)["has_core"]:
         raise Exception(
             "This currently works only with models that have an fxfycxcy core"
         )
@@ -238,7 +237,7 @@ def pinhole_model_for_reprojection(
                 )
                 sys.exit(1)
 
-        scale_focal = mrcal.scale_focal__best_pinhole_fit(model_from, fit)
+        scale_focal = scale_focal__best_pinhole_fit(model_from, fit)
 
     else:
         if fit is not None:
@@ -248,7 +247,7 @@ def pinhole_model_for_reprojection(
     lensmodel, intrinsics_data = model_from.intrinsics()
     imagersize = model_from.imagersize()
 
-    if not mrcal.lensmodel_metadata_and_config(lensmodel)["has_core"]:
+    if not lensmodel_metadata_and_config(lensmodel)["has_core"]:
         raise Exception(
             "This currently works only with models that have an fxfycxcy core"
         )
@@ -285,7 +284,7 @@ def pinhole_model_for_reprojection(
         intrinsics_data[2] *= kcx
         intrinsics_data[3] *= kcy
 
-    return mrcal.cameramodel(
+    return cameramodel(
         intrinsics=("LENSMODEL_PINHOLE", intrinsics_data[:4]),
         extrinsics_rt_fromref=model_from.extrinsics_rt_fromref(),
         imagersize=imagersize,
@@ -441,7 +440,7 @@ This array can be passed to mrcal.transform_image()
     if intrinsics_only:
         Rt_to_from = None
     else:
-        Rt_to_from = mrcal.compose_Rt(
+        Rt_to_from = compose_Rt(
             model_to.extrinsics_Rt_fromref(), model_from.extrinsics_Rt_toref()
         )
 
@@ -462,7 +461,6 @@ This array can be passed to mrcal.transform_image()
         #
         # The mask_valid_intrinsics_region_from isn't implemented in this path.
         # It COULD be, then this faster path could be used
-        import cv2
 
         fxy_from = intrinsics_data_from[0:2]
         cxy_from = intrinsics_data_from[2:4]
@@ -509,7 +507,7 @@ This array can be passed to mrcal.transform_image()
         nps.mv(nps.cat(*np.meshgrid(np.arange(W_to), np.arange(H_to))), 0, -1),
         dtype=float,
     )
-    v = mrcal.unproject(grid, lensmodel_to, intrinsics_data_to)
+    v = unproject(grid, lensmodel_to, intrinsics_data_to)
 
     if plane_n is not None:
         R_to_from = Rt_to_from[:3, :]
@@ -525,20 +523,19 @@ This array can be passed to mrcal.transform_image()
     else:
         if Rt_to_from is not None:
             if distance is not None:
-                v = mrcal.transform_point_Rt(
-                    mrcal.invert_Rt(Rt_to_from),
+                v = transform_point_Rt(
+                    invert_Rt(Rt_to_from),
                     v / nps.dummy(nps.mag(v), -1) * distance,
                 )
             else:
                 R_to_from = Rt_to_from[:3, :]
                 v = nps.matmult(v, R_to_from)
 
-    mapxy = mrcal.project(v, lensmodel_from, intrinsics_data_from)
+    mapxy = project(v, lensmodel_from, intrinsics_data_from)
 
     if mask_valid_intrinsics_region_from:
         # Using matplotlib to compute the out-of-bounds points. It doesn't
         # support broadcasting, so I do that manually with a clump/reshape
-        from matplotlib.path import Path
 
         region = Path(model_from.valid_intrinsics_region())
         is_inside = region.contains_points(nps.clump(mapxy, n=2)).reshape(
@@ -613,8 +610,6 @@ def transform_image(
         raise Exception("'image' must be a numpy array")
     if not isinstance(mapxy, np.ndarray):
         raise Exception("'mapxy' must be a numpy array")
-
-    import cv2
 
     if borderMode is None:
         borderMode = cv2.BORDER_CONSTANT
