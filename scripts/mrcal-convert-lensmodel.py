@@ -882,7 +882,7 @@ if not (args.sampled and args.intrinsics_only):
 
 
 note = "generated on {} with   {}\n".format(
-    time.strftime("%Y-%m-%d %H:%M:%S"), " ".join(mrcal.shellquote(s) for s in sys.argv)
+    time.strftime("%Y-%m-%d %H:%M:%S"), " ".join(shlex.quote(s) for s in sys.argv)
 )
 
 m_to.extrinsics_Rt_fromref(

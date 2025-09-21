@@ -541,7 +541,7 @@ else:
         print(
             "## generated on {} with   {}".format(
                 time.strftime("%Y-%m-%d %H:%M:%S"),
-                " ".join(mrcal.shellquote(s) for s in sys.argv),
+                " ".join(shlex.quote(s) for s in sys.argv),
             )
         )
         print("# Generated pinhole model:")
@@ -565,7 +565,7 @@ else:
         print(
             "## generated on {} with   {}".format(
                 time.strftime("%Y-%m-%d %H:%M:%S"),
-                " ".join(mrcal.shellquote(s) for s in sys.argv),
+                " ".join(shlex.quote(s) for s in sys.argv),
             )
         )
         print("# Generated pinhole model:")

@@ -242,7 +242,7 @@ else:
 
 
 note = "Generated on {} with   {}\n".format(
-    time.strftime("%Y-%m-%d %H:%M:%S"), " ".join(mrcal.shellquote(s) for s in sys.argv)
+    time.strftime("%Y-%m-%d %H:%M:%S"), " ".join(shlex.quote(s) for s in sys.argv)
 )
 
 print(

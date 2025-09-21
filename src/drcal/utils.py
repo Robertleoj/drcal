@@ -34,7 +34,7 @@ from .bindings import (
 )
 from .poseutils import Rt_from_rt, compose_Rt, transform_point_Rt
 from .projections import unproject
-from .synthetic_data import ref_calibration_object
+from .calibration_objects import ref_calibration_object
 
 from .bindings_poseutils_npsp import (
     _align_procrustes_points_Rt01_noweights,

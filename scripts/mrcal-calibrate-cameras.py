@@ -1,13 +1,3 @@
-#!/usr/bin/env python3
-
-# Copyright (c) 2017-2023 California Institute of Technology ("Caltech"). U.S.
-# Government sponsorship acknowledged. All rights reserved.
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-
 r"""Calibrate some synchronized, stationary cameras
 
 SYNOPSIS
@@ -37,6 +27,7 @@ N-camera calibration using observations of a chessboard.
 import sys
 import argparse
 import re
+import shlex
 import os
 import numpy as np
 import numpysane as nps
@@ -911,7 +902,7 @@ if (
 
 # The note says how we ran this, and contains the commented-out report
 note = (
-    f"generated on {time.strftime('%Y-%m-%d %H:%M:%S')} with   {' '.join(drcal.shellquote(s) for s in sys.argv)}\n"
+    f"generated on {time.strftime('%Y-%m-%d %H:%M:%S')} with   {' '.join(shlex.quote(s) for s in sys.argv)}\n"
     + report
 )
 for icam in range(len(models)):
@@ -1049,8 +1040,3 @@ def show_residuals_histogram(icam=None, **kwargs):
         x=stats["x"],
         **kwargs,
     )
-
-
-import IPython
-
-IPython.embed()

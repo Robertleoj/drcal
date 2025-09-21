@@ -17,32 +17,75 @@ mrcal.mmm.fff() can be called as mrcal.fff() instead. The latter is preferred.
 """
 
 # The C wrapper is written by us in mrcal-pywrap.c
-from .bindings import optimize
+# from .bindings import optimize
 
 # The C wrapper is generated from mrcal-genpywrap.py
-from . import bindings_npsp as _drcal_npsp
+# from . import bindings_npsp as _drcal_npsp
 
-from .projections import *
-from .cameramodel import cameramodel
-from .poseutils import rt_from_Rt
+# from .projections import *
+# from .cameramodel import cameramodel
+# from .poseutils import rt_from_Rt
 
 # The C wrapper is generated from poseutils-genpywrap.py
-from . import bindings_poseutils_npsp as _poseutils_npsp
-from .stereo import *
-from .visualization import *
-from .model_analysis import *
-from .synthetic_data import *
-from .calibration import compute_chessboard_corners
-from .image_transforms import *
-from .utils import *
-from .triangulation import *
+# from . import bindings_poseutils_npsp as _poseutils_npsp
+# from .stereo import *
+# from .visualization import *
+# from .model_analysis import *
+# from .synthetic_data import *
+# from .calibration import compute_chessboard_corners
+# from .image_transforms import *
+# from .utils import *
+# from .triangulation import *
+
+from .visualization import (
+    show_splined_model_correction,
+    show_projection_uncertainty,
+    show_valid_intrinsics_region,
+    show_residuals_vectorfield,
+    show_residuals_magnitudes,
+    show_residuals_directions,
+    show_residuals_regional,
+    show_distortion_off_pinhole,
+    show_distortion_off_pinhole_radial,
+    show_geometry,
+    show_residuals_board_observation,
+    show_residuals_histogram,
+)
+from .utils import measurements_board
+from .cameramodel import cameramodel
+from .poseutils import rt_from_Rt, Rt_from_rt, compose_Rt
+from .bindings import lensmodel_num_params, load_image, optimize
+from .calibration import (
+    compute_chessboard_corners,
+    estimate_joint_frame_poses,
+    estimate_monocular_calobject_poses_Rt_tocam,
+    seed_stereographic,
+)
 
 
 __all__ = [
-    "_drcal_npsp",
-    "_poseutils_npsp",
-    "rt_from_Rt",
-    "optimize",
+    "show_residuals_histogram",
+    "show_residuals_board_observation",
+    "show_geometry",
+    "show_residuals_directions",
+    "show_residuals_regional",
+    "show_distortion_off_pinhole",
+    "show_distortion_off_pinhole_radial",
+    "show_valid_intrinsics_region",
+    "show_projection_uncertainty",
+    "show_splined_model_correction",
+    "show_residuals_vectorfield",
+    "show_residuals_magnitudes",
+    "measurements_board",
     "cameramodel",
+    "rt_from_Rt",
+    "Rt_from_rt",
+    "compose_Rt",
+    "lensmodel_num_params",
+    "load_image",
+    "optimize",
     "compute_chessboard_corners",
+    "estimate_joint_frame_poses",
+    "estimate_monocular_calobject_poses_Rt_tocam",
+    "seed_stereographic",
 ]

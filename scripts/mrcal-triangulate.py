@@ -618,7 +618,7 @@ if args.q_calibration_stdev is not None and args.q_calibration_stdev != 0:
 print(
     "## generated on {} with   {}\n".format(
         time.strftime("%Y-%m-%d %H:%M:%S"),
-        " ".join(mrcal.shellquote(s) for s in sys.argv),
+        " ".join(shlex.quote(s) for s in sys.argv),
     )
 )
 

@@ -197,7 +197,7 @@ import time
 
 
 print(
-    f"## generated on {time.strftime('%Y-%m-%d %H:%M:%S')} with   {' '.join(mrcal.shellquote(s) for s in sys.argv)}"
+    f"## generated on {time.strftime('%Y-%m-%d %H:%M:%S')} with   {' '.join(shlex.quote(s) for s in sys.argv)}"
 )
 
 if (

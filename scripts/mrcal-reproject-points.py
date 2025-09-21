@@ -84,7 +84,7 @@ v = mrcal.unproject(p, *model_from.intrinsics())
 print(
     "## generated on {} with   {}".format(
         time.strftime("%Y-%m-%d %H:%M:%S"),
-        " ".join(mrcal.shellquote(s) for s in sys.argv),
+        " ".join(shlex.quote(s) for s in sys.argv),
     )
 )
 if not args.intrinsics_only:
