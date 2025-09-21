@@ -36,3 +36,5 @@ doc/out
 build
 .cache
 vcpkg_installed/
+
+data/example_stereo

@@ -5,6 +5,23 @@
 #include "mrcal-image.h"
 #include "util.h"
 
+static void freeimage_shutdown(
+    void
+) {
+    FreeImage_DeInitialise();
+}
+
+static void freeimage_init_once(
+    void
+) {
+    static int inited = 0;
+    if (!inited) {
+        FreeImage_Initialise(FALSE);  // REQUIRED for static builds
+        atexit(freeimage_shutdown);
+        inited = 1;
+    }
+}
+
 // for diagnostics
 __attribute__((unused)) static void report_image_details(
     /* const; FreeImage doesn't support that */
@@ -27,6 +44,7 @@ static bool generic_save(
     const void* _image,
     int bits_per_pixel
 ) {
+    freeimage_init_once();
     bool result = false;
 
     FIBITMAP* fib = NULL;
@@ -42,26 +60,6 @@ static bool generic_save(
         goto done;
     }
 
-#if defined HAVE_OLD_LIBFREEIMAGE && HAVE_OLD_LIBFREEIMAGE
-    if (bits_per_pixel == 16) {
-        MSG("WARNING: you have an old build of libfreeimage. It has trouble "
-            "writing 16bpp images, so '%s' will probably be written "
-            "incorrectly. You should upgrade your libfreeimage and rebuild",
-            filename);
-    }
-    fib = FreeImage_ConvertFromRawBits(
-        (BYTE*)image->data,
-        image->width,
-        image->height,
-        image->stride,
-        bits_per_pixel,
-        0,
-        0,
-        0,
-        // Top row is stored first
-        true
-    );
-#else
     // I do NOT reuse the input data because this function actually changes the
     // input buffer to flip it upside-down instead of accessing the bits in the
     // correct order
@@ -79,7 +77,6 @@ static bool generic_save(
         // Top row is stored first
         true
     );
-#endif
 
     FREE_IMAGE_FORMAT format = FreeImage_GetFIFFromFilename(filename);
     if (format == FIF_UNKNOWN) {
@@ -171,6 +168,7 @@ static bool generic_load(
     // input
     const char* filename
 ) {
+    freeimage_init_once();
     bool result = false;
     FIBITMAP* fib = NULL;
     FIBITMAP* fib_converted = NULL;

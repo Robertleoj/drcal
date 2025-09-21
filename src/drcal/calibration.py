@@ -37,6 +37,7 @@ from .projections import unproject, project
 from .poseutils import Rt_from_rt, invert_Rt, transform_point_Rt, compose_Rt, rt_from_Rt
 from .synthetic_data import ref_calibration_object
 from .model_analysis import projection_uncertainty
+from .visualization import _report_regional_statistics
 
 
 def compute_chessboard_corners(
