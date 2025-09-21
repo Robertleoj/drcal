@@ -37,11 +37,17 @@ mrcal.mmm.fff() can be called as mrcal.fff() instead. The latter is preferred.
 # from .utils import *
 # from .triangulation import *
 
+from .image_transforms import (
+    image_transformation_map,
+    pinhole_model_for_reprojection,
+    transform_image,
+)
 from .model_analysis import is_within_valid_intrinsics_region, projection_diff
 from . import cahvor
 from .bindings_poseutils_npsp import identity_Rt
 from .projections import unproject
 from .visualization import (
+    annotate_image__valid_intrinsics_region,
     show_projection_diff,
     show_splined_model_correction,
     show_projection_uncertainty,
@@ -68,6 +74,7 @@ from .bindings import (
     lensmodel_num_params,
     load_image,
     optimize,
+    save_image,
 )
 from .calibration import (
     compute_chessboard_corners,
@@ -78,11 +85,15 @@ from .calibration import (
 
 
 __all__ = [
+    "image_transformation_map",
+    "pinhole_model_for_reprojection",
+    "transform_image",
     "is_within_valid_intrinsics_region",
     "projection_diff",
     "cahvor",
     "identity_Rt",
     "unproject",
+    "annotate_image__valid_intrinsics_region",
     "show_projection_diff",
     "show_residuals_histogram",
     "show_residuals_board_observation",
@@ -108,6 +119,7 @@ __all__ = [
     "lensmodel_metadata_and_config",
     "lensmodel_num_params",
     "load_image",
+    "save_image",
     "optimize",
     "compute_chessboard_corners",
     "estimate_joint_frame_poses",
