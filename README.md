@@ -1,45 +1,6 @@
-* SYNOPSIS
+# drcal: a sanity-preserving build of mrcal.
 
-#+BEGIN_EXAMPLE
-$ mrcal-calibrate-cameras --focal 2000
-      --outdir /tmp --object-spacing 0.01
-      --object-width-n 10 '/tmp/left*.png' '/tmp/right*.png'
+Mrcal is amazing work, and I want to be able to `pip install` it.
+I don't want to jump through any hoops to use it as a runtime dependency, and I don't like hacks.
 
-... lots of output as the solve runs ...
-Wrote /tmp/camera0-0.cameramodel
-Wrote /tmp/camera0-1.cameramodel
-#+END_EXAMPLE
-
-And now we have a calibration!
-
-* SUMMARY
-
-=mrcal= is a generic toolkit built to solve the calibration and SFM-like
-problems we encounter at NASA/JPL. Functionality related to these problems is
-exposed as a set of C and Python libraries and some commandline tools.
-
-* DESCRIPTION
-
-Extensive documentation is available at https://mrcal.secretsauce.net/
-
-* INSTALLATION
-
-Install and/or building instructions are on the [[https://mrcal.secretsauce.net/install.html]["Building or installing" page]].
-
-* REPOSITORY
-
-https://www.github.com/dkogan/mrcal/
-
-* AUTHOR
-
-Dima Kogan (=dima@secretsauce.net=)
-
-* LICENSE AND COPYRIGHT
-
-Copyright (c) 2017-2023 California Institute of Technology ("Caltech"). U.S.
-Government sponsorship acknowledged. All rights reserved.
-
-Licensed under the Apache License, Version 2.0 (the "License");
-You may obtain a copy of the License at
-
-    http://www.apache.org/licenses/LICENSE-2.0
+This is my attempt to make it usable in a sane software stack.
