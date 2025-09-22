@@ -75,8 +75,7 @@ jobs:
             brew install gcc
             git clone https://github.com/microsoft/vcpkg "$HOME/vcpkg"
             "$HOME/vcpkg/bootstrap-vcpkg.sh" -disableMetrics
-            "$HOME/vcpkg/vcpkg" install --classic --triplet x64-osx   freeimage suitesparse-cholmod lapack
-            "$HOME/vcpkg/vcpkg" install --classic --triplet arm64-osx freeimage suitesparse-cholmod lapack
+            "$HOME/vcpkg/vcpkg" install --classic freeimage suitesparse-cholmod lapack
           # Point CMake at vcpkg and turn OFF manifest mode
           CIBW_ENVIRONMENT_MACOS: 'VCPKG_ROOT=$HOME/vcpkg VCPKG_MANIFEST_MODE=OFF'
         run: |
