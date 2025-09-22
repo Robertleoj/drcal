@@ -8,7 +8,6 @@ This is my attempt to make it usable in a sane software stack.
 # TODO
 
 - Put the generation of the `numpysane` bindings into the build script
-- Stop using the C image loading - it's breaking the mac build, and introducing an unnecessary native dep (freeimage)
 - Make the python code pass
   - type checking
   - `ruff check`
