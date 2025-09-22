@@ -1,41 +1,4 @@
-#!/usr/bin/python3
-
-# Copyright (c) 2017-2023 California Institute of Technology ("Caltech"). U.S.
-# Government sponsorship acknowledged. All rights reserved.
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-
-"""The main mrcal Python package
-
-This package doesn't contain any code itself, but all the mrcal.mmm submodules
-export their symbols here for convenience. So any function that can be called as
-mrcal.mmm.fff() can be called as mrcal.fff() instead. The latter is preferred.
-
-"""
-
-# The C wrapper is written by us in mrcal-pywrap.c
-# from .bindings import optimize
-
-# The C wrapper is generated from mrcal-genpywrap.py
-# from . import bindings_npsp as _drcal_npsp
-
-# from .projections import *
-# from .cameramodel import cameramodel
-# from .poseutils import rt_from_Rt
-
-# The C wrapper is generated from poseutils-genpywrap.py
-# from . import bindings_poseutils_npsp as _poseutils_npsp
-# from .stereo import *
-# from .visualization import *
-# from .model_analysis import *
-# from .synthetic_data import *
-# from .calibration import compute_chessboard_corners
-# from .image_transforms import *
-# from .utils import *
-# from .triangulation import *
+"""The main drcal Python package"""
 
 from .image_transforms import (
     image_transformation_map,
@@ -68,7 +31,25 @@ from .utils import (
     measurements_board,
 )
 from .cameramodel import cameramodel
-from .poseutils import invert_Rt, rt_from_Rt, Rt_from_rt, compose_Rt, compose_rt
+from .poseutils import (
+    compose_r,
+    invert_Rt,
+    rt_from_Rt,
+    Rt_from_rt,
+    compose_Rt,
+    compose_rt,
+    r_from_R,
+    R_from_r,
+    R_from_quat,
+    Rt_from_qt,
+    invert_R,
+    rotate_point_r,
+    rotate_point_R,
+    invert_rt,
+    qt_from_Rt,
+    transform_point_Rt,
+    transform_point_rt,
+)
 from .bindings import (
     lensmodel_metadata_and_config,
     lensmodel_num_params,
@@ -116,6 +97,18 @@ __all__ = [
     "Rt_from_rt",
     "compose_Rt",
     "compose_rt",
+    "compose_r",
+    "r_from_R",
+    "R_from_r",
+    "R_from_quat",
+    "Rt_from_qt",
+    "invert_R",
+    "rotate_point_r",
+    "rotate_point_R",
+    "invert_rt",
+    "qt_from_Rt",
+    "transform_point_Rt",
+    "transform_point_rt",
     "lensmodel_metadata_and_config",
     "lensmodel_num_params",
     "load_image",
