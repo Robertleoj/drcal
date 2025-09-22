@@ -936,73 +936,9 @@ static bool gnuplot_color_formula(
         return true;                                                           \
     }
 
-DEFINE_mrcal_apply_color_map(
-    uint8_t,
-    uint8,
-    0,
-    UINT8_MAX
-)
-    DEFINE_mrcal_apply_color_map(
-        uint16_t,
-        uint16,
-        0,
-        UINT16_MAX
-    )
-        DEFINE_mrcal_apply_color_map(
-            uint32_t,
-            uint32,
-            0,
-            UINT32_MAX
-        )
-            DEFINE_mrcal_apply_color_map(
-                uint64_t,
-                uint64,
-                0,
-                UINT64_MAX
-            )
-
-                DEFINE_mrcal_apply_color_map(
-                    int8_t,
-                    int8,
-                    INT8_MIN,
-                    INT8_MAX
-                )
-                    DEFINE_mrcal_apply_color_map(
-                        int16_t,
-                        int16,
-                        INT16_MIN,
-                        INT16_MAX
-                    )
-                        DEFINE_mrcal_apply_color_map(
-                            int32_t,
-                            int32,
-                            INT32_MIN,
-                            INT32_MAX
-                        )
-                            DEFINE_mrcal_apply_color_map(
-                                int64_t,
-                                int64,
-                                INT64_MIN,
-                                INT64_MAX
-                            )
-
-                                DEFINE_mrcal_apply_color_map(
-                                    float,
-                                    float,
-                                    FLT_MIN,
-                                    FLT_MAX
-                                )
-                                    DEFINE_mrcal_apply_color_map(
-                                        double,
-                                        double,
-                                        DBL_MIN,
-                                        DBL_MAX
-                                    )
-
-                                        static bool _validate_rectification_model_type(
-                                            const mrcal_lensmodel_type_t
-                                                rectification_model_type
-                                        ) {
+static bool _validate_rectification_model_type(
+    const mrcal_lensmodel_type_t rectification_model_type
+) {
     if (rectification_model_type == MRCAL_LENSMODEL_LATLON ||
         rectification_model_type == MRCAL_LENSMODEL_PINHOLE) {
         return true;
@@ -1110,71 +1046,6 @@ bool mrcal_stereo_range_sparse(
                 fxycxy_rectified,
                 baseline
             );
-        }
-    }
-
-    return true;
-}
-
-bool mrcal_stereo_range_dense(
-    // output
-    mrcal_image_double_t* range,
-
-    // input
-    const mrcal_image_uint16_t* disparity_scaled,
-    const uint16_t disparity_scale,
-
-    // Used to detect invalid values. Set to
-    // 0,UINT16_MAX to ignore
-    const uint16_t disparity_scaled_min,
-    const uint16_t disparity_scaled_max,
-
-    // models_rectified
-    const mrcal_lensmodel_type_t rectification_model_type,
-    const double* fxycxy_rectified,
-    const double baseline
-) {
-    if (!_validate_rectification_model_type(rectification_model_type)) {
-        return false;
-    }
-
-    if (disparity_scaled_min >= disparity_scaled_max) {
-        MSG("Must have disparity_scaled_max > disparity_scaled_min");
-        return false;
-    }
-
-    if (range->width != disparity_scaled->width ||
-        range->height != disparity_scaled->height) {
-        MSG("range and disparity_scaled MUST have the same dimensions. Got "
-            "(W,H): (%d,%d) and (%d,%d) respectively\n",
-            range->width,
-            range->height,
-            disparity_scaled->width,
-            disparity_scaled->height);
-        return false;
-    }
-
-    const int W = range->width;
-    const int H = range->height;
-
-    for (int i = 0; i < H; i++) {
-        double* r_row = mrcal_image_double_at(range, 0, i);
-        const uint16_t* d_row =
-            mrcal_image_uint16_at_const(disparity_scaled, 0, i);
-
-        for (int j = 0; j < W; j++) {
-            if (d_row[j] <= 0.0 || d_row[j] < disparity_scaled_min ||
-                d_row[j] > disparity_scaled_max) {
-                r_row[j] = 0.0;
-            } else {
-                r_row[j] = _stereo_range_one(
-                    (double)(d_row[j]) / (double)disparity_scale,
-                    (mrcal_point2_t){.x = (double)j, .y = (double)i},
-                    rectification_model_type,
-                    fxycxy_rectified,
-                    baseline
-                );
-            }
         }
     }
 

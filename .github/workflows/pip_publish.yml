@@ -36,7 +36,7 @@ jobs:
             yum -y install git curl zip unzip tar which pkgconfig gcc gcc-c++ gcc-gfortran make
             git clone https://github.com/microsoft/vcpkg /opt/vcpkg
             /opt/vcpkg/bootstrap-vcpkg.sh -disableMetrics
-            /opt/vcpkg/vcpkg install --classic --triplet x64-linux freeimage suitesparse-cholmod lapack
+            /opt/vcpkg/vcpkg install --classic --triplet x64-linux suitesparse-cholmod lapack
           # Make CMake see vcpkg, but DISABLE manifest mode
           CIBW_ENVIRONMENT_LINUX: 'VCPKG_ROOT=/opt/vcpkg VCPKG_MANIFEST_MODE=OFF'
         run: |
@@ -75,7 +75,7 @@ jobs:
             brew install gcc
             git clone https://github.com/microsoft/vcpkg "$HOME/vcpkg"
             "$HOME/vcpkg/bootstrap-vcpkg.sh" -disableMetrics
-            "$HOME/vcpkg/vcpkg" install --classic freeimage suitesparse-cholmod lapack
+            "$HOME/vcpkg/vcpkg" install --classic suitesparse-cholmod lapack
           # Point CMake at vcpkg and turn OFF manifest mode
           CIBW_ENVIRONMENT_MACOS: 'VCPKG_ROOT=$HOME/vcpkg VCPKG_MANIFEST_MODE=OFF'
         run: |

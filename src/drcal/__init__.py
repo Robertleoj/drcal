@@ -72,9 +72,7 @@ from .poseutils import invert_Rt, rt_from_Rt, Rt_from_rt, compose_Rt, compose_rt
 from .bindings import (
     lensmodel_metadata_and_config,
     lensmodel_num_params,
-    load_image,
     optimize,
-    save_image,
 )
 from .calibration import (
     compute_chessboard_corners,
@@ -82,6 +80,8 @@ from .calibration import (
     estimate_monocular_calobject_poses_Rt_tocam,
     seed_stereographic,
 )
+
+from .image_utils import save_image, load_image
 
 
 __all__ = [

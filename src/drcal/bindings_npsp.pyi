@@ -11,7 +11,7 @@ mrcal._mrcal_npsp.fff() or mrcal.fff(). The latter is preferred.
 
 """
 from __future__ import annotations
-__all__: list[str] = ['apply_color_map', 'apply_homography']
+__all__: list[str] = ['apply_homography']
 def _A_Jt_J_At(*args, **kwargs):
     """
     Computes matmult(A,Jt,J,At) for a sparse J
@@ -243,10 +243,6 @@ def _project_withgrad(*args, **kwargs):
     _project_withgrad() in mrcal-genpywrap.py. Please keep them in sync
     
     """
-def _stereo_range_dense(*args, **kwargs):
-    """
-    Internal wrapper of mrcal_stereo_range_dense()
-    """
 def _stereo_range_sparse(*args, **kwargs):
     """
     Internal wrapper of mrcal_stereo_range_sparse()
@@ -388,105 +384,6 @@ def _unproject_stereographic_withgrad(*args, **kwargs):
     This function is wrapped with numpysane_pywrap, so the points broadcast as
     expected
     
-    """
-def apply_color_map(*args, **kwargs):
-    """
-    Color-code an array
-    
-    SYNOPSIS
-    
-        image = produce_data()
-    
-        print( image.shape )
-        ===>
-        (480, 640)
-    
-        image_colorcoded = mrcal.apply_color_map(image)
-    
-        print( image_colorcoded.shape )
-        ===>
-        (480, 640, 3)
-    
-        print( image_colorcoded.dtype )
-        ===>
-        dtype('uint8')
-    
-        mrcal.save_image('data.png', image_colorcoded)
-    
-    This is very similar to cv2.applyColorMap() but more flexible in several
-    important ways. Differences:
-    
-    - Supports arrays of any shape. Most of the time the input is 2-dimensional
-      images, but this isn't required
-    
-    - Supports any input data type, NOT limited to 8-bit images like
-      cv2.applyColorMap()
-    
-    - Supports gnuplot color maps instead of MATLAB ones
-    
-    The color map is applied to each value in the input, each one producing an BGR
-    row of shape (3,). So output.shape is input.shape + (3,).
-    
-    The output has dtype=numpy.uint8, so these arrays can be output as images, and
-    visualized using any image-viewing tools.
-    
-    This function uses gnuplot's color maps, specified as rgbformulae:
-    
-      http://gnuplot.info/docs_6.0/loc14176.html
-      http://gnuplot.info/docs_6.0/loc14246.html
-    
-    This is selected by passing (function_red,function_blue,function_green)
-    integers, selecting different functions for each color channel. The default is
-    the default gnuplot colormap: 7,5,15. This is a nice
-    black-violet-blue-purple-red-orange-yellow map, appropriate for most usages. A
-    colormap may be visualized with gnuplot. For instance to see the "AFM hot"
-    colormap, run this gnuplot script:
-    
-      set palette rgbformulae 34,35,36
-      test palette
-    
-    The definition of each colormap function is given by "show palette rgbformulae"
-    in gnuplot:
-    
-        > show palette rgbformulae
-         * there are 37 available rgb color mapping formulae:
-            0: 0               1: 0.5             2: 1
-            3: x               4: x^2             5: x^3
-            6: x^4             7: sqrt(x)         8: sqrt(sqrt(x))
-            9: sin(90x)       10: cos(90x)       11: |x-0.5|
-           12: (2x-1)^2       13: sin(180x)      14: |cos(180x)|
-           15: sin(360x)      16: cos(360x)      17: |sin(360x)|
-           18: |cos(360x)|    19: |sin(720x)|    20: |cos(720x)|
-           21: 3x             22: 3x-1           23: 3x-2
-           24: |3x-1|         25: |3x-2|         26: (3x-1)/2
-           27: (3x-2)/2       28: |(3x-1)/2|     29: |(3x-2)/2|
-           30: x/0.32-0.78125 31: 2*x-0.84       32: 4x;1;-2x+1.84;x/0.08-11.5
-           33: |2*x - 0.5|    34: 2*x            35: 2*x - 0.5
-           36: 2*x - 1
-         * negative numbers mean inverted=negative colour component
-         * thus the ranges in `set pm3d rgbformulae' are -36..36
-    
-    ARGUMENTS
-    
-    - array: input numpy array
-    
-    - a_min: optional value indicating the lower bound of the values we color map.
-      All input values outside of the range [a_min,a_max] are clipped. If omitted,
-      we use array.min()
-    
-    - a_max: optional value indicating the upper bound of the values we color map.
-      All input values outside of the range [a_min,a_max] are clipped. If omitted,
-      we use array.max()
-    
-    - function_red
-      function_green
-      function_blue: optional integers selecting the color maps for each channel.
-      See the full docstring for this function for detail
-    
-    RETURNED VALUE
-    
-    The color-mapped output array of shape array.shape + (3,) and containing 8-bit
-    unsigned integers. The last row is the BGR color-mapped values.
     """
 def apply_homography(*args, **kwargs):
     """

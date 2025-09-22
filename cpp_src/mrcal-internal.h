@@ -8,6 +8,10 @@
 
 #pragma once
 
+#include <stdbool.h>
+
+#include "mrcal-types.h"
+
 // THESE ARE NOT A PART OF THE EXTERNAL API. Exported for the mrcal python
 // wrapper only
 

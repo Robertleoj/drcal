@@ -346,7 +346,7 @@ def get_imagersize_one(
     path = paths[iobservation0_thiscamera]
     if os.path.isfile(path):
         try:
-            image = drcal.load_image(path, bits_per_pixel=8, channels=1)
+            image = drcal.load_image(path)
         except:
             pass  # image is already None
 

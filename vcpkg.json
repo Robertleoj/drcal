@@ -1,10 +1,6 @@
 {
     "dependencies": [
         {
-            "name": "freeimage",
-            "default-features": false
-        },
-        {
             "name": "suitesparse-cholmod",
             "default-features": false
         },

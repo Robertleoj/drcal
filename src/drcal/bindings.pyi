@@ -10,7 +10,7 @@ All functions are exported into the mrcal module. So you can call these via
 mrcal._mrcal.fff() or mrcal.fff(). The latter is preferred.
 """
 from __future__ import annotations
-__all__: list[str] = ['CHOLMOD_factorization', 'corresponding_icam_extrinsics', 'decode_observation_indices_points_triangulated', 'drt_ref_refperturbed__dbpacked', 'knots_for_splined_models', 'lensmodel_metadata_and_config', 'lensmodel_num_params', 'load_image', 'measurement_index_boards', 'measurement_index_points', 'measurement_index_points_triangulated', 'measurement_index_regularization', 'num_intrinsics_optimization_params', 'num_measurements', 'num_measurements_boards', 'num_measurements_points', 'num_measurements_points_triangulated', 'num_measurements_regularization', 'num_states', 'num_states_calobject_warp', 'num_states_extrinsics', 'num_states_frames', 'num_states_intrinsics', 'num_states_points', 'optimize', 'optimizer_callback', 'pack_state', 'save_image', 'state_index_calobject_warp', 'state_index_extrinsics', 'state_index_frames', 'state_index_intrinsics', 'state_index_points', 'supported_lensmodels', 'traverse_sensor_links', 'unpack_state']
+__all__: list[str] = ['CHOLMOD_factorization', 'corresponding_icam_extrinsics', 'decode_observation_indices_points_triangulated', 'drt_ref_refperturbed__dbpacked', 'knots_for_splined_models', 'lensmodel_metadata_and_config', 'lensmodel_num_params', 'measurement_index_boards', 'measurement_index_points', 'measurement_index_points_triangulated', 'measurement_index_regularization', 'num_intrinsics_optimization_params', 'num_measurements', 'num_measurements_boards', 'num_measurements_points', 'num_measurements_points_triangulated', 'num_measurements_regularization', 'num_states', 'num_states_calobject_warp', 'num_states_extrinsics', 'num_states_frames', 'num_states_intrinsics', 'num_states_points', 'optimize', 'optimizer_callback', 'pack_state', 'state_index_calobject_warp', 'state_index_extrinsics', 'state_index_frames', 'state_index_intrinsics', 'state_index_points', 'supported_lensmodels', 'traverse_sensor_links', 'unpack_state']
 class CHOLMOD_factorization:
     """
     
@@ -470,59 +470,6 @@ def lensmodel_num_params(*args, **kwargs):
     RETURNED VALUE
     
     An integer number of parameters needed to describe a lens of the given type
-    
-    """
-def load_image(*args, **kwargs):
-    """
-    
-    Load an image from disk into a numpy array
-    
-    SYNOPSIS
-    
-        image = \\
-            mrcal.load_image("scene.jpg",
-                             bits_per_pixel = 8,
-                             channels       = 1)
-    
-        ## image is now a numpy array of shape (height,width) containing the
-        ## pixel data
-    
-    This is a completely uninteresting image-loading routine. It's like any other
-    image-loading routine out there; use any that you like. This exists because cv2
-    is very slow.
-    
-    This wraps the mrcal_image_TYPE_load() functions. At this time I support only
-    these 3 data formats:
-    
-    - bits_per_pixel = 8,  channels = 1: 8-bit grayscale data
-    - bits_per_pixel = 16, channels = 1: 16-bit grayscale data
-    - bits_per_pixel = 24, channels = 3: BGR color data
-    
-    With the exception of 16-bit grayscale data, the load function will convert the
-    input image to the requested format. At this time, asking for 16-bit grayscale
-    data requires that the input image matches that format.
-    
-    If we ask for an 8-bit image, but pass a 16-bit image file, we will apply
-    stretch equalization to the input first.
-    
-    If the bits_per_pixel, channels arguments are omitted or set to <= 0, we will
-    load the image in whatever format it appears on disk.
-    
-    ARGUMENTS
-    
-    - filename: the image on disk to load
-    
-    - bits_per_pixel: optional integer describing the requested bit depth. Must be 8
-      or 16 or 24. If omitted or <= 0, we use the bit depth of the image on disk
-    
-    - channels: optional integer describing the number of channels in the image.
-      Integer. Must be 1 or 3. If omitted or <= 0, we use the channel count of the
-      image on disk
-    
-    RETURNED VALUE
-    
-    A numpy array containing the pixel data
-    
     
     """
 def measurement_index_boards(*args, **kwargs):
@@ -1999,50 +1946,6 @@ def pack_state(*args, **kwargs):
     RETURNED VALUE
     
     None. The scaling is applied to the input array
-    
-    """
-def save_image(*args, **kwargs):
-    """
-    
-    Save a numpy array to an image on disk
-    
-    SYNOPSIS
-    
-        print(image.shape)
-        ---> (768, 1024, 3)
-    
-        print(image.dtype)
-        ---> dtype('uint8')
-    
-        mrcal.save_image("result.png", image)
-    
-        # wrote BGR color image to disk
-    
-    This is a completely uninteresting image-saving routine. It's like any other
-    image-saving routine out there; use any that you like. This exists because cv2
-    is very slow.
-    
-    This wraps the mrcal_image_TYPE_save() functions. At this time I support only
-    these 3 data formats:
-    
-    - bpp = 8,  channels = 1: 8-bit grayscale data
-    - bpp = 16, channels = 1: 16-bit grayscale data
-    - bpp = 24, channels = 3: BGR color data
-    
-    ARGUMENTS
-    
-    - filename: the image on disk to save to
-    
-    - array: numpy array containing the input data. Must have shape (height,width)
-      for grayscale data or (height,width,3) for color data. Each row must be stored
-      densely, but a non-dense stride is supported when moving from column to
-      column. The dtype must be either np.uint8 or np.uint16.
-    
-    RETURNED VALUE
-    
-    None on success. Exception thrown on error
-    
-    
     
     """
 def state_index_calobject_warp(*args, **kwargs):

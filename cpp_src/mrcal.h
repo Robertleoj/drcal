@@ -11,7 +11,7 @@
 #include <stdbool.h>
 #include <stdint.h>
 
-#include "mrcal-image.h"
+#include "mrcal-internal.h"
 #include "mrcal-types.h"
 #include "poseutils.h"
 #include "stereo.h"
@@ -952,46 +952,6 @@ bool mrcal_write_cameramodel_file(
     const mrcal_cameramodel_t* cameramodel
 );
 
-#define DECLARE_mrcal_apply_color_map(T, Tname) \
-    bool mrcal_apply_color_map_##Tname(                                 \
-        mrcal_image_bgr_t*    out,                                      \
-        const mrcal_image_##Tname##_t* in,                              \
-                                                                        \
-        /* If true, I set in_min/in_max from the */                     \
-        /* min/max of the input data */                                 \
-        const bool auto_min,                                            \
-        const bool auto_max,                                            \
-                                                                        \
-        /* If true, I implement gnuplot's default 7,5,15 mapping. */    \
-        /* This is a reasonable default choice. */                      \
-        /* function_red/green/blue are ignored if true */               \
-        const bool auto_function,                                       \
-                                                                        \
-        /* min/max input values to use if not */                        \
-        /* auto_min/auto_max */                                         \
-        T in_min, /* will map to 0 */                                   \
-        T in_max, /* will map to 255 */                                 \
-                                                                        \
-        /* The color mappings to use. If !auto_function */              \
-        int function_red,                                               \
-        int function_green,                                             \
-        int function_blue)
-
-DECLARE_mrcal_apply_color_map(uint8_t, uint8);
-DECLARE_mrcal_apply_color_map(uint16_t, uint16);
-DECLARE_mrcal_apply_color_map(uint32_t, uint32);
-DECLARE_mrcal_apply_color_map(uint64_t, uint64);
-
-DECLARE_mrcal_apply_color_map(int8_t, int8);
-DECLARE_mrcal_apply_color_map(int16_t, int16);
-DECLARE_mrcal_apply_color_map(int32_t, int32);
-DECLARE_mrcal_apply_color_map(int64_t, int64);
-
-DECLARE_mrcal_apply_color_map(float, float);
-DECLARE_mrcal_apply_color_map(double, double);
-
-#undef DECLARE_mrcal_apply_color_map
-
 // returns false on error
 typedef bool (*mrcal_callback_sensor_link_t)(
     const uint16_t idx_to,
@@ -1020,6 +980,3 @@ bool mrcal_traverse_sensor_links(
     const mrcal_callback_sensor_link_t cb,
     void* cookie
 );
-
-// Public ABI stuff, that's not for end-user consumption
-#include "mrcal-internal.h"

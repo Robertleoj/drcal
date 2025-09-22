@@ -22,6 +22,7 @@
 #include "cahvore.h"
 #include "minimath/minimath-extra.h"
 #include "minimath/minimath.h"
+#include "mrcal-internal.h"
 #include "mrcal.h"
 #include "scales.h"
 #include "util.h"

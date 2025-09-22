@@ -51,7 +51,6 @@ endif()
 
 
 find_package(CHOLMOD CONFIG REQUIRED)
-find_package(freeimage CONFIG REQUIRED)
 find_package(BLAS REQUIRED)
 find_package(LAPACK REQUIRED)
 
@@ -65,7 +64,6 @@ Python3_add_library(
     cpp_src/mrcal-pywrap.c
     cpp_src/mrcal.c
     cpp_src/uncertainty.c
-    cpp_src/image.c
     cpp_src/stereo.c
     cpp_src/traverse-sensor-links.c
     cpp_src/cahvore.cc
@@ -144,8 +142,6 @@ target_link_libraries(
     
     PRIVATE 
         SuiteSparse::CHOLMOD_static
-        freeimage::FreeImage
-        freeimage::FreeImagePlus
         LAPACK::LAPACK
         BLAS::BLAS
 )
@@ -155,8 +151,6 @@ target_link_libraries(
     
     PRIVATE 
         SuiteSparse::CHOLMOD_static
-        freeimage::FreeImage
-        freeimage::FreeImagePlus
         LAPACK::LAPACK
         BLAS::BLAS
 )
@@ -166,8 +160,6 @@ target_link_libraries(
     
     PRIVATE 
         SuiteSparse::CHOLMOD_static
-        freeimage::FreeImage
-        freeimage::FreeImagePlus
         LAPACK::LAPACK
         BLAS::BLAS
 )
@@ -177,8 +169,6 @@ target_link_libraries(
     
     PRIVATE 
         SuiteSparse::CHOLMOD_static
-        freeimage::FreeImage
-        freeimage::FreeImagePlus
         LAPACK::LAPACK
         BLAS::BLAS
 )

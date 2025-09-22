@@ -8,7 +8,6 @@
 
 #pragma once
 
-#include "mrcal-image.h"
 #include "mrcal-types.h"
 
 // The reference implementation in Python is _rectified_resolution_python() in
@@ -115,20 +114,3 @@ bool mrcal_stereo_range_sparse(  // output
     const double baseline
 );
 
-bool mrcal_stereo_range_dense(  // output
-    mrcal_image_double_t* range,
-
-    // input
-    const mrcal_image_uint16_t* disparity_scaled,
-    const uint16_t disparity_scale,
-
-    // Used to detect invalid values. Set to
-    // 0,UINT16_MAX to ignore
-    const uint16_t disparity_scaled_min,
-    const uint16_t disparity_scaled_max,
-
-    // models_rectified
-    const mrcal_lensmodel_type_t rectification_model_type,
-    const double* fxycxy_rectified,
-    const double baseline
-);
