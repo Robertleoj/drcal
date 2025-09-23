@@ -3,11 +3,6 @@ import sys
 import numpy as np
 import numpysane as nps
 import os
-
-testdir = os.path.dirname(os.path.realpath(__file__))
-
-# I import the LOCAL mrcal since that's what I'm testing
-sys.path[:0] = (f"{testdir}/..",)
 import mrcal
 import testutils
 from test_calibration_helpers import grad
