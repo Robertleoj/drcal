@@ -107,20 +107,20 @@ static bool triangulate_assume_intersect(
     "These all have NGRAD=9, which is inefficient: some/all of the requested gradients could be NULL"
 
 // Basic closest-approach-in-3D routine
-extern "C" mrcal_point3_t mrcal_triangulate_geometric(
+extern "C" drcal_point3_t drcal_triangulate_geometric(
     // outputs
     // These all may be NULL
-    mrcal_point3_t* _dm_dv0,
-    mrcal_point3_t* _dm_dv1,
-    mrcal_point3_t* _dm_dt01,
+    drcal_point3_t* _dm_dv0,
+    drcal_point3_t* _dm_dv1,
+    drcal_point3_t* _dm_dt01,
 
     // inputs
 
     // not-necessarily normalized vectors in the camera-0
     // coord system
-    const mrcal_point3_t* _v0,
-    const mrcal_point3_t* _v1,
-    const mrcal_point3_t* _t01
+    const drcal_point3_t* _v0,
+    const drcal_point3_t* _v1,
+    const drcal_point3_t* _t01
 ) {
     // This is the basic 3D-geometry routine. I find the point in 3D that
     // minimizes the distance to each of the observation rays. This is simple,
@@ -171,24 +171,24 @@ extern "C" mrcal_point3_t mrcal_triangulate_geometric(
 
     val_withgrad_t<9> denom = dot_v0v0 * dot_v1v1 - dot_v0v1 * dot_v0v1;
     if (-1e-10 <= denom.x && denom.x <= 1e-10) {
-        return (mrcal_point3_t){0};
+        return (drcal_point3_t){0};
     }
 
     val_withgrad_t<9> denom_recip = val_withgrad_t<9>(1.) / denom;
     val_withgrad_t<9> k0 =
         denom_recip * (dot_v1v1 * dot_v0t - dot_v0v1 * dot_v1t);
     if (k0.x <= 0.0) {
-        return (mrcal_point3_t){0};
+        return (drcal_point3_t){0};
     }
     val_withgrad_t<9> k1 =
         denom_recip * (dot_v0v1 * dot_v0t - dot_v0v0 * dot_v1t);
     if (k1.x <= 0.0) {
-        return (mrcal_point3_t){0};
+        return (drcal_point3_t){0};
     }
 
     vec_withgrad_t<9, 3> m = (v0 * k0 + v1 * k1 + t01) * 0.5;
 
-    mrcal_point3_t _m;
+    drcal_point3_t _m;
     m.extract_value(_m.xyz);
 
     if (_dm_dv0 != NULL) {
@@ -241,21 +241,21 @@ extern "C" mrcal_point3_t mrcal_triangulate_geometric(
 // Minimize L2 pinhole reprojection error. Described in "Triangulation Made
 // Easy", Peter Lindstrom, IEEE Conference on Computer Vision and Pattern
 // Recognition, 2010.
-extern "C" mrcal_point3_t mrcal_triangulate_lindstrom(
+extern "C" drcal_point3_t drcal_triangulate_lindstrom(
     // outputs
     // These all may be NULL
-    mrcal_point3_t* _dm_dv0,
-    mrcal_point3_t* _dm_dv1,
-    mrcal_point3_t* _dm_dRt01,
+    drcal_point3_t* _dm_dv0,
+    drcal_point3_t* _dm_dv1,
+    drcal_point3_t* _dm_dRt01,
 
     // inputs
 
     // not-necessarily normalized vectors in the LOCAL
     // coordinate system. This is different from the other
     // triangulation routines
-    const mrcal_point3_t* _v0_local,
-    const mrcal_point3_t* _v1_local,
-    const mrcal_point3_t* _Rt01
+    const drcal_point3_t* _v0_local,
+    const drcal_point3_t* _v1_local,
+    const drcal_point3_t* _Rt01
 ) {
     // This is an implementation of the algorithm described in "Triangulation
     // Made Easy", Peter Lindstrom, IEEE Conference on Computer Vision and
@@ -431,10 +431,10 @@ extern "C" mrcal_point3_t mrcal_triangulate_lindstrom(
     // with that assumption
     vec_withgrad_t<18, 3> m;
     if (!triangulate_assume_intersect(m, v0, Rv1, t01)) {
-        return (mrcal_point3_t){0};
+        return (drcal_point3_t){0};
     }
 
-    mrcal_point3_t _m;
+    drcal_point3_t _m;
     m.extract_value(_m.xyz);
 
     if (_dm_dv0 != NULL) {
@@ -476,20 +476,20 @@ extern "C" mrcal_point3_t mrcal_triangulate_lindstrom(
 // Minimize L1 angle error. Described in "Closed-Form Optimal Two-View
 // Triangulation Based on Angular Errors", Seong Hun Lee and Javier Civera. ICCV
 // 2019.
-extern "C" mrcal_point3_t mrcal_triangulate_leecivera_l1(
+extern "C" drcal_point3_t drcal_triangulate_leecivera_l1(
     // outputs
     // These all may be NULL
-    mrcal_point3_t* _dm_dv0,
-    mrcal_point3_t* _dm_dv1,
-    mrcal_point3_t* _dm_dt01,
+    drcal_point3_t* _dm_dv0,
+    drcal_point3_t* _dm_dv1,
+    drcal_point3_t* _dm_dt01,
 
     // inputs
 
     // not-necessarily normalized vectors in the camera-0
     // coord system
-    const mrcal_point3_t* _v0,
-    const mrcal_point3_t* _v1,
-    const mrcal_point3_t* _t01
+    const drcal_point3_t* _v0,
+    const drcal_point3_t* _v1,
+    const drcal_point3_t* _t01
 ) {
     // The paper has m0, m1 as the cam1-frame observation vectors. I do
     // everything in cam0-frame
@@ -528,10 +528,10 @@ extern "C" mrcal_point3_t mrcal_triangulate_leecivera_l1(
 
     vec_withgrad_t<9, 3> m;
     if (!triangulate_assume_intersect(m, v0, v1, t01)) {
-        return (mrcal_point3_t){0};
+        return (drcal_point3_t){0};
     }
 
-    mrcal_point3_t _m;
+    drcal_point3_t _m;
     m.extract_value(_m.xyz);
 
     if (_dm_dv0 != NULL) {
@@ -574,20 +574,20 @@ extern "C" mrcal_point3_t mrcal_triangulate_leecivera_l1(
 // Minimize L-infinity angle error. Described in "Closed-Form Optimal Two-View
 // Triangulation Based on Angular Errors", Seong Hun Lee and Javier Civera. ICCV
 // 2019.
-extern "C" mrcal_point3_t mrcal_triangulate_leecivera_linf(
+extern "C" drcal_point3_t drcal_triangulate_leecivera_linf(
     // outputs
     // These all may be NULL
-    mrcal_point3_t* _dm_dv0,
-    mrcal_point3_t* _dm_dv1,
-    mrcal_point3_t* _dm_dt01,
+    drcal_point3_t* _dm_dv0,
+    drcal_point3_t* _dm_dv1,
+    drcal_point3_t* _dm_dt01,
 
     // inputs
 
     // not-necessarily normalized vectors in the camera-0
     // coord system
-    const mrcal_point3_t* _v0,
-    const mrcal_point3_t* _v1,
-    const mrcal_point3_t* _t01
+    const drcal_point3_t* _v0,
+    const drcal_point3_t* _v1,
+    const drcal_point3_t* _t01
 ) {
     // The paper has m0, m1 as the cam1-frame observation vectors. I do
     // everything in cam0-frame
@@ -610,10 +610,10 @@ extern "C" mrcal_point3_t mrcal_triangulate_leecivera_linf(
     // with that assumption
     vec_withgrad_t<9, 3> m;
     if (!triangulate_assume_intersect(m, v0, v1, t01)) {
-        return (mrcal_point3_t){0};
+        return (drcal_point3_t){0};
     }
 
-    mrcal_point3_t _m;
+    drcal_point3_t _m;
     m.extract_value(_m.xyz);
 
     if (_dm_dv0 != NULL) {
@@ -717,20 +717,20 @@ static bool chirality(
 
 // The "Mid2" method in "Triangulation: Why Optimize?", Seong Hun Lee and Javier
 // Civera. https://arxiv.org/abs/1907.11917
-extern "C" mrcal_point3_t mrcal_triangulate_leecivera_mid2(
+extern "C" drcal_point3_t drcal_triangulate_leecivera_mid2(
     // outputs
     // These all may be NULL
-    mrcal_point3_t* _dm_dv0,
-    mrcal_point3_t* _dm_dv1,
-    mrcal_point3_t* _dm_dt01,
+    drcal_point3_t* _dm_dv0,
+    drcal_point3_t* _dm_dv1,
+    drcal_point3_t* _dm_dt01,
 
     // inputs
 
     // not-necessarily normalized vectors in the camera-0
     // coord system
-    const mrcal_point3_t* _v0,
-    const mrcal_point3_t* _v1,
-    const mrcal_point3_t* _t01
+    const drcal_point3_t* _v0,
+    const drcal_point3_t* _v1,
+    const drcal_point3_t* _t01
 ) {
     // The paper has m0, m1 as the cam1-frame observation vectors. I do
     // everything in cam0-frame
@@ -745,12 +745,12 @@ extern "C" mrcal_point3_t mrcal_triangulate_leecivera_mid2(
     val_withgrad_t<9> l1 = (cross_norm2<9>(v0, t01) * p_norm2_recip).sqrt();
 
     if (!chirality(l0, v0, l1, v1, t01)) {
-        return (mrcal_point3_t){0};
+        return (drcal_point3_t){0};
     }
 
     vec_withgrad_t<9, 3> m = (v0 * l0 + t01 + v1 * l1) / 2.0;
 
-    mrcal_point3_t _m;
+    drcal_point3_t _m;
     m.extract_value(_m.xyz);
 
     if (_dm_dv0 != NULL) {
@@ -790,36 +790,36 @@ extern "C" mrcal_point3_t mrcal_triangulate_leecivera_mid2(
     return _m;
 }
 
-extern "C" bool _mrcal_triangulate_leecivera_mid2_is_convergent(
+extern "C" bool _drcal_triangulate_leecivera_mid2_is_convergent(
     // inputs
 
     // not-necessarily normalized vectors in the camera-0
     // coord system
-    const mrcal_point3_t* _v0,
-    const mrcal_point3_t* _v1,
-    const mrcal_point3_t* _t01
+    const drcal_point3_t* _v0,
+    const drcal_point3_t* _v1,
+    const drcal_point3_t* _t01
 ) {
-    mrcal_point3_t p =
-        mrcal_triangulate_leecivera_mid2(NULL, NULL, NULL, _v0, _v1, _t01);
+    drcal_point3_t p =
+        drcal_triangulate_leecivera_mid2(NULL, NULL, NULL, _v0, _v1, _t01);
     return !(p.x == 0.0 && p.y == 0.0 && p.z == 0.0);
 }
 
 // The "wMid2" method in "Triangulation: Why Optimize?", Seong Hun Lee and
 // Javier Civera. https://arxiv.org/abs/1907.11917
-extern "C" mrcal_point3_t mrcal_triangulate_leecivera_wmid2(
+extern "C" drcal_point3_t drcal_triangulate_leecivera_wmid2(
     // outputs
     // These all may be NULL
-    mrcal_point3_t* _dm_dv0,
-    mrcal_point3_t* _dm_dv1,
-    mrcal_point3_t* _dm_dt01,
+    drcal_point3_t* _dm_dv0,
+    drcal_point3_t* _dm_dv1,
+    drcal_point3_t* _dm_dt01,
 
     // inputs
 
     // not-necessarily normalized vectors in the camera-0
     // coord system
-    const mrcal_point3_t* _v0,
-    const mrcal_point3_t* _v1,
-    const mrcal_point3_t* _t01
+    const drcal_point3_t* _v0,
+    const drcal_point3_t* _v1,
+    const drcal_point3_t* _t01
 ) {
     // The paper has m0, m1 as the cam1-frame observation vectors. I do
     // everything in cam0-frame
@@ -839,13 +839,13 @@ extern "C" mrcal_point3_t mrcal_triangulate_leecivera_wmid2(
     val_withgrad_t<9> l1 = cross_mag<9>(v0, t01) * p_mag_recip;
 
     if (!chirality(l0, v0, l1, v1, t01)) {
-        return (mrcal_point3_t){0};
+        return (drcal_point3_t){0};
     }
 
     vec_withgrad_t<9, 3> m =
         (v0 * l0 * l1 + t01 * l0 + v1 * l0 * l1) / (l0 + l1);
 
-    mrcal_point3_t _m;
+    drcal_point3_t _m;
     m.extract_value(_m.xyz);
 
     if (_dm_dv0 != NULL) {
@@ -1009,22 +1009,22 @@ static val_withgrad_t<6> sigmoid(
 }
 
 // Internal function used in the optimization. This uses
-// mrcal_triangulate_leecivera_mid2(), but contains logic in the divergent-ray
+// drcal_triangulate_leecivera_mid2(), but contains logic in the divergent-ray
 // case more appropriate for the optimization loop
-extern "C" double _mrcal_triangulated_error(
+extern "C" double _drcal_triangulated_error(
     // outputs
-    mrcal_point3_t* _derr_dv1,
-    mrcal_point3_t* _derr_dt01,
+    drcal_point3_t* _derr_dv1,
+    drcal_point3_t* _derr_dt01,
 
     // inputs
 
     // not-necessarily normalized vectors in the camera-0
     // coord system
-    const mrcal_point3_t* _v0,
-    const mrcal_point3_t* _v1,
-    const mrcal_point3_t* _t01
+    const drcal_point3_t* _v0,
+    const drcal_point3_t* _v1,
+    const drcal_point3_t* _t01
 ) {
-    ////////////////////////// Copy of mrcal_triangulate_leecivera_mid2(). I
+    ////////////////////////// Copy of drcal_triangulate_leecivera_mid2(). I
     ////////////////////////// extend it
 
     // Implementation here is a bit different: I don't propagate the gradient in

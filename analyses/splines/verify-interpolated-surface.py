@@ -2,7 +2,7 @@
 
 """Observe the interpolation grid implemented in the C code
 
-This is a validation of mrcal.project()
+This is a validation of drcal.project()
 
 """
 
@@ -15,9 +15,9 @@ import gnuplotlib as gp
 
 testdir = os.path.dirname(os.path.realpath(__file__))
 
-# I import the LOCAL mrcal since that's what I'm testing
+# I import the LOCAL drcal since that's what I'm testing
 sys.path[:0] = (f"{testdir}/../..",)
-import mrcal
+import drcal
 
 
 order = 3
@@ -58,8 +58,8 @@ x_sampled = np.linspace(1, Nx - 2, Nh)
 y_sampled = np.linspace(1, Ny - 2, Nw)
 ixy = nps.mv(nps.cat(*np.meshgrid(x_sampled, y_sampled)), 0, -1)
 
-##### this has mostly been implemented in mrcal_project_stereographic() and
-##### mrcal_unproject_stereographic()
+##### this has mostly been implemented in drcal_project_stereographic() and
+##### drcal_unproject_stereographic()
 # Stereographic projection function:
 #   p   = xyz
 #   rxy = mag(xy)
@@ -121,12 +121,12 @@ p = nps.glue(xy, nps.dummy(z, -1), axis=-1)
 mxy = nps.mag(xy)
 
 # Bam. I have applied a stereographic unprojection to get 3D vectors that would
-# stereographically project to given spline grid locations. I use the mrcal
+# stereographically project to given spline grid locations. I use the drcal
 # internals to project the unprojection, and to get the focal lengths it ended
 # up using. If the internals were implemented correctly, the dense surface of
 # focal lengths should follow the sparse surface of spline control points
 lensmodel_type = f"LENSMODEL_SPLINED_STEREOGRAPHIC_order={order}_Nx={Nx}_Ny={Ny}_fov_x_deg={fov_x_deg}"
-q = mrcal.project(np.ascontiguousarray(p), lensmodel_type, parameters)
+q = drcal.project(np.ascontiguousarray(p), lensmodel_type, parameters)
 th = np.arctan2(nps.mag(p[..., :2]), p[..., 2])
 uxy = p[..., :2] * nps.dummy(np.tan(th / 2) * 2 / nps.mag(p[..., :2]), -1)
 deltau = (q - cxy) / fxy - uxy

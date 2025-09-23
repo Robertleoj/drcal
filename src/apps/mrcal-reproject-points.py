@@ -13,13 +13,13 @@ r"""Reprojects pixel observations from one model to another
 SYNOPSIS
 
   $ < points-in.vnl
-    mrcal-reproject-points
+    drcal-reproject-points
       from.cameramodel to.cameramodel
     > points-out.vnl
 
 This tool takes a set of pixel observations of points captured by one camera
 model, and transforms them into observations of the same points captured by
-another model. This is similar to mrcal-reproject-image, but acts on discrete
+another model. This is similar to drcal-reproject-image, but acts on discrete
 points, rather than on whole images. The two sets of intrinsics are always used.
 The translation component of the extrinsics is always ignored; the rotation is
 ignored as well if --intrinsics-only.
@@ -71,15 +71,15 @@ args = parse_args()
 import numpy as np
 import numpysane as nps
 
-import mrcal
+import drcal
 import time
 
-model_from = mrcal.cameramodel(getattr(args, "model-from"))
-model_to = mrcal.cameramodel(getattr(args, "model-to"))
+model_from = drcal.cameramodel(getattr(args, "model-from"))
+model_to = drcal.cameramodel(getattr(args, "model-to"))
 
 
 p = nps.atleast_dims(np.genfromtxt(sys.stdin), -2)
-v = mrcal.unproject(p, *model_from.intrinsics())
+v = drcal.unproject(p, *model_from.intrinsics())
 
 print(
     "## generated on {} with   {}".format(
@@ -88,7 +88,7 @@ print(
     )
 )
 if not args.intrinsics_only:
-    Rt_to_from = mrcal.compose_Rt(
+    Rt_to_from = drcal.compose_Rt(
         model_to.extrinsics_Rt_fromref(), model_from.extrinsics_Rt_toref()
     )
 
@@ -99,5 +99,5 @@ if not args.intrinsics_only:
 
     v = nps.matmult(Rt_to_from[:3, :], nps.dummy(v, -1))[..., 0]
 
-p = mrcal.project(v, *model_to.intrinsics())
+p = drcal.project(v, *model_to.intrinsics())
 np.savetxt(sys.stdout, p, fmt="%f", header="x y")

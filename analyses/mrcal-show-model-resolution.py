@@ -63,7 +63,7 @@ args = parse_args()
 import numpy as np
 import numpysane as nps
 import gnuplotlib as gp
-import mrcal
+import drcal
 
 
 def mean_resolution__rad_pixel(q, model):
@@ -93,8 +93,8 @@ def mean_resolution__rad_pixel(q, model):
 
     """
 
-    v = mrcal.unproject(q, *model.intrinsics(), normalize=True)
-    _, dq_dv, _ = mrcal.project(v, *model.intrinsics(), get_gradients=True)
+    v = drcal.unproject(q, *model.intrinsics(), normalize=True)
+    _, dq_dv, _ = drcal.project(v, *model.intrinsics(), get_gradients=True)
 
     # Use R_aligned_to_vector(). Add broadcasting to that function?
     @nps.broadcast_define(((3,),), (3, 3))
@@ -154,7 +154,7 @@ if args.title is not None:
 
 def openmodel(f):
     try:
-        return mrcal.cameramodel(f)
+        return drcal.cameramodel(f)
     except Exception as e:
         print(f"Couldn't load camera model '{f}': {e}", file=sys.stderr)
         sys.exit(1)
@@ -191,7 +191,7 @@ if args.cbmin is None:
     base10_floor = np.power(10.0, np.floor(np.log10(args.cbmin)))
     args.cbmin = np.floor(args.cbmin / base10_floor) * base10_floor
 
-curve_options = mrcal.visualization._options_heatmap_with_contours(
+curve_options = drcal.visualization._options_heatmap_with_contours(
     # update these plot options
     plot_options,
     contour_min=args.cbmin,

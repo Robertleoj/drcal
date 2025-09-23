@@ -12,7 +12,7 @@ r"""Visualize the valid-intrinsics region
 
 SYNOPSIS
 
-  $ mrcal-show-valid-intrinsics-region --write-image --image image.png left.cameramodel
+  $ drcal-show-valid-intrinsics-region --write-image --image image.png left.cameramodel
   Wrote image-valid-intrinsics-region.png
 
 Given a camera model (or models), this tool displays the valid-intrinsics
@@ -130,13 +130,13 @@ if args.write_image:
         sys.exit(1)
 
 
-import mrcal
+import drcal
 import numpy as np
 
 
 def openmodel(f):
     try:
-        return mrcal.cameramodel(f)
+        return drcal.cameramodel(f)
     except Exception as e:
         print(f"Couldn't load camera model '{f}': {e}", file=sys.stderr)
         sys.exit(1)
@@ -152,7 +152,7 @@ if any(m.valid_intrinsics_region() is None for m in models):
     sys.exit(1)
 
 if args.write_image:
-    # this function stolen from mrcal-reproject-image. Please consolidate
+    # this function stolen from drcal-reproject-image. Please consolidate
     def target_image_filename(filename_in, suffix):
         base, extension = os.path.splitext(filename_in)
         if len(extension) != 4:
@@ -182,10 +182,10 @@ if args.write_image:
         return filename_out
 
     imagefile_out = target_image_filename(args.image, "valid-intrinsics-region")
-    image_out = mrcal.load_image(args.image)
+    image_out = drcal.load_image(args.image)
     for m in models:
-        mrcal.annotate_image__valid_intrinsics_region(image_out, m)
-    mrcal.save_image(imagefile_out, image_out)
+        drcal.annotate_image__valid_intrinsics_region(image_out, m)
+    drcal.save_image(imagefile_out, image_out)
     sys.stderr.write("Wrote {}\n".format(imagefile_out))
 
 else:
@@ -199,7 +199,7 @@ else:
     if args.unset is not None:
         plotkwargs_extra["unset"] = args.unset
 
-    plot = mrcal.show_valid_intrinsics_region(
+    plot = drcal.show_valid_intrinsics_region(
         models,
         cameranames=args.models,
         image=args.image,

@@ -12,7 +12,7 @@ extern "C" {
 #include "stereo-matching-libelas.h"
 };
 
-void mrcal_stereo_matching_libelas(
+void drcal_stereo_matching_libelas(
     // output
     float* disparity0,
     float* disparity1,

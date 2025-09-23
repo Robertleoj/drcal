@@ -68,7 +68,7 @@ static void rotate_point_r_core(
     }
 }
 
-extern "C" void mrcal_rotate_point_r_full(
+extern "C" void drcal_rotate_point_r_full(
     // output
     double* x_out,      // (3,) array
     int x_out_stride0,  // in bytes. <= 0 means "contiguous"
@@ -127,7 +127,7 @@ extern "C" void mrcal_rotate_point_r_full(
     }
 }
 
-extern "C" void mrcal_transform_point_rt_full(
+extern "C" void drcal_transform_point_rt_full(
     // output
     double* x_out,      // (3,) array
     int x_out_stride0,  // in bytes. <= 0 means "contiguous"
@@ -161,7 +161,7 @@ extern "C" void mrcal_transform_point_rt_full(
         double t[3] = {P1(rt, 3), P1(rt, 4), P1(rt, 5)};
         // I want rotate(x) + t
         // First rotate(x)
-        mrcal_rotate_point_r_full(
+        drcal_rotate_point_r_full(
             x_out,
             x_out_stride0,
             J_rt,
@@ -182,7 +182,7 @@ extern "C" void mrcal_transform_point_rt_full(
             P1(x_out, i) += t[i];
         }
         if (J_rt) {
-            mrcal_identity_R_full(&P2(J_rt, 0, 3), J_rt_stride0, J_rt_stride1);
+            drcal_identity_R_full(&P2(J_rt, 0, 3), J_rt_stride0, J_rt_stride1);
         }
     } else {
         // I use the special-case rx_minus_rt() to efficiently rotate both x and
@@ -737,7 +737,7 @@ static void compose_r_core(
     }
 }
 
-extern "C" void mrcal_compose_r_full(
+extern "C" void drcal_compose_r_full(
     // output
     double* r_out,       // (3,) array
     int r_out_stride0,   // in bytes. <= 0 means "contiguous"

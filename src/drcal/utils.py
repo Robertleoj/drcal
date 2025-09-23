@@ -1,7 +1,7 @@
-"""General utility functions used throughout mrcal
+"""General utility functions used throughout drcal
 
-All functions are exported into the mrcal module. So you can call these via
-mrcal.utils.fff() or mrcal.fff(). The latter is preferred.
+All functions are exported into the drcal module. So you can call these via
+drcal.utils.fff() or drcal.fff(). The latter is preferred.
 
 """
 
@@ -50,7 +50,7 @@ def _align_procrustes_points_Rt01_python(p0, p1, weights=None):
 
     The main implementation is written in C in poseutils.c:
 
-      mrcal_align_procrustes_points_Rt01()
+      drcal_align_procrustes_points_Rt01()
 
     The two implementations are identical, with a test to verify this
 
@@ -116,7 +116,7 @@ def _align_procrustes_vectors_R01_python(v0, v1, weights=None):
 
     The main implementation is written in C in poseutils.c:
 
-      mrcal_align_procrustes_vectors_R01()
+      drcal_align_procrustes_vectors_R01()
 
     The two implementations are identical, with a test to verify this
 
@@ -180,9 +180,9 @@ def align_procrustes_points_Rt01(p0, p1, weights=None):
         ===>
         (100,3)
 
-        Rt01 = mrcal.align_procrustes_points_Rt01(points0, points1)
+        Rt01 = drcal.align_procrustes_points_Rt01(points0, points1)
 
-        print( np.sum(nps.norm2(mrcal.transform_point_Rt(Rt01, points1) -
+        print( np.sum(nps.norm2(drcal.transform_point_Rt(Rt01, points1) -
                                 points0)) )
         ===>
         [The fit error from applying the optimal transformation. If the two point
@@ -252,9 +252,9 @@ def align_procrustes_vectors_R01(v0, v1, weights=None):
         ===>
         (100,3)
 
-        R01 = mrcal.align_procrustes_vectors_R01(vectors0, vectors1)
+        R01 = drcal.align_procrustes_vectors_R01(vectors0, vectors1)
 
-        print( np.mean(1. - nps.inner(mrcal.rotate_point_R(R01, vectors1),
+        print( np.mean(1. - nps.inner(drcal.rotate_point_R(R01, vectors1),
                                       vectors0)) )
         ===>
         [The fit error from applying the optimal rotation. If the two sets of
@@ -342,7 +342,7 @@ def sample_imager(gridn_width, gridn_height, imager_width, imager_height):
          sample_imager(...)[gridn_height-1,gridn_width-1,:] =
          (imager_width-1,imager_height-1)
 
-    When making plots you probably want to call mrcal.imagergrid_using(). See the
+    When making plots you probably want to call drcal.imagergrid_using(). See the
     that docstring for details.
 
     ARGUMENTS
@@ -354,7 +354,7 @@ def sample_imager(gridn_width, gridn_height, imager_width, imager_height):
       gridn_height/gridn_width ~ imager_height/imager_width
 
     - imager_width,imager_height: the width, height of the imager. With a
-      mrcal.cameramodel object this is *model.imagersize()
+      drcal.cameramodel object this is *model.imagersize()
 
     RETURNED VALUES
 
@@ -385,7 +385,7 @@ def sample_imager_unproject(
 SYNOPSIS
 
     import gnuplotlib as gp
-    import mrcal
+    import drcal
 
     ...
 
@@ -394,7 +394,7 @@ SYNOPSIS
 
     # shape (Nheight,Nwidth,3)
     v,q = \
-        mrcal.sample_imager_unproject(Nw, Nh,
+        drcal.sample_imager_unproject(Nw, Nh,
                                       *model.imagersize(),
                                       *model.intrinsics())
 
@@ -404,7 +404,7 @@ SYNOPSIS
     gp.plot(f,
             tuplesize = 3,
             ascii     = True,
-            using     = mrcal.imagergrid_using(model.imagersize, Nw, Nh),
+            using     = drcal.imagergrid_using(model.imagersize, Nw, Nh),
             square    = True,
             _with     = 'image')
 
@@ -418,7 +418,7 @@ normalized, pass normalize=True.
 This function has two modes of operation:
 
 - One camera. lensmodel is a string, and intrinsics_data is a 1-dimensions numpy
-  array. With a mrcal.cameramodel object together these are *model.intrinsics().
+  array. With a drcal.cameramodel object together these are *model.intrinsics().
   We return (v,q) where v is a shape (Nheight,Nwidth,3) array of observation
   vectors, and q is a (Nheight,Nwidth,2) array of corresponding pixel
   coordinates (the grid returned by sample_imager())
@@ -439,11 +439,11 @@ ARGUMENTS
   gridn_height/gridn_width ~ imager_height/imager_width
 
 - imager_width,imager_height: the width, height of the imager. With a
-  mrcal.cameramodel object this is *model.imagersize()
+  drcal.cameramodel object this is *model.imagersize()
 
 - lensmodel, intrinsics_data: the lens parameters. With a single camera,
   lensmodel is a string, and intrinsics_data is a 1-dimensions numpy array; with
-  a mrcal.cameramodel object together these are *model.intrinsics(). With
+  a drcal.cameramodel object together these are *model.intrinsics(). With
   multiple cameras, lensmodel is a list/tuple of strings. And intrinsics_data is
   an iterable of 1-dimensional numpy arrays (a list/tuple or a 2D array).
 
@@ -498,12 +498,12 @@ def hypothesis_board_corner_positions(
 
 SYNOPSIS
 
-    model = mrcal.cameramodel("xxx.cameramodel")
+    model = drcal.cameramodel("xxx.cameramodel")
 
     optimization_inputs = model.optimization_inputs()
 
     # shape (Nobservations, Nheight, Nwidth, 3)
-    pcam = mrcal.hypothesis_board_corner_positions(**optimization_inputs)[0]
+    pcam = drcal.hypothesis_board_corner_positions(**optimization_inputs)[0]
 
     i_intrinsics = \
       optimization_inputs['indices_frame_camintrinsics_camextrinsics'][:,1]
@@ -512,14 +512,14 @@ SYNOPSIS
     intrinsics = nps.mv(optimization_inputs['intrinsics'][i_intrinsics],-2,-4)
 
     optimization_inputs['observations_board'][...,:2] = \
-        mrcal.project( pcam,
+        drcal.project( pcam,
                        optimization_inputs['lensmodel'],
                        intrinsics )
 
     # optimization_inputs now contains perfect, noiseless board observations
 
-    x = mrcal.optimizer_callback(**optimization_inputs)[1]
-    print(nps.norm2(x[:mrcal.num_measurements_boards(**optimization_inputs)]))
+    x = drcal.optimizer_callback(**optimization_inputs)[1]
+    print(nps.norm2(x[:drcal.num_measurements_boards(**optimization_inputs)]))
     ==>
     0
 
@@ -552,8 +552,8 @@ ARGUMENTS
   observations_board[...,2] > 0. This argument is available to pick common
   inliers from two separate solves.
 
-- **optimization_inputs: a dict() of arguments passable to mrcal.optimize() and
-  mrcal.optimizer_callback(). We use the geometric data. This dict is obtainable
+- **optimization_inputs: a dict() of arguments passable to drcal.optimize() and
+  drcal.optimizer_callback(). We use the geometric data. This dict is obtainable
   from a cameramodel object by calling cameramodel.optimization_inputs()
 
 RETURNED VALUE
@@ -644,11 +644,11 @@ def _splined_stereographic_domain(lensmodel):
 
     SYNOPSIS
 
-        model = mrcal.cameramodel(model_filename)
+        model = drcal.cameramodel(model_filename)
 
         lensmodel = model.intrinsics()[0]
 
-        domain_contour = mrcal._splined_stereographic_domain(lensmodel)
+        domain_contour = drcal._splined_stereographic_domain(lensmodel)
 
     Splined stereographic models are defined by a splined surface. This surface is
     indexed by normalized stereographic-projected points. This surface is defined in
@@ -711,7 +711,7 @@ def polygon_difference(positive, negative):
         A = np.array(((-1,-1),( 1,-1),( 1, 1),(-1, 1),(-1,-1)))
         B = np.array(((-.1,-1.1),( .1,-1.1),( .1, 1.1),(-.1, 1.1),(-.1,-1.1)))
 
-        diff = mrcal.polygon_difference(A, B)
+        diff = drcal.polygon_difference(A, B)
 
         gp.plot( (A, dict(legend = 'A', _with = 'lines')),
                  (B, dict(legend = 'B', _with = 'lines')),
@@ -1002,7 +1002,7 @@ def close_contour(c):
         ===>
         [886 198]
 
-        b = mrcal.close_contour(a)
+        b = drcal.close_contour(a)
 
         print( b.shape )
         ===>
@@ -1068,15 +1068,15 @@ def plotoptions_state_boundaries(**optimization_inputs):
 
         import numpy as np
         import gnuplotlib as gp
-        import mrcal
+        import drcal
 
-        model               = mrcal.cameramodel('xxx.cameramodel')
+        model               = drcal.cameramodel('xxx.cameramodel')
         optimization_inputs = model.optimization_inputs()
 
-        J = mrcal.optimizer_callback(**optimization_inputs)[2]
+        J = drcal.optimizer_callback(**optimization_inputs)[2]
 
         gp.plot( np.sum(np.abs(J.toarray()), axis=-2),
-                 _set = mrcal.plotoptions_state_boundaries(**optimization_inputs) )
+                 _set = drcal.plotoptions_state_boundaries(**optimization_inputs) )
 
         # a plot pops up showing the magnitude of the effects of each element of the
         # packed state (as seen by the optimizer), with boundaries between the
@@ -1089,9 +1089,9 @@ def plotoptions_state_boundaries(**optimization_inputs):
 
     ARGUMENTS
 
-    **optimization_inputs: a dict() of arguments passable to mrcal.optimize() and
-    mrcal.optimizer_callback(). These define the full optimization problem, and can
-    be obtained from the optimization_inputs() method of mrcal.cameramodel
+    **optimization_inputs: a dict() of arguments passable to drcal.optimize() and
+    drcal.optimizer_callback(). These define the full optimization problem, and can
+    be obtained from the optimization_inputs() method of drcal.cameramodel
 
     RETURNED VALUE
 
@@ -1134,15 +1134,15 @@ def plotoptions_measurement_boundaries(**optimization_inputs):
 
         import numpy as np
         import gnuplotlib as gp
-        import mrcal
+        import drcal
 
-        model               = mrcal.cameramodel('xxx.cameramodel')
+        model               = drcal.cameramodel('xxx.cameramodel')
         optimization_inputs = model.optimization_inputs()
 
-        x = mrcal.optimizer_callback(**optimization_inputs)[1]
+        x = drcal.optimizer_callback(**optimization_inputs)[1]
 
         gp.plot( np.abs(x),
-                 _set = mrcal.plotoptions_measurement_boundaries(**optimization_inputs) )
+                 _set = drcal.plotoptions_measurement_boundaries(**optimization_inputs) )
 
         # a plot pops up showing the magnitude of each measurement, with boundaries
         # between the different measurements denoted
@@ -1155,9 +1155,9 @@ def plotoptions_measurement_boundaries(**optimization_inputs):
 
     ARGUMENTS
 
-    **optimization_inputs: a dict() of arguments passable to mrcal.optimize() and
-    mrcal.optimizer_callback(). These define the full optimization problem, and can
-    be obtained from the optimization_inputs() method of mrcal.cameramodel
+    **optimization_inputs: a dict() of arguments passable to drcal.optimize() and
+    drcal.optimizer_callback(). These define the full optimization problem, and can
+    be obtained from the optimization_inputs() method of drcal.cameramodel
 
     RETURNED VALUE
 
@@ -1190,37 +1190,37 @@ def ingest_packed_state(b_packed, **optimization_inputs):
 
         # A simple gradient check
 
-        model               = mrcal.cameramodel('xxx.cameramodel')
+        model               = drcal.cameramodel('xxx.cameramodel')
         optimization_inputs = model.optimization_inputs()
 
-        b0,x0,J = mrcal.optimizer_callback(no_factorization = True,
+        b0,x0,J = drcal.optimizer_callback(no_factorization = True,
                                            **optimization_inputs)[:3]
 
         db = np.random.randn(len(b0)) * 1e-9
 
-        mrcal.ingest_packed_state(b0 + db,
+        drcal.ingest_packed_state(b0 + db,
                                   **optimization_inputs)
 
-        x1 = mrcal.optimizer_callback(no_factorization = True,
+        x1 = drcal.optimizer_callback(no_factorization = True,
                                       no_jacobian      = True,
                                       **optimization_inputs)[1]
 
         dx_observed  = x1 - x0
         dx_predicted = nps.inner(J, db_packed)
 
-    This is the converse of mrcal.optimizer_callback(). One thing
-    mrcal.optimizer_callback() does is to convert the expanded (intrinsics,
+    This is the converse of drcal.optimizer_callback(). One thing
+    drcal.optimizer_callback() does is to convert the expanded (intrinsics,
     extrinsics, ...) arrays into a 1-dimensional scaled optimization vector
-    b_packed. mrcal.ingest_packed_state() allows updates to b_packed to be absorbed
+    b_packed. drcal.ingest_packed_state() allows updates to b_packed to be absorbed
     back into the (intrinsics, extrinsics, ...) arrays for further evaluation with
-    mrcal.optimizer_callback() and others.
+    drcal.optimizer_callback() and others.
 
     ARGUMENTS
 
     - b_packed: a numpy array of shape (Nstate,) containing the input packed state
 
-    - **optimization_inputs: a dict() of arguments passable to mrcal.optimize() and
-      mrcal.optimizer_callback(). The arrays in this dict are updated
+    - **optimization_inputs: a dict() of arguments passable to drcal.optimize() and
+      drcal.optimizer_callback(). The arrays in this dict are updated
 
 
     RETURNED VALUE
@@ -1252,7 +1252,7 @@ def ingest_packed_state(b_packed, **optimization_inputs):
     )
 
     # Defaults MUST match those in OPTIMIZER_ARGUMENTS_OPTIONAL in
-    # mrcal-pywrap.c. Or better yet, this whole function should
+    # drcal-pywrap.c. Or better yet, this whole function should
     # come from the C code instead of being reimplemented here in Python
     do_optimize_intrinsics_core = optimization_inputs.get(
         "do_optimize_intrinsics_core", True
@@ -1321,7 +1321,7 @@ def sorted_eig(M):
         # plane
         p -= np.mean(p, axis=-2)
 
-        l,v = mrcal.sorted_eig(nps.matmult(nps.transpose(p),p))
+        l,v = drcal.sorted_eig(nps.matmult(nps.transpose(p),p))
 
         n = v[:,0]
 
@@ -1403,9 +1403,9 @@ def measurements_board(
 
     SYNOPSIS
 
-        model = mrcal.cameramodel(model_filename)
+        model = drcal.cameramodel(model_filename)
 
-        gp.plot( mrcal.measurements_board(
+        gp.plot( drcal.measurements_board(
                    optimization_inputs = model.optimization_inputs(),
                    icam_intrinsics     = icam_intrinsics ).ravel(),
                  histogram = True,
@@ -1425,7 +1425,7 @@ def measurements_board(
     ARGUMENTS
 
     - optimization_inputs: the optimization inputs dict passed into and returned
-      from mrcal.optimize(). This describes the solved optimization problem
+      from drcal.optimize(). This describes the solved optimization problem
 
     - icam_intrinsics: optional integer to select the camera whose measurements
       we're interested in. If omitted or None, we report the measurements for ALL
@@ -1433,8 +1433,8 @@ def measurements_board(
 
     - x: optional numpy array of shape (Nmeasurements,) containing the optimization
       measurements. If omitted or None, this will be recomputed. To use a cached
-      value, pass the result of mrcal.optimize(**optimization_inputs)['x'] or
-      mrcal.optimizer_callback(**optimization_inputs)[1]
+      value, pass the result of drcal.optimize(**optimization_inputs)['x'] or
+      drcal.optimizer_callback(**optimization_inputs)[1]
 
     - return_observations: optional boolean, defaulting to False. if
       return_observations: we return a tuple (x,observations) instead of just x
@@ -1532,9 +1532,9 @@ def measurements_point(
 
     SYNOPSIS
 
-        model = mrcal.cameramodel(model_filename)
+        model = drcal.cameramodel(model_filename)
 
-        gp.plot( mrcal.measurements_point(
+        gp.plot( drcal.measurements_point(
                    optimization_inputs = model.optimization_inputs(),
                    icam_intrinsics     = icam_intrinsics ).ravel(),
                  histogram = True,
@@ -1554,7 +1554,7 @@ def measurements_point(
     ARGUMENTS
 
     - optimization_inputs: the optimization inputs dict passed into and returned
-      from mrcal.optimize(). This describes the solved optimization problem
+      from drcal.optimize(). This describes the solved optimization problem
 
     - icam_intrinsics: optional integer to select the camera whose measurements
       we're interested in. If omitted or None, we report the measurements for ALL
@@ -1562,8 +1562,8 @@ def measurements_point(
 
     - x: optional numpy array of shape (Nmeasurements,) containing the optimization
       measurements. If omitted or None, this will be recomputed. To use a cached
-      value, pass the result of mrcal.optimize(**optimization_inputs)['x'] or
-      mrcal.optimizer_callback(**optimization_inputs)[1]
+      value, pass the result of drcal.optimize(**optimization_inputs)['x'] or
+      drcal.optimizer_callback(**optimization_inputs)[1]
 
     - return_observations: optional boolean, defaulting to False. if
       return_observations: we return a tuple (x,observations) instead of just x
@@ -1651,7 +1651,7 @@ def _R_aligned_to_vector_python(v):
 
     The main implementation is written in C in poseutils.c:
 
-      mrcal_R_aligned_to_vector()
+      drcal_R_aligned_to_vector()
 
     The two implementations are identical, with a test to verify this
     """

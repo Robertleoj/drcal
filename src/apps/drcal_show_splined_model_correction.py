@@ -2,7 +2,7 @@ r"""Visualizes the surface represented in a splined lens model
 
 SYNOPSIS
 
-  $ mrcal-show-splined-model-correction cam.cameramodel
+  $ drcal-show-splined-model-correction cam.cameramodel
   ... a plot pops up showing the correction magnitude heatmap
 
 Splined models are parametrized by flexible surfaces that define the projection
@@ -10,9 +10,9 @@ corrections (off some baseline model), and visualizing these corrections is
 useful for understanding the projection behavior. Details of these models are
 described in the documentation:
 
-https://mrcal.secretsauce.net/lensmodels.html#splined-stereographic-lens-model
+https://drcal.secretsauce.net/lensmodels.html#splined-stereographic-lens-model
 
-At this time LENSMODEL_SPLINED_STEREOGRAPHIC is the only splined model mrcal
+At this time LENSMODEL_SPLINED_STEREOGRAPHIC is the only splined model drcal
 has, so the baseline model is always LENSMODEL_STEREOGRAPHIC.
 
 This tool produces a plot in the domain either of the input or the output of the

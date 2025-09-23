@@ -13,16 +13,16 @@ r"""Converts a cameramodel to the cahvor file format
 
 SYNOPSIS
 
-  $ mrcal-to-cahvor model1.cameramodel model2.cameramodel
+  $ drcal-to-cahvor model1.cameramodel model2.cameramodel
   Wrote model1.cahvor
   Wrote model2.cahvor
 
-File formats supported by mrcal are described at
-https://mrcal.secretsauce.net/cameramodels.html#cameramodel-file-formats
+File formats supported by drcal are described at
+https://drcal.secretsauce.net/cameramodels.html#cameramodel-file-formats
 
 This tool converts the given model(s) to the cahvor file format. No changes to
 the content are made; this is purely a format converter (the
-mrcal-convert-lensmodel tool fits different lens models instead). Model
+drcal-convert-lensmodel tool fits different lens models instead). Model
 filenames are given on the commandline. Output is written to the same directory,
 with the same filename, but with a .cahvor extension.
 
@@ -80,12 +80,12 @@ if Nstdin > 1:
     )
     sys.exit(1)
 
-import mrcal
+import drcal
 
 for model in args.model:
     if model == "-":
         try:
-            m = mrcal.cameramodel(model)
+            m = drcal.cameramodel(model)
         except KeyboardInterrupt:
             sys.exit(1)
         m.write(sys.stdout, cahvor=True)
@@ -107,6 +107,6 @@ for model in args.model:
                 file=sys.stderr,
             )
         else:
-            m = mrcal.cameramodel(model)
+            m = drcal.cameramodel(model)
             m.write(filename_out)
             print("Wrote " + filename_out)

@@ -11,9 +11,9 @@ import os
 
 testdir = os.path.dirname(os.path.realpath(__file__))
 
-# I import the LOCAL mrcal since that's what I'm testing
+# I import the LOCAL drcal since that's what I'm testing
 sys.path[:0] = (f"{testdir}/..",)
-import mrcal
+import drcal
 import testutils
 import cv2
 
@@ -23,10 +23,10 @@ if False:
     import subprocess
 
     subprocess.check_output(
-        "wget -O /tmp/0.cameramodel https://mrcal.secretsauce.net/external/2022-11-05--dtla-overpass--samyang--alpha7/stereo/0.cameramodel && "
-        + "wget -O /tmp/1.cameramodel https://mrcal.secretsauce.net/external/2022-11-05--dtla-overpass--samyang--alpha7/stereo/1.cameramodel && "
-        "wget -O /tmp/0.jpg         https://mrcal.secretsauce.net/external/2022-11-05--dtla-overpass--samyang--alpha7/stereo/0.jpg && "
-        "wget -O /tmp/1.jpg         https://mrcal.secretsauce.net/external/2022-11-05--dtla-overpass--samyang--alpha7/stereo/1.jpg",
+        "wget -O /tmp/0.cameramodel https://drcal.secretsauce.net/external/2022-11-05--dtla-overpass--samyang--alpha7/stereo/0.cameramodel && "
+        + "wget -O /tmp/1.cameramodel https://drcal.secretsauce.net/external/2022-11-05--dtla-overpass--samyang--alpha7/stereo/1.cameramodel && "
+        "wget -O /tmp/0.jpg         https://drcal.secretsauce.net/external/2022-11-05--dtla-overpass--samyang--alpha7/stereo/0.jpg && "
+        "wget -O /tmp/1.jpg         https://drcal.secretsauce.net/external/2022-11-05--dtla-overpass--samyang--alpha7/stereo/1.jpg",
         shell=True,
     )
 
@@ -41,9 +41,9 @@ az0_deg = 0
 el0_deg = 0
 
 
-models = [mrcal.cameramodel(f) for f in model_filenames]
+models = [drcal.cameramodel(f) for f in model_filenames]
 
-images = [mrcal.load_image(f, bits_per_pixel=8, channels=1) for f in image_filenames]
+images = [drcal.load_image(f, bits_per_pixel=8, channels=1) for f in image_filenames]
 
 clahe = cv2.createCLAHE()
 clahe.setClipLimit(8)
@@ -78,7 +78,7 @@ for rectification_model in (
     "LENSMODEL_LATLON",
     "LENSMODEL_PINHOLE",
 ):
-    models_rectified = mrcal.rectified_system(
+    models_rectified = drcal.rectified_system(
         models,
         az_fov_deg=az_fov_deg[rectification_model],
         el_fov_deg=el_fov_deg,
@@ -114,15 +114,15 @@ for rectification_model in (
             mode=cv2.StereoSGBM_MODE_SGBM,
         )
 
-        rectification_maps = mrcal.rectification_maps(models, models_rectified)
+        rectification_maps = drcal.rectification_maps(models, models_rectified)
 
         images_rectified = [
-            mrcal.transform_image(images[i], rectification_maps[i]) for i in range(2)
+            drcal.transform_image(images[i], rectification_maps[i]) for i in range(2)
         ]
 
         disparity = stereo_sgbm.compute(*images_rectified)
 
-        ranges_dense = mrcal.stereo_range(
+        ranges_dense = drcal.stereo_range(
             disparity,
             models_rectified,
             disparity_scale=disparity_scale,
@@ -130,7 +130,7 @@ for rectification_model in (
             disparity_scaled_max=32767,
         )
 
-        ranges_dense_python = mrcal.stereo._stereo_range_python(
+        ranges_dense_python = drcal.stereo._stereo_range_python(
             disparity,
             models_rectified,
             disparity_scale=disparity_scale,
@@ -138,7 +138,7 @@ for rectification_model in (
             disparity_scaled_max=32767,
         )
 
-        ranges_sparse = mrcal.stereo_range(
+        ranges_sparse = drcal.stereo_range(
             disparity[q[:, 1], q[:, 0]],
             models_rectified,
             qrect0=q,
@@ -146,7 +146,7 @@ for rectification_model in (
             disparity_min=disparity_min,
         )
 
-        ranges_sparse_python = mrcal.stereo._stereo_range_python(
+        ranges_sparse_python = drcal.stereo._stereo_range_python(
             disparity[q[:, 1], q[:, 0]],
             models_rectified,
             qrect0=q,
@@ -190,16 +190,16 @@ for rectification_model in (
 
         if False:
             range_image_limits = (1, 1000)
-            disparity_colored = mrcal.apply_color_map(
+            disparity_colored = drcal.apply_color_map(
                 disparity,
                 a_min=disparity_min * disparity_scale,
                 a_max=disparity_max * disparity_scale,
             )
-            ranges_colored = mrcal.apply_color_map(
+            ranges_colored = drcal.apply_color_map(
                 ranges_dense, a_min=range_image_limits[0], a_max=range_image_limits[1]
             )
-            mrcal.save_image("/tmp/disparity.png", disparity_colored)
-            mrcal.save_image("/tmp/range.png", ranges_colored)
+            drcal.save_image("/tmp/disparity.png", disparity_colored)
+            drcal.save_image("/tmp/range.png", ranges_colored)
             print("Wrote /tmp/disparity.png and /tmp/range.png")
 
 testutils.finish()

@@ -8,12 +8,12 @@ import os
 
 testdir = os.path.dirname(os.path.realpath(__file__))
 
-# I import the LOCAL mrcal since that's what I'm testing
+# I import the LOCAL drcal since that's what I'm testing
 sys.path[:0] = (f"{testdir}/..",)
-import mrcal
+import drcal
 import testutils
 
-from mrcal.calibration import _traverse_sensor_links_python
+from drcal.calibration import _traverse_sensor_links_python
 
 
 connectivity_matrix = np.array(
@@ -32,7 +32,7 @@ Nsensors = connectivity_matrix.shape[0]
 node_sequence = []
 node_sequence_python = []
 
-mrcal.traverse_sensor_links(
+drcal.traverse_sensor_links(
     connectivity_matrix=connectivity_matrix,
     callback_sensor_link=lambda idx_to, idx_from: node_sequence.append(
         (idx_to, idx_from),

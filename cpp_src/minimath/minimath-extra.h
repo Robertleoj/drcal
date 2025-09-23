@@ -1,6 +1,6 @@
 #pragma once
 
-// Extra functions I'm using in mrcal. I'm going to replace this whole library
+// Extra functions I'm using in drcal. I'm going to replace this whole library
 // eventually, to make things nicer. These new functions will be a part of the
 // replacement, and I'm not going to be thorough and I'm not going to add tests
 // until I do that.

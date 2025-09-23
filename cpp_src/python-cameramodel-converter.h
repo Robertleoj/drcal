@@ -1,13 +1,13 @@
 #pragma once
 
-// mrcal_cameramodel_converter is a "converter" function that can be used with
+// drcal_cameramodel_converter is a "converter" function that can be used with
 // "O&" conversions in PyArg_ParseTupleAndKeywords() calls. Can interpret either
-// path strings or mrcal.cameramodel objects as mrcal_cameramodel_t structures
+// path strings or drcal.cameramodel objects as drcal_cameramodel_t structures
 
 #include <Python.h>
-#include "mrcal.h"
+#include "drcal.h"
 
-int mrcal_cameramodel_converter(
+int drcal_cameramodel_converter(
     PyObject* py_model,
-    mrcal_cameramodel_t** model
+    drcal_cameramodel_t** model
 );

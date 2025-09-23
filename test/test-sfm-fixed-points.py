@@ -18,9 +18,9 @@ import os
 
 testdir = os.path.dirname(os.path.realpath(__file__))
 
-# I import the LOCAL mrcal since that's what I'm testing
+# I import the LOCAL drcal since that's what I'm testing
 sys.path[:0] = (f"{testdir}/..",)
-import mrcal
+import drcal
 import testutils
 import test_sfm_helpers
 
@@ -79,7 +79,7 @@ optimization_inputs = dict(
     verbose=False,
 )
 
-stats = mrcal.optimize(**optimization_inputs)
+stats = drcal.optimize(**optimization_inputs)
 
 
 # If we have outliers, I need to be able to detect it. If I can detect it,
@@ -88,7 +88,7 @@ stats = mrcal.optimize(**optimization_inputs)
 # discrete points, so markOutliers() ignores discrete points. If you want to
 # figure out how to do this right, start by re-enabling this code
 if add_outlier:
-    p, x, J, f = mrcal.optimizer_callback(**optimization_inputs)
+    p, x, J, f = drcal.optimizer_callback(**optimization_inputs)
 
     if 0:  # print measurements x
         import gnuplotlib as gp

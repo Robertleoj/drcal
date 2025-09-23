@@ -7,10 +7,10 @@ import os
 
 testdir = os.path.dirname(os.path.realpath(__file__))
 
-# I import the LOCAL mrcal since that's what I'm testing
+# I import the LOCAL drcal since that's what I'm testing
 sys.path[:0] = (f"{testdir}/..",)
-import mrcal
-import mrcal._poseutils_npsp as _poseutils
+import drcal
+import drcal._poseutils_npsp as _poseutils
 
 import cv2
 from testutils import *
@@ -93,9 +93,9 @@ out6 = base[1, 4, :6, 1]
 out66 = base[5, 3:9, 3:9, 2]
 out66a = base[6, 3:9, 3:9, 2]
 
-confirm_equal(mrcal.identity_R(out=out33), np.eye(3), msg="identity_R")
+confirm_equal(drcal.identity_R(out=out33), np.eye(3), msg="identity_R")
 confirm_equal(
-    mrcal.identity_Rt(out=out43),
+    drcal.identity_Rt(out=out43),
     nps.glue(
         np.eye(3),
         np.zeros(
@@ -105,14 +105,14 @@ confirm_equal(
     ),
     msg="identity_Rt",
 )
-confirm_equal(mrcal.identity_r(out=out3), np.zeros((3,)), msg="identity_r")
-confirm_equal(mrcal.identity_rt(out=out6), np.zeros((6,)), msg="identity_rt")
+confirm_equal(drcal.identity_r(out=out3), np.zeros((3,)), msg="identity_r")
+confirm_equal(drcal.identity_rt(out=out6), np.zeros((6,)), msg="identity_rt")
 
 ################# rotate_point_R
-y = mrcal.rotate_point_R(R0_ref, x, out=out3)
+y = drcal.rotate_point_R(R0_ref, x, out=out3)
 confirm_equal(y, nps.matmult(x, nps.transpose(R0_ref)), msg="rotate_point_R result")
 
-y, J_R, J_x = mrcal.rotate_point_R(
+y, J_R, J_x = drcal.rotate_point_R(
     R0_ref, x, get_gradients=True, out=(out3, out333, out33)
 )
 J_R_ref = grad(lambda R: nps.matmult(x, nps.transpose(R)), R0_ref)
@@ -124,7 +124,7 @@ confirm_equal(J_x, J_x_ref, msg="rotate_point_R J_x")
 # In-place
 R0_ref_copy = np.array(R0_ref)
 x_copy = np.array(x)
-y = mrcal.rotate_point_R(R0_ref_copy, x_copy, out=x_copy)
+y = drcal.rotate_point_R(R0_ref_copy, x_copy, out=x_copy)
 confirm_equal(
     y,
     nps.matmult(x, nps.transpose(R0_ref)),
@@ -132,10 +132,10 @@ confirm_equal(
 )
 
 # inverted
-y = mrcal.rotate_point_R(R0_ref, x, out=out3, inverted=True)
+y = drcal.rotate_point_R(R0_ref, x, out=out3, inverted=True)
 confirm_equal(y, nps.matmult(x, R0_ref), msg="rotate_point_R(inverted) result")
 
-y, J_R, J_x = mrcal.rotate_point_R(
+y, J_R, J_x = drcal.rotate_point_R(
     R0_ref, x, get_gradients=True, out=(out3, out333, out33), inverted=True
 )
 J_R_ref = grad(lambda R: nps.matmult(x, R), R0_ref)
@@ -147,7 +147,7 @@ confirm_equal(J_x, J_x_ref, msg="rotate_point_R(inverted) J_x")
 # inverted in-place
 R0_ref_copy = np.array(R0_ref)
 x_copy = np.array(x)
-y = mrcal.rotate_point_R(R0_ref_copy, x_copy, out=x_copy, inverted=True)
+y = drcal.rotate_point_R(R0_ref_copy, x_copy, out=x_copy, inverted=True)
 confirm_equal(
     y, nps.matmult(x, R0_ref), msg="rotate_point_R result written in-place into x"
 )
@@ -155,14 +155,14 @@ confirm_equal(
 ################# rotate_point_r
 
 for what, r_ref, R_ref in (("r0_ref", r0_ref, R0_ref), ("r1_ref", r1_ref, R1_ref)):
-    y = mrcal.rotate_point_r(r_ref, x, out=out3)
+    y = drcal.rotate_point_r(r_ref, x, out=out3)
     confirm_equal(
         y,
         nps.matmult(x, nps.transpose(R_from_r(r_ref))),
         msg=f"{what}: rotate_point_r result",
     )
 
-    y, J_r, J_x = mrcal.rotate_point_r(
+    y, J_r, J_x = drcal.rotate_point_r(
         r_ref, x, get_gradients=True, out=(out3, out33, out33a)
     )
     J_r_ref = grad(lambda r: nps.matmult(x, nps.transpose(R_from_r(r))), r_ref)
@@ -184,7 +184,7 @@ for what, r_ref, R_ref in (("r0_ref", r0_ref, R0_ref), ("r1_ref", r1_ref, R1_ref
 
     r0_ref_copy = np.array(r_ref)
     x_copy = np.array(x)
-    y = mrcal.rotate_point_r(r0_ref_copy, x_copy, out=x_copy)
+    y = drcal.rotate_point_r(r0_ref_copy, x_copy, out=x_copy)
     confirm_equal(
         y,
         nps.matmult(x, nps.transpose(R_from_r(r_ref))),
@@ -195,7 +195,7 @@ for what, r_ref, R_ref in (("r0_ref", r0_ref, R0_ref), ("r1_ref", r1_ref, R1_ref
     x_copy = np.array(x)
     out33_copy = np.array(out33)
     out33a_copy = np.array(out33a)
-    y, J_r, J_x = mrcal.rotate_point_r(
+    y, J_r, J_x = drcal.rotate_point_r(
         r0_ref_copy, x_copy, get_gradients=True, out=(x_copy, out33, out33a)
     )
     confirm_equal(
@@ -218,14 +218,14 @@ for what, r_ref, R_ref in (("r0_ref", r0_ref, R0_ref), ("r1_ref", r1_ref, R1_ref
     )
 
     # inverted
-    y = mrcal.rotate_point_r(r_ref, x, out=out3, inverted=True)
+    y = drcal.rotate_point_r(r_ref, x, out=out3, inverted=True)
     confirm_equal(
         y,
         nps.matmult(x, R_from_r(r_ref)),
         msg=f"{what}: rotate_point_r(inverted) result",
     )
 
-    y, J_r, J_x = mrcal.rotate_point_r(
+    y, J_r, J_x = drcal.rotate_point_r(
         r_ref, x, get_gradients=True, out=(out3, out33, out33a), inverted=True
     )
     J_r_ref = grad(lambda r: nps.matmult(x, R_from_r(r)), r_ref)
@@ -248,7 +248,7 @@ for what, r_ref, R_ref in (("r0_ref", r0_ref, R0_ref), ("r1_ref", r1_ref, R1_ref
     # inverted, in-place
     r0_ref_copy = np.array(r_ref)
     x_copy = np.array(x)
-    y = mrcal.rotate_point_r(r0_ref_copy, x_copy, inverted=True, out=x_copy)
+    y = drcal.rotate_point_r(r0_ref_copy, x_copy, inverted=True, out=x_copy)
     confirm_equal(
         y,
         nps.matmult(x, R_from_r(r_ref)),
@@ -258,7 +258,7 @@ for what, r_ref, R_ref in (("r0_ref", r0_ref, R0_ref), ("r1_ref", r1_ref, R1_ref
     x_copy = np.array(x)
     out33_copy = np.array(out33)
     out33a_copy = np.array(out33a)
-    y, J_r, J_x = mrcal.rotate_point_r(
+    y, J_r, J_x = drcal.rotate_point_r(
         r0_ref_copy,
         x_copy,
         get_gradients=True,
@@ -288,12 +288,12 @@ for what, r_ref, R_ref in (("r0_ref", r0_ref, R0_ref), ("r1_ref", r1_ref, R1_ref
 ################# transform_point_Rt
 
 
-y = mrcal.transform_point_Rt(Rt0_ref, x, out=out3)
+y = drcal.transform_point_Rt(Rt0_ref, x, out=out3)
 confirm_equal(
     y, nps.matmult(x, nps.transpose(R0_ref)) + t0_ref, msg="transform_point_Rt result"
 )
 
-y, J_Rt, J_x = mrcal.transform_point_Rt(
+y, J_Rt, J_x = drcal.transform_point_Rt(
     Rt0_ref, x, get_gradients=True, out=(out3, out343, out33)
 )
 J_Rt_ref = grad(lambda Rt: nps.matmult(x, nps.transpose(Rt[:3, :])) + Rt[3, :], Rt0_ref)
@@ -308,7 +308,7 @@ confirm_equal(J_x, J_x_ref, msg="transform_point_Rt J_x")
 # into any of R
 Rt0_ref_copy = np.array(Rt0_ref)
 x_copy = np.array(x)
-y = mrcal.transform_point_Rt(Rt0_ref_copy, x_copy, out=Rt0_ref_copy[3, :])
+y = drcal.transform_point_Rt(Rt0_ref_copy, x_copy, out=Rt0_ref_copy[3, :])
 confirm_equal(
     y,
     nps.matmult(x, nps.transpose(R0_ref)) + t0_ref,
@@ -316,7 +316,7 @@ confirm_equal(
 )
 Rt0_ref_copy = np.array(Rt0_ref)
 x_copy = np.array(x)
-y = mrcal.transform_point_Rt(Rt0_ref_copy, x_copy, out=x_copy)
+y = drcal.transform_point_Rt(Rt0_ref_copy, x_copy, out=x_copy)
 confirm_equal(
     y,
     nps.matmult(x, nps.transpose(R0_ref)) + t0_ref,
@@ -325,7 +325,7 @@ confirm_equal(
 
 Rt0_ref_copy = np.array(Rt0_ref)
 x_copy = np.array(x)
-y, J_Rt, J_x = mrcal.transform_point_Rt(
+y, J_Rt, J_x = drcal.transform_point_Rt(
     Rt0_ref_copy, x_copy, out=(Rt0_ref_copy[3, :], out343, out33), get_gradients=True
 )
 confirm_equal(
@@ -345,7 +345,7 @@ confirm_equal(
 )
 Rt0_ref_copy = np.array(Rt0_ref)
 x_copy = np.array(x)
-y, J_Rt, J_x = mrcal.transform_point_Rt(
+y, J_Rt, J_x = drcal.transform_point_Rt(
     Rt0_ref_copy, x_copy, out=(x_copy, out343, out33), get_gradients=True
 )
 confirm_equal(
@@ -365,14 +365,14 @@ confirm_equal(
 )
 
 # inverted
-y = mrcal.transform_point_Rt(Rt0_ref, x, out=out3, inverted=True)
+y = drcal.transform_point_Rt(Rt0_ref, x, out=out3, inverted=True)
 confirm_equal(
     y,
     nps.matmult(x, R0_ref) - nps.matmult(t0_ref, R0_ref),
     msg="transform_point_Rt(inverted) result",
 )
 
-y, J_Rt, J_x = mrcal.transform_point_Rt(
+y, J_Rt, J_x = drcal.transform_point_Rt(
     Rt0_ref, x, get_gradients=True, out=(out3, out343, out33), inverted=True
 )
 J_Rt_ref = grad(
@@ -391,7 +391,7 @@ confirm_equal(J_x, J_x_ref, msg="transform_point_Rt(inverted) J_x")
 # into any of R
 Rt0_ref_copy = np.array(Rt0_ref)
 x_copy = np.array(x)
-y = mrcal.transform_point_Rt(
+y = drcal.transform_point_Rt(
     Rt0_ref_copy, x_copy, out=Rt0_ref_copy[3, :], inverted=True
 )
 confirm_equal(
@@ -401,7 +401,7 @@ confirm_equal(
 )
 Rt0_ref_copy = np.array(Rt0_ref)
 x_copy = np.array(x)
-y = mrcal.transform_point_Rt(Rt0_ref_copy, x_copy, out=x_copy, inverted=True)
+y = drcal.transform_point_Rt(Rt0_ref_copy, x_copy, out=x_copy, inverted=True)
 confirm_equal(
     y,
     nps.matmult(x, R0_ref) - nps.matmult(t0_ref, R0_ref),
@@ -410,7 +410,7 @@ confirm_equal(
 
 Rt0_ref_copy = np.array(Rt0_ref)
 x_copy = np.array(x)
-y, J_Rt, J_x = mrcal.transform_point_Rt(
+y, J_Rt, J_x = drcal.transform_point_Rt(
     Rt0_ref_copy,
     x_copy,
     out=(Rt0_ref_copy[3, :], out343, out33),
@@ -434,7 +434,7 @@ confirm_equal(
 )
 Rt0_ref_copy = np.array(Rt0_ref)
 x_copy = np.array(x)
-y, J_Rt, J_x = mrcal.transform_point_Rt(
+y, J_Rt, J_x = drcal.transform_point_Rt(
     Rt0_ref_copy, x_copy, out=(x_copy, out343, out33), get_gradients=True, inverted=True
 )
 confirm_equal(
@@ -457,12 +457,12 @@ confirm_equal(
 ################# transform_point_rt
 
 
-y = mrcal.transform_point_rt(rt0_ref, x, out=out3)
+y = drcal.transform_point_rt(rt0_ref, x, out=out3)
 confirm_equal(
     y, nps.matmult(x, nps.transpose(R0_ref)) + t0_ref, msg="transform_point_rt result"
 )
 
-y, J_rt, J_x = mrcal.transform_point_rt(
+y, J_rt, J_x = drcal.transform_point_rt(
     rt0_ref, x, get_gradients=True, out=(out3, out36, out33a)
 )
 J_rt_ref = grad(
@@ -486,7 +486,7 @@ confirm_equal(J_x, J_x_ref, msg="transform_point_rt J_x")
 # into any of r or J
 rt0_ref_copy = np.array(rt0_ref)
 x_copy = np.array(x)
-y = mrcal.transform_point_rt(rt0_ref_copy, x_copy, out=rt0_ref_copy[3:])
+y = drcal.transform_point_rt(rt0_ref_copy, x_copy, out=rt0_ref_copy[3:])
 confirm_equal(
     y,
     nps.matmult(x, nps.transpose(R0_ref)) + t0_ref,
@@ -494,7 +494,7 @@ confirm_equal(
 )
 rt0_ref_copy = np.array(rt0_ref)
 x_copy = np.array(x)
-y = mrcal.transform_point_rt(rt0_ref_copy, x_copy, out=x_copy)
+y = drcal.transform_point_rt(rt0_ref_copy, x_copy, out=x_copy)
 confirm_equal(
     y,
     nps.matmult(x, nps.transpose(R0_ref)) + t0_ref,
@@ -505,7 +505,7 @@ rt0_ref_copy = np.array(rt0_ref)
 x_copy = np.array(x)
 out36_copy = np.array(out36)
 out33a_copy = np.array(out33a)
-y, J_rt, J_x = mrcal.transform_point_rt(
+y, J_rt, J_x = drcal.transform_point_rt(
     rt0_ref_copy,
     x_copy,
     get_gradients=True,
@@ -533,7 +533,7 @@ rt0_ref_copy = np.array(rt0_ref)
 x_copy = np.array(x)
 out36_copy = np.array(out36)
 out33a_copy = np.array(out33a)
-y, J_rt, J_x = mrcal.transform_point_rt(
+y, J_rt, J_x = drcal.transform_point_rt(
     rt0_ref_copy, x_copy, get_gradients=True, out=(x_copy, out36_copy, out33a_copy)
 )
 confirm_equal(
@@ -556,12 +556,12 @@ confirm_equal(
 )
 
 # Inverted
-y = mrcal.transform_point_rt(rt0_ref, x, out=out3, inverted=True)
+y = drcal.transform_point_rt(rt0_ref, x, out=out3, inverted=True)
 confirm_equal(
     y, nps.matmult(x - t0_ref, R0_ref), msg="transform_point_rt(inverted) result"
 )
 
-y, J_rt, J_x = mrcal.transform_point_rt(
+y, J_rt, J_x = drcal.transform_point_rt(
     rt0_ref, x, get_gradients=True, out=(out3, out36, out33a), inverted=True
 )
 J_rt_ref = grad(lambda rt: nps.matmult(x - rt[3:], R_from_r(rt[:3])), rt0_ref)
@@ -583,7 +583,7 @@ confirm_equal(J_x, J_x_ref, msg="transform_point_rt(inverted) J_x")
 # But not into any of r or J
 rt0_ref_copy = np.array(rt0_ref)
 x_copy = np.array(x)
-y = mrcal.transform_point_rt(rt0_ref_copy, x_copy, inverted=True, out=rt0_ref_copy[3:])
+y = drcal.transform_point_rt(rt0_ref_copy, x_copy, inverted=True, out=rt0_ref_copy[3:])
 confirm_equal(
     y,
     nps.matmult(x - t0_ref, R0_ref),
@@ -591,7 +591,7 @@ confirm_equal(
 )
 rt0_ref_copy = np.array(rt0_ref)
 x_copy = np.array(x)
-y = mrcal.transform_point_rt(rt0_ref_copy, x_copy, inverted=True, out=x_copy)
+y = drcal.transform_point_rt(rt0_ref_copy, x_copy, inverted=True, out=x_copy)
 confirm_equal(
     y,
     nps.matmult(x - t0_ref, R0_ref),
@@ -602,7 +602,7 @@ rt0_ref_copy = np.array(rt0_ref)
 x_copy = np.array(x)
 out36_copy = np.array(out36)
 out33a_copy = np.array(out33a)
-y, J_rt, J_x = mrcal.transform_point_rt(
+y, J_rt, J_x = drcal.transform_point_rt(
     rt0_ref_copy,
     x_copy,
     get_gradients=True,
@@ -631,7 +631,7 @@ rt0_ref_copy = np.array(rt0_ref)
 x_copy = np.array(x)
 out36_copy = np.array(out36)
 out33a_copy = np.array(out33a)
-y, J_rt, J_x = mrcal.transform_point_rt(
+y, J_rt, J_x = drcal.transform_point_rt(
     rt0_ref_copy,
     x_copy,
     get_gradients=True,
@@ -661,17 +661,17 @@ confirm_equal(
 ################# r_from_R
 
 for what, r_ref, R_ref in (("r0_ref", r0_ref, R0_ref), ("r1_ref", r1_ref, R1_ref)):
-    r = mrcal.r_from_R(R_ref, out=out3)
+    r = drcal.r_from_R(R_ref, out=out3)
     confirm_equal(r, r_ref, msg=f"{what}: r_from_R result")
 
-    r, J_R = mrcal.r_from_R(R_ref, get_gradients=True, out=(out3, out333))
+    r, J_R = drcal.r_from_R(R_ref, get_gradients=True, out=(out3, out333))
     J_R_ref = grad__r_from_R(R_ref)
     confirm_equal(r, r_ref, msg=f"{what}: r_from_R result")
     confirm_equal(J_R, J_R_ref, msg=f"{what}: r_from_R J_R")
 
     # Do it again, actually calling opencv. This is both a test, and shows how to
     # migrate old code
-    r, J_R = mrcal.r_from_R(R_ref, get_gradients=True, out=(out3, out333))
+    r, J_R = drcal.r_from_R(R_ref, get_gradients=True, out=(out3, out333))
     rref, J_R_ref = cv2.Rodrigues(R_ref)
     confirm_equal(r, rref, msg=f"{what}: r_from_R result, comparing with cv2.Rodrigues")
 
@@ -701,7 +701,7 @@ R_fuzzed_I = np.array(
     ]
 )
 confirm_equal(
-    mrcal.r_from_R(R_fuzzed_I),
+    drcal.r_from_R(R_fuzzed_I),
     np.zeros((3,)),
     msg="r_from_R() can handle numerical fuzz",
 )
@@ -710,7 +710,7 @@ confirm_equal(
 R_false_0 = np.array(
     ((-1.0, 0.0, 0.0), (0.0, 0.0, -1.0), (0.0, -1.0, 0.0)),
 )
-r_false_0 = mrcal.r_from_R(R_false_0)
+r_false_0 = drcal.r_from_R(R_false_0)
 if r_false_0[1] > 0.0:
     r_false_0 *= -1  # this is unique up-to-sign. Accept both
 confirm_equal(
@@ -727,17 +727,17 @@ confirm_equal(
 
 ################# R_from_r
 for what, r_ref, R_ref in (("r0_ref", r0_ref, R0_ref), ("r1_ref", r1_ref, R1_ref)):
-    R = mrcal.R_from_r(r_ref, out=out33)
+    R = drcal.R_from_r(r_ref, out=out33)
     confirm_equal(R, R_ref, msg=f"{what}: R_from_r result")
 
-    R, J_r = mrcal.R_from_r(r_ref, get_gradients=True, out=(out33, out333))
+    R, J_r = drcal.R_from_r(r_ref, get_gradients=True, out=(out33, out333))
     J_r_ref = grad(R_from_r, r_ref)
     confirm_equal(R, R_ref, msg=f"{what}: R_from_r result")
     confirm_equal(J_r, J_r_ref, msg=f"{what}: R_from_r J_r")
 
     # Do it again, actually calling opencv. This is both a test, and shows how to
     # migrate old code
-    R, J_r = mrcal.R_from_r(r_ref, get_gradients=True, out=(out33, out333))
+    R, J_r = drcal.R_from_r(r_ref, get_gradients=True, out=(out33, out333))
     Rref, J_r_ref = cv2.Rodrigues(r_ref)
     J_r_ref = nps.transpose(J_r_ref)  # fix opencv's weirdness. Now shape=(9,3)
     J_r_ref = J_r_ref.reshape(3, 3, 3)
@@ -748,57 +748,57 @@ for what, r_ref, R_ref in (("r0_ref", r0_ref, R0_ref), ("r1_ref", r1_ref, R1_ref
 
 
 # the implementation has a separate path for tiny R, so I test it separately
-R = mrcal.R_from_r(r0_ref_tiny, out=out33)
+R = drcal.R_from_r(r0_ref_tiny, out=out33)
 confirm_equal(R, R0_ref_tiny, msg="R_from_r result for tiny r0")
 
-R, J_r = mrcal.R_from_r(r0_ref_tiny, get_gradients=True, out=(out33, out333))
+R, J_r = drcal.R_from_r(r0_ref_tiny, get_gradients=True, out=(out33, out333))
 J_r_ref = grad(R_from_r, r0_ref_tiny)
 confirm_equal(R, R0_ref_tiny, msg="R_from_r result for tiny r0")
 confirm_equal(J_r, J_r_ref, msg="R_from_r J_r for tiny r0")
 
 
-rt = mrcal.rt_from_Rt(Rt0_ref, out=out6)
+rt = drcal.rt_from_Rt(Rt0_ref, out=out6)
 confirm_equal(rt, rt0_ref, msg="rt_from_Rt result")
 
-rt, J_R = mrcal.rt_from_Rt(Rt0_ref, get_gradients=True, out=(out6, out333))
+rt, J_R = drcal.rt_from_Rt(Rt0_ref, get_gradients=True, out=(out6, out333))
 
 J_R_ref = grad__r_from_R(Rt0_ref[:3, :])
 confirm_equal(rt, rt0_ref, msg="rt_from_Rt result")
 confirm_equal(J_R, J_R_ref, msg="rt_from_Rt grad result")
 
-Rt = mrcal.Rt_from_rt(rt0_ref, out=out43)
+Rt = drcal.Rt_from_rt(rt0_ref, out=out43)
 confirm_equal(Rt, Rt0_ref, msg="Rt_from_rt result")
 
-Rt, J_r = mrcal.Rt_from_rt(rt0_ref, get_gradients=True, out=(out43, out333))
+Rt, J_r = drcal.Rt_from_rt(rt0_ref, get_gradients=True, out=(out43, out333))
 J_r_ref = grad(R_from_r, rt0_ref[:3])
 confirm_equal(Rt, Rt0_ref, msg="Rt_from_rt result")
 confirm_equal(J_r, J_r_ref, msg="Rt_from_rt grad result")
 
-Rt = mrcal.invert_Rt(Rt0_ref, out=out43)
+Rt = drcal.invert_Rt(Rt0_ref, out=out43)
 confirm_equal(Rt, invert_Rt(Rt0_ref), msg="invert_Rt result")
 
 # in-place
 Rt0_ref_copy = np.array(Rt0_ref)
-Rt = mrcal.invert_Rt(Rt0_ref_copy, out=Rt0_ref_copy)
+Rt = drcal.invert_Rt(Rt0_ref_copy, out=Rt0_ref_copy)
 confirm_equal(Rt, invert_Rt(Rt0_ref), msg="invert_Rt result written in-place")
 
-R = mrcal.invert_R(R0_ref, out=out33)
+R = drcal.invert_R(R0_ref, out=out33)
 confirm_equal(R, invert_R(R0_ref), msg="invert_R result")
 
 # in-place
 R0_ref_copy = np.array(R0_ref)
-R = mrcal.invert_R(R0_ref_copy, out=R0_ref_copy)
+R = drcal.invert_R(R0_ref_copy, out=R0_ref_copy)
 confirm_equal(R, invert_R(R0_ref), msg="invert_R result written in-place")
 
-rt = mrcal.invert_rt(rt0_ref, out=out6)
+rt = drcal.invert_rt(rt0_ref, out=out6)
 confirm_equal(rt, invert_rt(rt0_ref), msg="invert_rt result")
 
 # in-place
 rt0_ref_copy = np.array(rt0_ref)
-rt = mrcal.invert_rt(rt0_ref_copy, out=rt0_ref_copy)
+rt = drcal.invert_rt(rt0_ref_copy, out=rt0_ref_copy)
 confirm_equal(rt, invert_rt(rt0_ref), msg="invert_rt result written in-place")
 
-rt, drt_drt = mrcal.invert_rt(rt0_ref, get_gradients=True, out=(out6, out66))
+rt, drt_drt = drcal.invert_rt(rt0_ref, get_gradients=True, out=(out6, out66))
 drt_drt_ref = grad(invert_rt, rt0_ref)
 confirm_equal(rt, invert_rt(rt0_ref), msg="invert_rt with grad result")
 confirm_equal(drt_drt, drt_drt_ref, msg="invert_rt drt/drt result")
@@ -806,7 +806,7 @@ confirm_equal(drt_drt, drt_drt_ref, msg="invert_rt drt/drt result")
 # in-place
 rt0_ref_copy = np.array(rt0_ref)
 drt_drt_copy = np.array(drt_drt)
-rt, drt_drt = mrcal.invert_rt(
+rt, drt_drt = drcal.invert_rt(
     rt0_ref_copy, out=(rt0_ref_copy, drt_drt_copy), get_gradients=True
 )
 confirm_equal(rt, invert_rt(rt0_ref), msg="invert_rt with grad result written in-place")
@@ -816,7 +816,7 @@ confirm_equal(
 
 ############ compose_Rt()
 
-Rt2 = mrcal.compose_Rt(Rt0_ref, Rt1_ref, out=out43)
+Rt2 = drcal.compose_Rt(Rt0_ref, Rt1_ref, out=out43)
 confirm_equal(Rt2, compose_Rt(Rt0_ref, Rt1_ref), msg="compose_Rt result")
 
 # in-place
@@ -827,7 +827,7 @@ for iout, outname in (
     Rt0_ref_copy = np.array(Rt0_ref)
     Rt1_ref_copy = np.array(Rt1_ref)
     out = (Rt0_ref_copy, Rt1_ref_copy)[iout]
-    Rt2 = mrcal.compose_Rt(Rt0_ref_copy, Rt1_ref_copy, out=out)
+    Rt2 = drcal.compose_Rt(Rt0_ref_copy, Rt1_ref_copy, out=out)
     confirm_equal(
         Rt2,
         compose_Rt(Rt0_ref, Rt1_ref),
@@ -837,7 +837,7 @@ for iout, outname in (
     Rt0_ref_copy = np.array(Rt0_ref)
     Rt1_ref_copy = np.array(Rt1_ref)
     out = (Rt0_ref_copy, Rt1_ref_copy)[iout]
-    Rt2 = mrcal.compose_Rt(Rt0_ref_copy, Rt1_ref_copy, inverted0=True, out=out)
+    Rt2 = drcal.compose_Rt(Rt0_ref_copy, Rt1_ref_copy, inverted0=True, out=out)
     confirm_equal(
         Rt2,
         compose_Rt(invert_Rt(Rt0_ref), Rt1_ref),
@@ -847,7 +847,7 @@ for iout, outname in (
     Rt0_ref_copy = np.array(Rt0_ref)
     Rt1_ref_copy = np.array(Rt1_ref)
     out = (Rt0_ref_copy, Rt1_ref_copy)[iout]
-    Rt2 = mrcal.compose_Rt(Rt0_ref_copy, Rt1_ref_copy, inverted1=True, out=out)
+    Rt2 = drcal.compose_Rt(Rt0_ref_copy, Rt1_ref_copy, inverted1=True, out=out)
     confirm_equal(
         Rt2,
         compose_Rt(Rt0_ref, invert_Rt(Rt1_ref)),
@@ -857,7 +857,7 @@ for iout, outname in (
     Rt0_ref_copy = np.array(Rt0_ref)
     Rt1_ref_copy = np.array(Rt1_ref)
     out = (Rt0_ref_copy, Rt1_ref_copy)[iout]
-    Rt2 = mrcal.compose_Rt(
+    Rt2 = drcal.compose_Rt(
         Rt0_ref_copy, Rt1_ref_copy, inverted0=True, inverted1=True, out=out
     )
     confirm_equal(
@@ -869,19 +869,19 @@ for iout, outname in (
 
 ############ compose_rt()
 
-rt2 = mrcal.compose_rt(rt0_ref, rt1_ref, out=out6)
+rt2 = drcal.compose_rt(rt0_ref, rt1_ref, out=out6)
 confirm_equal(rt2, compose_rt(rt0_ref, rt1_ref), msg="compose_rt result")
 
 # in-place
 rt0_ref_copy = np.array(rt0_ref)
 rt1_ref_copy = np.array(rt1_ref)
-rt2 = mrcal.compose_rt(rt0_ref_copy, rt1_ref_copy, out=rt0_ref_copy)
+rt2 = drcal.compose_rt(rt0_ref_copy, rt1_ref_copy, out=rt0_ref_copy)
 confirm_equal(
     rt2, compose_rt(rt0_ref, rt1_ref), msg="compose_rt result written in-place to rt0"
 )
 rt0_ref_copy = np.array(rt0_ref)
 rt1_ref_copy = np.array(rt1_ref)
-rt2 = mrcal.compose_rt(rt0_ref_copy, rt1_ref_copy, out=rt1_ref_copy)
+rt2 = drcal.compose_rt(rt0_ref_copy, rt1_ref_copy, out=rt1_ref_copy)
 confirm_equal(
     rt2, compose_rt(rt0_ref, rt1_ref), msg="compose_rt result written in-place to rt1"
 )
@@ -911,7 +911,7 @@ confirm_equal(
     msg="compose_rt (calling _compose_rt() directly) written in-place to rt1",
 )
 
-rt2, drt2_drt0, drt2_drt1 = mrcal.compose_rt(
+rt2, drt2_drt0, drt2_drt1 = drcal.compose_rt(
     rt0_ref, rt1_ref, get_gradients=True, out=(out6, out66, out66a)
 )
 drt2_drt0_ref = grad(lambda rt0: compose_rt(rt0, rt1_ref), rt0_ref)
@@ -937,7 +937,7 @@ rt0_ref_copy = np.array(rt0_ref)
 rt1_ref_copy = np.array(rt1_ref)
 drt2_drt0_copy = np.array(drt2_drt0)
 drt2_drt1_copy = np.array(drt2_drt1)
-rt2, drt2_drt0, drt2_drt1 = mrcal.compose_rt(
+rt2, drt2_drt0, drt2_drt1 = drcal.compose_rt(
     rt0_ref_copy,
     rt1_ref_copy,
     get_gradients=True,
@@ -962,13 +962,13 @@ confirm_equal(
 rt0_ref_copy = np.array(rt0_ref)
 rt1_ref_copy = np.array(rt1_ref)
 confirm_equal(
-    mrcal.compose_rt(rt0_ref_copy, rt1_ref_copy, inverted0=True, out=rt0_ref_copy),
+    drcal.compose_rt(rt0_ref_copy, rt1_ref_copy, inverted0=True, out=rt0_ref_copy),
     compose_rt(invert_rt(rt0_ref), rt1_ref),
     msg="compose_rt (without gradients) result written in-place to rt0: rtneg01",
 )
 rt0_ref_copy = np.array(rt0_ref)
 rt1_ref_copy = np.array(rt1_ref)
-rtneg01, drtneg01_drt0, drtneg01_drt1 = mrcal.compose_rt(
+rtneg01, drtneg01_drt0, drtneg01_drt1 = drcal.compose_rt(
     rt0_ref_copy,
     rt1_ref_copy,
     inverted0=True,
@@ -994,13 +994,13 @@ confirm_equal(
 rt0_ref_copy = np.array(rt0_ref)
 rt1_ref_copy = np.array(rt1_ref)
 confirm_equal(
-    mrcal.compose_rt(rt0_ref_copy, rt1_ref_copy, inverted1=True, out=rt0_ref_copy),
+    drcal.compose_rt(rt0_ref_copy, rt1_ref_copy, inverted1=True, out=rt0_ref_copy),
     compose_rt(rt0_ref, invert_rt(rt1_ref)),
     msg="compose_rt (without gradients) result written in-place to rt0: rt0neg1",
 )
 rt0_ref_copy = np.array(rt0_ref)
 rt1_ref_copy = np.array(rt1_ref)
-rt0neg1, drt0neg1_drt0, drt0neg1_drt1 = mrcal.compose_rt(
+rt0neg1, drt0neg1_drt0, drt0neg1_drt1 = drcal.compose_rt(
     rt0_ref_copy,
     rt1_ref_copy,
     inverted1=True,
@@ -1026,7 +1026,7 @@ confirm_equal(
 rt0_ref_copy = np.array(rt0_ref)
 rt1_ref_copy = np.array(rt1_ref)
 confirm_equal(
-    mrcal.compose_rt(
+    drcal.compose_rt(
         rt0_ref_copy, rt1_ref_copy, inverted0=True, inverted1=True, out=rt0_ref_copy
     ),
     compose_rt(invert_rt(rt0_ref), invert_rt(rt1_ref)),
@@ -1034,7 +1034,7 @@ confirm_equal(
 )
 rt0_ref_copy = np.array(rt0_ref)
 rt1_ref_copy = np.array(rt1_ref)
-rtneg0neg1, drtneg0neg1_drt0, drtneg0neg1_drt1 = mrcal.compose_rt(
+rtneg0neg1, drtneg0neg1_drt0, drtneg0neg1_drt1 = drcal.compose_rt(
     rt0_ref_copy,
     rt1_ref_copy,
     inverted0=True,
@@ -1063,7 +1063,7 @@ rt0_ref_copy = np.array(rt0_ref)
 rt1_ref_copy = np.array(rt1_ref)
 drt2_drt0_copy = np.array(drt2_drt0)
 drt2_drt1_copy = np.array(drt2_drt1)
-rt2, drt2_drt0, drt2_drt1 = mrcal.compose_rt(
+rt2, drt2_drt0, drt2_drt1 = drcal.compose_rt(
     rt0_ref_copy,
     rt1_ref_copy,
     get_gradients=True,
@@ -1089,13 +1089,13 @@ confirm_equal(
 rt0_ref_copy = np.array(rt0_ref)
 rt1_ref_copy = np.array(rt1_ref)
 confirm_equal(
-    mrcal.compose_rt(rt0_ref_copy, rt1_ref_copy, inverted0=True, out=rt1_ref_copy),
+    drcal.compose_rt(rt0_ref_copy, rt1_ref_copy, inverted0=True, out=rt1_ref_copy),
     compose_rt(invert_rt(rt0_ref), rt1_ref),
     msg="compose_rt (without gradients) result written in-place to rt1: rtneg01",
 )
 rt0_ref_copy = np.array(rt0_ref)
 rt1_ref_copy = np.array(rt1_ref)
-rtneg01, drtneg01_drt0, drtneg01_drt1 = mrcal.compose_rt(
+rtneg01, drtneg01_drt0, drtneg01_drt1 = drcal.compose_rt(
     rt0_ref_copy,
     rt1_ref_copy,
     inverted0=True,
@@ -1121,13 +1121,13 @@ confirm_equal(
 rt0_ref_copy = np.array(rt0_ref)
 rt1_ref_copy = np.array(rt1_ref)
 confirm_equal(
-    mrcal.compose_rt(rt0_ref_copy, rt1_ref_copy, inverted1=True, out=rt1_ref_copy),
+    drcal.compose_rt(rt0_ref_copy, rt1_ref_copy, inverted1=True, out=rt1_ref_copy),
     compose_rt(rt0_ref, invert_rt(rt1_ref)),
     msg="compose_rt (without gradients) result written in-place to rt1: rt0neg1",
 )
 rt0_ref_copy = np.array(rt0_ref)
 rt1_ref_copy = np.array(rt1_ref)
-rt0neg1, drt0neg1_drt0, drt0neg1_drt1 = mrcal.compose_rt(
+rt0neg1, drt0neg1_drt0, drt0neg1_drt1 = drcal.compose_rt(
     rt0_ref_copy,
     rt1_ref_copy,
     inverted1=True,
@@ -1153,7 +1153,7 @@ confirm_equal(
 rt0_ref_copy = np.array(rt0_ref)
 rt1_ref_copy = np.array(rt1_ref)
 confirm_equal(
-    mrcal.compose_rt(
+    drcal.compose_rt(
         rt0_ref_copy, rt1_ref_copy, inverted0=True, inverted1=True, out=rt1_ref_copy
     ),
     compose_rt(invert_rt(rt0_ref), invert_rt(rt1_ref)),
@@ -1161,7 +1161,7 @@ confirm_equal(
 )
 rt0_ref_copy = np.array(rt0_ref)
 rt1_ref_copy = np.array(rt1_ref)
-rtneg0neg1, drtneg0neg1_drt0, drtneg0neg1_drt1 = mrcal.compose_rt(
+rtneg0neg1, drtneg0neg1_drt0, drtneg0neg1_drt1 = drcal.compose_rt(
     rt0_ref_copy,
     rt1_ref_copy,
     inverted0=True,
@@ -1186,14 +1186,14 @@ confirm_equal(
 )
 
 
-Rt2 = mrcal.compose_Rt(Rt0_ref, Rt1_ref, Rt0_ref, out=out43)
+Rt2 = drcal.compose_Rt(Rt0_ref, Rt1_ref, Rt0_ref, out=out43)
 confirm_equal(
     Rt2,
     compose_Rt(compose_Rt(Rt0_ref, Rt1_ref), Rt0_ref),
     msg="compose_Rt with 3 inputs",
 )
 
-rt2 = mrcal.compose_rt(rt0_ref, rt1_ref, rt0_ref, out=out6)
+rt2 = drcal.compose_rt(rt0_ref, rt1_ref, rt0_ref, out=out6)
 # Needed here. The two rotations are semantically equivalent, but numerically
 # different
 rt2 = normalize_rt(rt2)
@@ -1226,15 +1226,15 @@ r0zero[:] *= 0.0
 r1zero[:] *= 0.0
 
 confirm_equal(
-    mrcal.compose_r(r0big, r1big),
+    drcal.compose_r(r0big, r1big),
     compose_r(r0big, r1big),
     msg="compose_r basic operation",
 )
 
-mrcal.compose_r(r0big, r1big, out=r01)
+drcal.compose_r(r0big, r1big, out=r01)
 confirm_equal(r01, compose_r(r0big, r1big), msg="compose_r in-place output")
 
-r01_notinplace, dr01_dr0_notinplace, dr01_dr1_notinplace = mrcal.compose_r(
+r01_notinplace, dr01_dr0_notinplace, dr01_dr1_notinplace = drcal.compose_r(
     r0big, r1big, get_gradients=True
 )
 dr01_dr0_ref = grad(lambda r0: compose_r(r0, r1big), r0big, step=1e-5)
@@ -1251,21 +1251,21 @@ confirm_equal(dr01_dr0_notinplace, dr01_dr0_ref, msg="compose_r gradients: dr01_
 confirm_equal(dr01_dr1_notinplace, dr01_dr1_ref, msg="compose_r gradients: dr01_dr1")
 
 confirm_equal(
-    mrcal.compose_r(r0big, r1big),
+    drcal.compose_r(r0big, r1big),
     compose_r(r0big, r1big),
     msg="compose_r no-gradients: r01",
 )
-mrcal.compose_r(r0big, r1big, get_gradients=True, out=(r01, dr01_dr0, dr01_dr1))
+drcal.compose_r(r0big, r1big, get_gradients=True, out=(r01, dr01_dr0, dr01_dr1))
 confirm_equal(r01, compose_r(r0big, r1big), msg="compose_r in-place gradients: r01")
 confirm_equal(dr01_dr0, dr01_dr0_ref, msg="compose_r in-place gradients: dr01_dr0")
 confirm_equal(dr01_dr1, dr01_dr1_ref, msg="compose_r in-place gradients: dr01_dr1")
 
 confirm_equal(
-    mrcal.compose_r(r0big, r1big, inverted0=True),
+    drcal.compose_r(r0big, r1big, inverted0=True),
     compose_r(-r0big, r1big),
     msg="compose_r no-gradients: rneg01",
 )
-mrcal.compose_r(
+drcal.compose_r(
     r0big, r1big, get_gradients=True, inverted0=True, out=(r01, dr01_dr0, dr01_dr1)
 )
 (rneg01, drneg01_dr0, drneg01_dr1) = (r01, dr01_dr0, dr01_dr1)
@@ -1280,11 +1280,11 @@ confirm_equal(
 )
 
 confirm_equal(
-    mrcal.compose_r(r0big, r1big, inverted1=True),
+    drcal.compose_r(r0big, r1big, inverted1=True),
     compose_r(r0big, -r1big),
     msg="compose_r no-gradients: r0neg1",
 )
-mrcal.compose_r(
+drcal.compose_r(
     r0big, r1big, get_gradients=True, inverted1=True, out=(r01, dr01_dr0, dr01_dr1)
 )
 (r0neg1, dr0neg1_dr0, dr0neg1_dr1) = (r01, dr01_dr0, dr01_dr1)
@@ -1299,11 +1299,11 @@ confirm_equal(
 )
 
 confirm_equal(
-    mrcal.compose_r(r0big, r1big, inverted0=True, inverted1=True),
+    drcal.compose_r(r0big, r1big, inverted0=True, inverted1=True),
     compose_r(-r0big, -r1big),
     msg="compose_r no-gradients: rneg0neg1",
 )
-mrcal.compose_r(
+drcal.compose_r(
     r0big,
     r1big,
     get_gradients=True,
@@ -1327,7 +1327,7 @@ confirm_equal(
 )
 
 
-mrcal.compose_r(r0big, r1nearzero, get_gradients=True, out=(r01, dr01_dr0, dr01_dr1))
+drcal.compose_r(r0big, r1nearzero, get_gradients=True, out=(r01, dr01_dr0, dr01_dr1))
 dr01_dr0_ref = grad(lambda r0: compose_r(r0, r1nearzero), r0big, step=1e-5)
 dr01_dr1_ref = grad(lambda r1: compose_r(r0big, r1), r1nearzero, step=1e-5)
 confirm_equal(
@@ -1342,7 +1342,7 @@ confirm_equal(
     dr01_dr1, dr01_dr1_ref, msg="compose_r in-place r1nearzero gradients: dr01_dr1"
 )
 
-mrcal.compose_r(r0big, r1zero, get_gradients=True, out=(r01, dr01_dr0, dr01_dr1))
+drcal.compose_r(r0big, r1zero, get_gradients=True, out=(r01, dr01_dr0, dr01_dr1))
 dr01_dr0_ref = grad(lambda r0: compose_r(r0, r1zero), r0big, step=1e-5)
 dr01_dr1_ref = grad(lambda r1: compose_r(r0big, r1), r1zero, step=1e-5)
 confirm_equal(
@@ -1355,7 +1355,7 @@ confirm_equal(
     dr01_dr1, dr01_dr1_ref, msg="compose_r in-place r1zero gradients: dr01_dr1"
 )
 
-mrcal.compose_r(r0nearzero, r1big, get_gradients=True, out=(r01, dr01_dr0, dr01_dr1))
+drcal.compose_r(r0nearzero, r1big, get_gradients=True, out=(r01, dr01_dr0, dr01_dr1))
 dr01_dr0_ref = grad(lambda r0: compose_r(r0, r1big), r0nearzero, step=1e-5)
 dr01_dr1_ref = grad(lambda r1: compose_r(r0nearzero, r1), r1big, step=1e-5)
 confirm_equal(
@@ -1370,7 +1370,7 @@ confirm_equal(
     dr01_dr1, dr01_dr1_ref, msg="compose_r in-place r1nearzero gradients: dr01_dr1"
 )
 
-mrcal.compose_r(r0zero, r1big, get_gradients=True, out=(r01, dr01_dr0, dr01_dr1))
+drcal.compose_r(r0zero, r1big, get_gradients=True, out=(r01, dr01_dr0, dr01_dr1))
 dr01_dr0_ref = grad(lambda r0: compose_r(r0, r1big), r0zero, step=1e-5)
 dr01_dr1_ref = grad(lambda r1: compose_r(r0zero, r1), r1big, step=1e-5)
 confirm_equal(
@@ -1383,7 +1383,7 @@ confirm_equal(
     dr01_dr1, dr01_dr1_ref, msg="compose_r in-place r1zero gradients: dr01_dr1"
 )
 
-mrcal.compose_r(
+drcal.compose_r(
     r0nearzero, r1nearzero, get_gradients=True, out=(r01, dr01_dr0, dr01_dr1)
 )
 dr01_dr0_ref = grad(lambda r0: compose_r(r0, r1nearzero), r0nearzero, step=1e-5)
@@ -1404,7 +1404,7 @@ confirm_equal(
     msg="compose_r in-place r0nearzero,r1nearzero gradients: dr01_dr1",
 )
 
-mrcal.compose_r(r0nearzero, r1zero, get_gradients=True, out=(r01, dr01_dr0, dr01_dr1))
+drcal.compose_r(r0nearzero, r1zero, get_gradients=True, out=(r01, dr01_dr0, dr01_dr1))
 dr01_dr0_ref = grad(lambda r0: compose_r(r0, r1zero), r0nearzero, step=1e-5)
 dr01_dr1_ref = grad(lambda r1: compose_r(r0nearzero, r1), r1zero, step=1e-5)
 confirm_equal(
@@ -1423,7 +1423,7 @@ confirm_equal(
     msg="compose_r in-place r0nearzero,r1zero gradients: dr01_dr1",
 )
 
-mrcal.compose_r(r0zero, r1nearzero, get_gradients=True, out=(r01, dr01_dr0, dr01_dr1))
+drcal.compose_r(r0zero, r1nearzero, get_gradients=True, out=(r01, dr01_dr0, dr01_dr1))
 dr01_dr0_ref = grad(lambda r0: compose_r(r0, r1nearzero), r0zero, step=1e-5)
 dr01_dr1_ref = grad(lambda r1: compose_r(r0zero, r1), r1nearzero, step=1e-5)
 confirm_equal(
@@ -1442,7 +1442,7 @@ confirm_equal(
     msg="compose_r in-place r0zero,r1nearzero gradients: dr01_dr1",
 )
 
-mrcal.compose_r(r0zero, r1zero, get_gradients=True, out=(r01, dr01_dr0, dr01_dr1))
+drcal.compose_r(r0zero, r1zero, get_gradients=True, out=(r01, dr01_dr0, dr01_dr1))
 dr01_dr0_ref = grad(lambda r0: compose_r(r0, r1zero), r0zero, step=1e-5)
 dr01_dr1_ref = grad(lambda r1: compose_r(r0zero, r1), r1zero, step=1e-5)
 confirm_equal(
@@ -1458,7 +1458,7 @@ confirm_equal(
 )
 
 # Finally, let's look at rotation composition when the result is 0
-mrcal.compose_r(r0big, -r0big, get_gradients=True, out=(r01, dr01_dr0, dr01_dr1))
+drcal.compose_r(r0big, -r0big, get_gradients=True, out=(r01, dr01_dr0, dr01_dr1))
 dr01_dr0_ref = grad(lambda r0: compose_r(r0, -r0big), r0big, step=1e-5)
 dr01_dr1_ref = grad(lambda r1: compose_r(r0big, r1), -r0big, step=1e-5)
 confirm_equal(
@@ -1481,7 +1481,7 @@ confirm_equal(
     msg="compose_r in-place r0big,-r0big gradients: dr01_dr1",
 )
 
-mrcal.compose_r(
+drcal.compose_r(
     r0nearzero, -r0nearzero, get_gradients=True, out=(r01, dr01_dr0, dr01_dr1)
 )
 dr01_dr0_ref = grad(lambda r0: compose_r(r0, -r0nearzero), r0nearzero, step=1e-5)
@@ -1502,7 +1502,7 @@ confirm_equal(
     msg="compose_r in-place r0nearzero,-r0nearzero gradients: dr01_dr1",
 )
 
-mrcal.compose_r(r0zero, -r0zero, get_gradients=True, out=(r01, dr01_dr0, dr01_dr1))
+drcal.compose_r(r0zero, -r0zero, get_gradients=True, out=(r01, dr01_dr0, dr01_dr1))
 dr01_dr0_ref = grad(lambda r0: compose_r(r0, -r0zero), r0zero, step=1e-5)
 dr01_dr1_ref = grad(lambda r1: compose_r(r0zero, r1), -r0zero, step=1e-5)
 confirm_equal(
@@ -1532,7 +1532,7 @@ r0zero[:] *= 0.0
 r1zero[:] *= 0.0
 
 
-mrcal.compose_r_tinyr0_gradientr0(r1big, out=dr01_dr0)
+drcal.compose_r_tinyr0_gradientr0(r1big, out=dr01_dr0)
 dr01_dr0_ref = grad(lambda r0: compose_r(r0, r1big), r0zero, step=1e-5)
 confirm_equal(
     dr01_dr0,
@@ -1543,7 +1543,7 @@ confirm_equal(
     msg="compose_r_tinyr0_gradientr0 in-place r1big gradients: dr01_dr0",
 )
 
-mrcal.compose_r_tinyr0_gradientr0(r1nearzero, out=dr01_dr0)
+drcal.compose_r_tinyr0_gradientr0(r1nearzero, out=dr01_dr0)
 dr01_dr0_ref = grad(lambda r0: compose_r(r0, r1nearzero), r0zero, step=1e-5)
 confirm_equal(
     dr01_dr0,
@@ -1554,7 +1554,7 @@ confirm_equal(
     msg="compose_r_tinyr0_gradientr0 in-place r1nearzero gradients: dr01_dr0",
 )
 
-mrcal.compose_r_tinyr0_gradientr0(r1zero, out=dr01_dr0)
+drcal.compose_r_tinyr0_gradientr0(r1zero, out=dr01_dr0)
 dr01_dr0_ref = grad(lambda r0: compose_r(r0, r1zero), r0zero, step=1e-5)
 confirm_equal(
     dr01_dr0,
@@ -1565,7 +1565,7 @@ confirm_equal(
     msg="compose_r_tinyr0_gradientr0 in-place r1zero gradients: dr01_dr0",
 )
 
-mrcal.compose_r_tinyr0_gradientr0(-r0zero, out=dr01_dr0)
+drcal.compose_r_tinyr0_gradientr0(-r0zero, out=dr01_dr0)
 dr01_dr0_ref = grad(lambda r0: compose_r(r0, -r0zero), r0zero, step=1e-5)
 confirm_equal(
     dr01_dr0,
@@ -1583,7 +1583,7 @@ r0big = r1big
 r0nearzero = r1nearzero
 
 
-mrcal.compose_r_tinyr1_gradientr1(r0big, out=dr01_dr1)
+drcal.compose_r_tinyr1_gradientr1(r0big, out=dr01_dr1)
 dr01_dr1_ref = grad(lambda r1: compose_r(r0big, r1), r1zero, step=1e-5)
 confirm_equal(
     dr01_dr1,
@@ -1594,7 +1594,7 @@ confirm_equal(
     msg="compose_r_tinyr1_gradientr1 in-place r0big gradients: dr01_dr1",
 )
 
-mrcal.compose_r_tinyr1_gradientr1(r0nearzero, out=dr01_dr1)
+drcal.compose_r_tinyr1_gradientr1(r0nearzero, out=dr01_dr1)
 dr01_dr1_ref = grad(lambda r1: compose_r(r0nearzero, r1), r1zero, step=1e-5)
 confirm_equal(
     dr01_dr1,
@@ -1605,7 +1605,7 @@ confirm_equal(
     msg="compose_r_tinyr1_gradientr1 in-place r0nearzero gradients: dr01_dr1",
 )
 
-mrcal.compose_r_tinyr1_gradientr1(r1zero, out=dr01_dr1)
+drcal.compose_r_tinyr1_gradientr1(r1zero, out=dr01_dr1)
 dr01_dr1_ref = grad(lambda r1: compose_r(r1zero, r1), r1zero, step=1e-5)
 confirm_equal(
     dr01_dr1,
@@ -1616,7 +1616,7 @@ confirm_equal(
     msg="compose_r_tinyr1_gradientr1 in-place r1zero gradients: dr01_dr1",
 )
 
-mrcal.compose_r_tinyr1_gradientr1(-r0zero, out=dr01_dr1)
+drcal.compose_r_tinyr1_gradientr1(-r0zero, out=dr01_dr1)
 dr01_dr1_ref = grad(lambda r1: compose_r(-r0zero, r1), r1zero, step=1e-5)
 confirm_equal(
     dr01_dr1,
@@ -1642,7 +1642,7 @@ rt0zero[:] *= 0.0
 rt1zero[:] *= 0.0
 
 
-mrcal.compose_rt_tinyrt0_gradientrt0(rt1big, out=drt01_drt0)
+drcal.compose_rt_tinyrt0_gradientrt0(rt1big, out=drt01_drt0)
 drt01_drt0_ref = grad(lambda rt0: compose_rt(rt0, rt1big), rt0zero, step=1e-5)
 confirm_equal(
     drt01_drt0,
@@ -1650,7 +1650,7 @@ confirm_equal(
     msg="compose_rt_tinyrt0_gradientrt0 in-place rt1big gradients: drt01_drt0",
 )
 
-mrcal.compose_rt_tinyrt0_gradientrt0(rt1nearzero, out=drt01_drt0)
+drcal.compose_rt_tinyrt0_gradientrt0(rt1nearzero, out=drt01_drt0)
 drt01_drt0_ref = grad(lambda rt0: compose_rt(rt0, rt1nearzero), rt0zero, step=1e-5)
 confirm_equal(
     drt01_drt0,
@@ -1658,7 +1658,7 @@ confirm_equal(
     msg="compose_rt_tinyrt0_gradientrt0 in-place rt1nearzero gradients: drt01_drt0",
 )
 
-mrcal.compose_rt_tinyrt0_gradientrt0(rt1zero, out=drt01_drt0)
+drcal.compose_rt_tinyrt0_gradientrt0(rt1zero, out=drt01_drt0)
 drt01_drt0_ref = grad(lambda rt0: compose_rt(rt0, rt1zero), rt0zero, step=1e-5)
 confirm_equal(
     drt01_drt0,
@@ -1666,7 +1666,7 @@ confirm_equal(
     msg="compose_rt_tinyrt0_gradientrt0 in-place rt1zero gradients: drt01_drt0",
 )
 
-mrcal.compose_rt_tinyrt0_gradientrt0(-rt0zero, out=drt01_drt0)
+drcal.compose_rt_tinyrt0_gradientrt0(-rt0zero, out=drt01_drt0)
 drt01_drt0_ref = grad(lambda rt0: compose_rt(rt0, -rt0zero), rt0zero, step=1e-5)
 confirm_equal(
     drt01_drt0,
@@ -1682,7 +1682,7 @@ drt01_drt1 = base[:6, :6, 0, 0]
 rt0big = rt1big
 rt0nearzero = rt1nearzero
 
-mrcal.compose_rt_tinyrt1_gradientrt1(rt0big, out=drt01_drt1)
+drcal.compose_rt_tinyrt1_gradientrt1(rt0big, out=drt01_drt1)
 drt01_drt1_ref = grad(lambda rt1: compose_rt(rt0big, rt1), rt1zero, step=1e-5)
 confirm_equal(
     drt01_drt1,
@@ -1690,7 +1690,7 @@ confirm_equal(
     msg="compose_rt_tinyrt1_gradientrt1 in-place rt0big gradients: drt01_drt1",
 )
 
-mrcal.compose_rt_tinyrt1_gradientrt1(rt0nearzero, out=drt01_drt1)
+drcal.compose_rt_tinyrt1_gradientrt1(rt0nearzero, out=drt01_drt1)
 drt01_drt1_ref = grad(lambda rt1: compose_rt(rt0nearzero, rt1), rt1zero, step=1e-5)
 confirm_equal(
     drt01_drt1,
@@ -1698,7 +1698,7 @@ confirm_equal(
     msg="compose_rt_tinyrt1_gradientrt1 in-place rt0nearzero gradients: drt01_drt1",
 )
 
-mrcal.compose_rt_tinyrt1_gradientrt1(rt0zero, out=drt01_drt1)
+drcal.compose_rt_tinyrt1_gradientrt1(rt0zero, out=drt01_drt1)
 drt01_drt1_ref = grad(lambda rt1: compose_rt(rt0zero, rt1), rt1zero, step=1e-5)
 confirm_equal(
     drt01_drt1,
@@ -1706,7 +1706,7 @@ confirm_equal(
     msg="compose_rt_tinyrt1_gradientrt1 in-place rt0zero gradients: drt01_drt1",
 )
 
-mrcal.compose_rt_tinyrt1_gradientrt1(-rt1zero, out=drt01_drt1)
+drcal.compose_rt_tinyrt1_gradientrt1(-rt1zero, out=drt01_drt1)
 drt01_drt1_ref = grad(lambda rt1: compose_rt(-rt1zero, rt1), rt1zero, step=1e-5)
 confirm_equal(
     drt01_drt1,

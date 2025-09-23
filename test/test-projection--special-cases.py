@@ -24,9 +24,9 @@ import os
 
 testdir = os.path.dirname(os.path.realpath(__file__))
 
-# I import the LOCAL mrcal since that's what I'm testing
+# I import the LOCAL drcal since that's what I'm testing
 sys.path[:0] = (f"{testdir}/..",)
-import mrcal
+import drcal
 import testutils
 from test_calibration_helpers import grad
 
@@ -55,8 +55,8 @@ if sys.argv[1] == "pinhole" or sys.argv[1] == "latlon" or sys.argv[1] == "lonlat
 
     if sys.argv[1] == "pinhole":
         lensmodel = "LENSMODEL_PINHOLE"
-        func_project = mrcal.project_pinhole
-        func_unproject = mrcal.unproject_pinhole
+        func_project = drcal.project_pinhole
+        func_unproject = drcal.unproject_pinhole
         name = "pinhole"
 
         q_projected_ref = np.array(
@@ -65,8 +65,8 @@ if sys.argv[1] == "pinhole" or sys.argv[1] == "latlon" or sys.argv[1] == "lonlat
 
     elif sys.argv[1] == "lonlat":
         lensmodel = "LENSMODEL_LONLAT"
-        func_project = mrcal.project_lonlat
-        func_unproject = mrcal.unproject_lonlat
+        func_project = drcal.project_lonlat
+        func_unproject = drcal.unproject_lonlat
         name = "lonlat"
 
         q_projected_ref = np.array(
@@ -79,8 +79,8 @@ if sys.argv[1] == "pinhole" or sys.argv[1] == "latlon" or sys.argv[1] == "lonlat
 
     elif sys.argv[1] == "latlon":
         lensmodel = "LENSMODEL_LATLON"
-        func_project = mrcal.project_latlon
-        func_unproject = mrcal.unproject_latlon
+        func_project = drcal.project_latlon
+        func_unproject = drcal.unproject_latlon
         name = "latlon"
 
         q_projected_ref = np.array(
@@ -93,8 +93,8 @@ if sys.argv[1] == "pinhole" or sys.argv[1] == "latlon" or sys.argv[1] == "lonlat
 
 elif sys.argv[1] == "stereographic":
     lensmodel = "LENSMODEL_STEREOGRAPHIC"
-    func_project = mrcal.project_stereographic
-    func_unproject = mrcal.unproject_stereographic
+    func_project = drcal.project_stereographic
+    func_unproject = drcal.unproject_stereographic
     name = "stereographic"
 
     fx, fy, cx, cy = 1512.0, 1112, 500.0, 333.0
@@ -126,7 +126,7 @@ testutils.confirm_equal(
 )
 
 testutils.confirm_equal(
-    mrcal.project(p, *intrinsics),
+    drcal.project(p, *intrinsics),
     q_projected,
     msg=f"project({name}) returns the same as project_{name}()",
     worstcase=True,
@@ -162,7 +162,7 @@ else:
     # Not normalized by default. Make sure that if I ask for it to be
     # normalized, that it is
     testutils.confirm_equal(
-        nps.mag(mrcal.unproject(q_projected, *intrinsics, normalize=True)),
+        nps.mag(drcal.unproject(q_projected, *intrinsics, normalize=True)),
         1.0,
         msg=f"unproject({name},normalize = True) returns normalized vectors",
         worstcase=True,
@@ -170,7 +170,7 @@ else:
     )
     testutils.confirm_equal(
         nps.mag(
-            mrcal.unproject(
+            drcal.unproject(
                 q_projected, *intrinsics, normalize=True, get_gradients=True
             )[0]
         ),
@@ -182,7 +182,7 @@ else:
 
 
 testutils.confirm_equal(
-    mrcal.unproject(q_projected, *intrinsics),
+    drcal.unproject(q_projected, *intrinsics),
     v_unprojected,
     msg=f"unproject({name}) returns the same as unproject_{name}()",
     worstcase=True,
@@ -190,7 +190,7 @@ testutils.confirm_equal(
 )
 
 testutils.confirm_equal(
-    mrcal.project(mrcal.unproject(q_projected, *intrinsics), *intrinsics),
+    drcal.project(drcal.unproject(q_projected, *intrinsics), *intrinsics),
     q_projected,
     msg="project(unproject()) is an identity",
     worstcase=True,
@@ -218,12 +218,12 @@ testutils.confirm_equal(
     relative=True,
     eps=1e-5,
 )
-_, dq_dp_reported, dq_di_reported = mrcal.project(
+_, dq_dp_reported, dq_di_reported = drcal.project(
     p[ipt], *intrinsics, get_gradients=True
 )
-dq_dp_observed = grad(lambda p: mrcal.project(p, *intrinsics), p[ipt])
+dq_dp_observed = grad(lambda p: drcal.project(p, *intrinsics), p[ipt])
 dq_di_observed = grad(
-    lambda intrinsics_data: mrcal.project(p[ipt], intrinsics[0], intrinsics_data),
+    lambda intrinsics_data: drcal.project(p[ipt], intrinsics[0], intrinsics_data),
     intrinsics[1],
 )
 testutils.confirm_equal(
@@ -258,14 +258,14 @@ testutils.confirm_equal(
 
 
 for normalize in (False, True):
-    v_unprojected, dv_dq_reported, dv_di_reported = mrcal.unproject(
+    v_unprojected, dv_dq_reported, dv_di_reported = drcal.unproject(
         q_projected[ipt], *intrinsics, get_gradients=True, normalize=normalize
     )
     dv_dq_observed = grad(
-        lambda q: mrcal.unproject(q, *intrinsics, normalize=normalize), q_projected[ipt]
+        lambda q: drcal.unproject(q, *intrinsics, normalize=normalize), q_projected[ipt]
     )
     dv_di_observed = grad(
-        lambda intrinsics_data: mrcal.unproject(
+        lambda intrinsics_data: drcal.unproject(
             q_projected[ipt], intrinsics[0], intrinsics_data, normalize=normalize
         ),
         intrinsics[1],
@@ -291,7 +291,7 @@ for normalize in (False, True):
     dv_dq_reported_inplace = dv_dq_reported.copy() * 0
     dv_di_reported_inplace = dv_di_reported.copy() * 0
 
-    mrcal.unproject(
+    drcal.unproject(
         q_projected[ipt],
         *intrinsics,
         get_gradients=True,

@@ -1966,7 +1966,7 @@ Putting all this together I get the expressions for the factors above:
   Cook's others     :        x*t (B - B*B) x*
 
 These expressions are all tested and verified in
-mrcal/analyses/outlierness-test.py
+drcal/analyses/outlierness-test.py
 
 
 There're several slightly-different definitions of Cook's D and of a
@@ -2513,7 +2513,7 @@ double dogleg_getOutliernessTrace_newFeature_sparse(
       assume that x* are all independent and identical, so Var(x*) =
       observation_variance*I, and E(x*t C x) = trace(C) observation_variance. I
       thus let the caller deal with the observation variance, and I just return
-      trace(C). The test at mrcal/analyses/outlierness-test.py suggests that
+      trace(C). The test at drcal/analyses/outlierness-test.py suggests that
       "Dima's self+others" is the metric we want to use, so C = B = inv(J*
       inv(JtJ) J*t + I)
 

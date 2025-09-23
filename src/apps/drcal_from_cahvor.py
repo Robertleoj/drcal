@@ -2,13 +2,13 @@ r"""Converts a .cahvor-formatted camera model to the .cameramodel file format
 
 SYNOPSIS
 
-  $ mrcal-from-cahvor model1.cahvor model2.cahvor
+  $ drcal-from-cahvor model1.cahvor model2.cahvor
   Wrote model1.cameramodel
   Wrote model2.cameramodel
 
 This tool converts the given model(s) to the cameramodel file format. No changes
 to the content are made; this is purely a format converter (the
-mrcal-convert-lensmodel tool fits different lens models instead). Model
+drcal-convert-lensmodel tool fits different lens models instead). Model
 filenames are given on the commandline. Output is written to the same directory,
 with the same filename, but with a .cameramodel extension.
 

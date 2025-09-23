@@ -3,7 +3,7 @@ import sys
 import numpy as np
 import numpysane as nps
 import os
-import mrcal
+import drcal
 import testutils
 from test_calibration_helpers import grad
 
@@ -17,11 +17,11 @@ np.random.seed(0)
 ############### World layout
 
 # camera0 is the "reference"
-model0 = mrcal.cameramodel(
+model0 = drcal.cameramodel(
     intrinsics=("LENSMODEL_PINHOLE", np.array((1000.0, 1000.0, 500.0, 500.0))),
     imagersize=np.array((1000, 1000)),
 )
-model1 = mrcal.cameramodel(
+model1 = drcal.cameramodel(
     intrinsics=("LENSMODEL_PINHOLE", np.array((1100.0, 1100.0, 500.0, 500.0))),
     imagersize=np.array((1000, 1000)),
 )
@@ -69,12 +69,12 @@ def callback_linf_angle(p, v0, v1, t01):
 
 @nps.broadcast_define(((3,), (3,), (3,), (4, 3)), ())
 def callback_l2_reprojection(p, v0local, v1local, Rt01):
-    dq0 = mrcal.project(p, *model0.intrinsics()) - mrcal.project(
+    dq0 = drcal.project(p, *model0.intrinsics()) - drcal.project(
         v0local, *model0.intrinsics()
     )
-    dq1 = mrcal.project(
-        mrcal.transform_point_Rt(mrcal.invert_Rt(Rt01), p), *model1.intrinsics()
-    ) - mrcal.project(v1local, *model1.intrinsics())
+    dq1 = drcal.project(
+        drcal.transform_point_Rt(drcal.invert_Rt(Rt01), p), *model1.intrinsics()
+    ) - drcal.project(v1local, *model1.intrinsics())
     return nps.norm2(dq0) + nps.norm2(dq1)
 
 
@@ -100,31 +100,31 @@ def test_geometry(Rt01, p, whatgeometry, out_of_bounds=False, check_gradients=Fa
         q1_noisy,
     ) = [
         v[..., 0, :]
-        for v in mrcal.synthetic_data._noisy_observation_vectors_for_triangulation(
+        for v in drcal.synthetic_data._noisy_observation_vectors_for_triangulation(
             p, Rt01, model0.intrinsics(), model1.intrinsics(), 1, sigma=0.1
         )
     ]
 
     scenarios = (
-        (mrcal.triangulate_geometric, callback_l2_geometric, v0_noisy, v1_noisy, t01),
-        (mrcal.triangulate_leecivera_l1, callback_l1_angle, v0_noisy, v1_noisy, t01),
+        (drcal.triangulate_geometric, callback_l2_geometric, v0_noisy, v1_noisy, t01),
+        (drcal.triangulate_leecivera_l1, callback_l1_angle, v0_noisy, v1_noisy, t01),
         (
-            mrcal.triangulate_leecivera_linf,
+            drcal.triangulate_leecivera_linf,
             callback_linf_angle,
             v0_noisy,
             v1_noisy,
             t01,
         ),
-        (mrcal.triangulate_leecivera_mid2, None, v0_noisy, v1_noisy, t01),
-        (mrcal.triangulate_leecivera_wmid2, None, v0_noisy, v1_noisy, t01),
+        (drcal.triangulate_leecivera_mid2, None, v0_noisy, v1_noisy, t01),
+        (drcal.triangulate_leecivera_wmid2, None, v0_noisy, v1_noisy, t01),
         (
-            mrcal.triangulate_lindstrom,
+            drcal.triangulate_lindstrom,
             callback_l2_reprojection,
             v0local_noisy,
             v1local_noisy,
             Rt01,
         ),
-        (mrcal.triangulated_error, None, v0_noisy, v1_noisy, t01),
+        (drcal.triangulated_error, None, v0_noisy, v1_noisy, t01),
     )
 
     for scenario in scenarios:
@@ -155,13 +155,13 @@ def test_geometry(Rt01, p, whatgeometry, out_of_bounds=False, check_gradients=Fa
                             eps=2e-2,
                         )
 
-        if f is mrcal.triangulated_error:
+        if f is drcal.triangulated_error:
             # triangulated_error() gets lots of special treatment since it's a
             # scalar, and works just fine with divergent rays and doesn't report
             # the derr/dv0 gradient
             if not out_of_bounds:
                 err_reported = p_reported
-                p_mid2 = mrcal.triangulate_leecivera_mid2(*args)
+                p_mid2 = drcal.triangulate_leecivera_mid2(*args)
 
                 def angle_error__assume_small(v0, v1):
                     costh = nps.inner(v0, v1) / np.sqrt(nps.norm2(v0) * nps.norm2(v1))
@@ -236,9 +236,9 @@ def test_geometry(Rt01, p, whatgeometry, out_of_bounds=False, check_gradients=Fa
                 )
             else:
                 # No callback defined. Compare projected q
-                q0 = mrcal.project(p_reported, *model0.intrinsics())
-                q1 = mrcal.project(
-                    mrcal.transform_point_Rt(mrcal.invert_Rt(Rt01), p_reported),
+                q0 = drcal.project(p_reported, *model0.intrinsics())
+                q1 = drcal.project(
+                    drcal.transform_point_Rt(drcal.invert_Rt(Rt01), p_reported),
                     *model1.intrinsics(),
                 )
 
@@ -262,7 +262,7 @@ def test_geometry(Rt01, p, whatgeometry, out_of_bounds=False, check_gradients=Fa
 
 # square camera layout
 t01 = np.array((1.0, 0.1, -0.2))
-R01 = mrcal.R_from_r(np.array((0.001, -0.002, -0.003)))
+R01 = drcal.R_from_r(np.array((0.001, -0.002, -0.003)))
 Rt01 = nps.glue(R01, t01, axis=-2)
 
 p = np.array(
@@ -290,7 +290,7 @@ test_geometry(Rt01, p, "square-camera-geometry", check_gradients=True)
 
 # cameras facing at each other
 t01 = np.array((0, 0, 100.0))
-R01 = mrcal.R_from_r(np.array((0.001, np.pi + 0.002, -0.003)))
+R01 = drcal.R_from_r(np.array((0.001, np.pi + 0.002, -0.003)))
 Rt01 = nps.glue(R01, t01, axis=-2)
 
 p = np.array(
@@ -314,7 +314,7 @@ test_geometry(Rt01, p, "cameras-facing-each-other out-of-bounds", out_of_bounds=
 
 # cameras at 90 deg to each other
 t01 = np.array((100.0, 0, 100.0))
-R01 = mrcal.R_from_r(np.array((0.001, -np.pi / 2.0 + 0.002, -0.003)))
+R01 = drcal.R_from_r(np.array((0.001, -np.pi / 2.0 + 0.002, -0.003)))
 Rt01 = nps.glue(R01, t01, axis=-2)
 
 p = np.array(

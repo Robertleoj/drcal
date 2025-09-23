@@ -336,7 +336,7 @@ static inline double inner3(
 }
 
 // Make an identity rotation or transformation
-void mrcal_identity_R_full(
+void drcal_identity_R_full(
     double* R,      // (3,3) array
     int R_stride0,  // in bytes. <= 0 means "contiguous"
     int R_stride1   // in bytes. <= 0 means "contiguous"
@@ -352,7 +352,7 @@ void mrcal_identity_R_full(
     P2(R, 2, 1) = 0.0;
     P2(R, 2, 2) = 1.0;
 }
-void mrcal_identity_r_full(
+void drcal_identity_r_full(
     double* r,     // (3,) array
     int r_stride0  // in bytes. <= 0 means "contiguous"
 ) {
@@ -361,29 +361,29 @@ void mrcal_identity_r_full(
     P1(r, 1) = 0.0;
     P1(r, 2) = 0.0;
 }
-void mrcal_identity_Rt_full(
+void drcal_identity_Rt_full(
     double* Rt,      // (4,3) array
     int Rt_stride0,  // in bytes. <= 0 means "contiguous"
     int Rt_stride1   // in bytes. <= 0 means "contiguous"
 ) {
     init_stride_2D(Rt, 4, 3);
-    mrcal_identity_R_full(Rt, Rt_stride0, Rt_stride1);
+    drcal_identity_R_full(Rt, Rt_stride0, Rt_stride1);
     for (int i = 0; i < 3; i++) {
         P2(Rt, 3, i) = 0.0;
     }
 }
-void mrcal_identity_rt_full(
+void drcal_identity_rt_full(
     double* rt,     // (6,) array
     int rt_stride0  // in bytes. <= 0 means "contiguous"
 ) {
     init_stride_1D(rt, 6);
-    mrcal_identity_r_full(rt, rt_stride0);
+    drcal_identity_r_full(rt, rt_stride0);
     for (int i = 0; i < 3; i++) {
         P1(rt, i + 3) = 0.0;
     }
 }
 
-void mrcal_rotate_point_R_full(
+void drcal_rotate_point_R_full(
     // output
     double* x_out,      // (3,) array
     int x_out_stride0,  // in bytes. <= 0 means "contiguous"
@@ -465,11 +465,11 @@ void mrcal_rotate_point_R_full(
     );
 }
 
-// mrcal_rotate_point_r() uses auto-differentiation, so it's implemented in C++
+// drcal_rotate_point_r() uses auto-differentiation, so it's implemented in C++
 // in poseutils-uses-autodiff.cc
 
 // Apply a transformation to a point
-void mrcal_transform_point_Rt_full(
+void drcal_transform_point_Rt_full(
     // output
     double* x_out,      // (3,) array
     int x_out_stride0,  // in bytes. <= 0 means "contiguous"
@@ -505,7 +505,7 @@ void mrcal_transform_point_Rt_full(
 
         // I want R*x + t
         // First R*x
-        mrcal_rotate_point_R_full(
+        drcal_rotate_point_R_full(
             x_out,
             x_out_stride0,
             J_Rt,
@@ -528,7 +528,7 @@ void mrcal_transform_point_Rt_full(
             P1(x_out, i) += t[i];
         }
         if (J_Rt) {
-            mrcal_identity_R_full(
+            drcal_identity_R_full(
                 &P3(J_Rt, 0, 3, 0),
                 J_Rt_stride0,
                 J_Rt_stride2
@@ -548,7 +548,7 @@ void mrcal_transform_point_Rt_full(
         //   x_out is done
         //   J_R is done
         //   J_x is done
-        mrcal_rotate_point_R_full(
+        drcal_rotate_point_R_full(
             x_out,
             x_out_stride0,
             J_Rt,
@@ -583,7 +583,7 @@ void mrcal_transform_point_Rt_full(
 //
 // The result is returned in a (3,3) array R_out. In-place operation is
 // supported
-void mrcal_invert_R_full(
+void drcal_invert_R_full(
     // output
     double* R_out,      // (3,3) array
     int R_out_stride0,  // in bytes. <= 0 means "contiguous"
@@ -611,8 +611,8 @@ void mrcal_invert_R_full(
 }
 
 // Convert a transformation representation from Rt to rt. This is mostly a
-// convenience functions since 99% of the work is done by mrcal_r_from_R().
-void mrcal_rt_from_Rt_full(
+// convenience functions since 99% of the work is done by drcal_r_from_R().
+void drcal_rt_from_Rt_full(
     // output
     double* rt,      // (6,) vector
     int rt_stride0,  // in bytes. <= 0 means "contiguous"
@@ -627,7 +627,7 @@ void mrcal_rt_from_Rt_full(
     int Rt_stride0,    // in bytes. <= 0 means "contiguous"
     int Rt_stride1     // in bytes. <= 0 means "contiguous"
 ) {
-    mrcal_r_from_R_full(
+    drcal_r_from_R_full(
         rt,
         rt_stride0,
         J_R,
@@ -649,8 +649,8 @@ void mrcal_rt_from_Rt_full(
 }
 
 // Convert a transformation representation from Rt to rt. This is mostly a
-// convenience functions since 99% of the work is done by mrcal_R_from_r().
-void mrcal_Rt_from_rt_full(
+// convenience functions since 99% of the work is done by drcal_R_from_r().
+void drcal_Rt_from_rt_full(
     // output
     double* Rt,      // (4,3) array
     int Rt_stride0,  // in bytes. <= 0 means "contiguous"
@@ -665,7 +665,7 @@ void mrcal_Rt_from_rt_full(
     const double* rt,  // (6,) vector
     int rt_stride0     // in bytes. <= 0 means "contiguous"
 ) {
-    mrcal_R_from_r_full(
+    drcal_R_from_r_full(
         Rt,
         Rt_stride0,
         Rt_stride1,
@@ -689,7 +689,7 @@ void mrcal_Rt_from_rt_full(
 // Invert an Rt transformation
 //
 // b = Ra + t  -> a = R'b - R't
-void mrcal_invert_Rt_full(
+void drcal_invert_Rt_full(
     // output
     double* Rt_out,      // (4,3) array
     int Rt_out_stride0,  // in bytes. <= 0 means "contiguous"
@@ -734,7 +734,7 @@ void mrcal_invert_Rt_full(
 //
 // drout_drin is not returned: it is always -I
 // drout_dtin is not returned: it is always 0
-void mrcal_invert_rt_full(
+void drcal_invert_rt_full(
     // output
     double* rt_out,          // (6,) array
     int rt_out_stride0,      // in bytes. <= 0 means "contiguous"
@@ -760,7 +760,7 @@ void mrcal_invert_rt_full(
         P1(rt_out, i) = -P1(rt_in, i);
     }
 
-    mrcal_rotate_point_r_full(
+    drcal_rotate_point_r_full(
         &P1(rt_out, 3),
         rt_out_stride0,
         dtout_drin,
@@ -793,7 +793,7 @@ void mrcal_invert_rt_full(
 // Compose two Rt transformations
 //   R0*(R1*x + t1) + t0 =
 //   (R0*R1)*x + R0*t1+t0
-void mrcal_compose_Rt_full(
+void drcal_compose_Rt_full(
     // output
     double* Rt_out,      // (4,3) array
     int Rt_out_stride0,  // in bytes. <= 0 means "contiguous"
@@ -992,7 +992,7 @@ void mrcal_compose_Rt_full(
 //
 // dr_dt0 is not returned: it is always 0
 // dr_dt1 is not returned: it is always 0
-void mrcal_compose_rt_full(
+void drcal_compose_rt_full(
     // output
     double* rt_out,      // (6,) array
     int rt_out_stride0,  // in bytes. <= 0 means "contiguous"
@@ -1061,7 +1061,7 @@ void mrcal_compose_rt_full(
          t01 = -r0t r1t t1 - r0t t0
 
       All the r stuff (inversions, gradients) is handled by
-      mrcal_compose_r_full(). For the t I have custom logic in this function
+      drcal_compose_r_full(). For the t I have custom logic in this function
     */
 
     // to make in-place operation work
@@ -1075,7 +1075,7 @@ void mrcal_compose_rt_full(
     }
 
     // Compute r01
-    mrcal_compose_r_full(
+    drcal_compose_r_full(
         rt_out,
         rt_out_stride0,
         dr_r0,
@@ -1095,7 +1095,7 @@ void mrcal_compose_rt_full(
 
     if (!inverted0 && !inverted1) {
         // t01 <- r0 t1 + t0
-        mrcal_rotate_point_r_full(
+        drcal_rotate_point_r_full(
             &P1(rt_out, 3),
             rt_out_stride0,
             dt_r0,
@@ -1141,7 +1141,7 @@ void mrcal_compose_rt_full(
             rt1[1 + 3] - rt0[1 + 3],
             rt1[2 + 3] - rt0[2 + 3]
         };
-        mrcal_rotate_point_r_full(
+        drcal_rotate_point_r_full(
             &P1(rt_out, 3),
             rt_out_stride0,
             dt_r0,
@@ -1183,7 +1183,7 @@ void mrcal_compose_rt_full(
         double p[3];
         double dp_r1[9];
         double dp_t1[9];
-        mrcal_rotate_point_r_full(
+        drcal_rotate_point_r_full(
             p,
             -1,
             dp_r1,
@@ -1210,7 +1210,7 @@ void mrcal_compose_rt_full(
 
         // t01 <- r0 p = -r0 r1t t1
         double dt_p[9];
-        mrcal_rotate_point_r_full(
+        drcal_rotate_point_r_full(
             &P1(rt_out, 3),
             rt_out_stride0,
             dt_r0,
@@ -1278,7 +1278,7 @@ void mrcal_compose_rt_full(
         double p[3];
         double dp_r1[9];
         double dp_t1[9];
-        mrcal_rotate_point_r_full(
+        drcal_rotate_point_r_full(
             p,
             -1,
             dp_r1,
@@ -1310,7 +1310,7 @@ void mrcal_compose_rt_full(
 
         // t01 <- r0 p = -r0 r1t t1
         double dt_p[9];
-        mrcal_rotate_point_r_full(
+        drcal_rotate_point_r_full(
             &P1(rt_out, 3),
             rt_out_stride0,
             dt_r0,
@@ -1370,7 +1370,7 @@ void mrcal_compose_rt_full(
     }
 }
 
-void mrcal_compose_r_tinyr0_gradientr0_full(
+void drcal_compose_r_tinyr0_gradientr0_full(
     // output
     double* dr_dr0,      // (3,3) array; may be NULL
     int dr_dr0_stride0,  // in bytes. <= 0 means "contiguous"
@@ -1442,7 +1442,7 @@ void mrcal_compose_r_tinyr0_gradientr0_full(
     P2(dr_dr0, 2, 1) -= P1(r_1, 0) / 2.;
 }
 
-void mrcal_compose_r_tinyr1_gradientr1_full(
+void drcal_compose_r_tinyr1_gradientr1_full(
     // output
     double* dr_dr1,      // (3,3) array; may be NULL
     int dr_dr1_stride0,  // in bytes. <= 0 means "contiguous"
@@ -1514,7 +1514,7 @@ void mrcal_compose_r_tinyr1_gradientr1_full(
     P2(dr_dr1, 2, 1) += P1(r_0, 0) / 2.;
 }
 
-void mrcal_r_from_R_full(
+void drcal_r_from_R_full(
     // output
     double* r,      // (3,) vector
     int r_stride0,  // in bytes. <= 0 means "contiguous"
@@ -1762,7 +1762,7 @@ void mrcal_r_from_R_full(
 
         double dRflat_dr[9 * 3];  // inverse gradient
 
-        mrcal_R_from_r_full(  // outputs
+        drcal_R_from_r_full(  // outputs
             m.R_roundtrip,
             0,
             0,
@@ -1835,12 +1835,12 @@ int dgesdd_(
     int jobz_len
 );
 
-// This is functionally identical to mrcal.align_procrustes_vectors_R01(). It
-// should replace that function to provide a C implementation for mrcal users
+// This is functionally identical to drcal.align_procrustes_vectors_R01(). It
+// should replace that function to provide a C implementation for drcal users
 //
 // This solves:
 //   https://en.wikipedia.org/wiki/Orthogonal_Procrustes_problem
-// See the mrcal sources for implementation details
+// See the drcal sources for implementation details
 static bool _align_procrustes_vectors_R01(
     // out
     double* R01,
@@ -1996,7 +1996,7 @@ static bool _align_procrustes_vectors_R01(
     return true;
 }
 
-bool mrcal_align_procrustes_vectors_R01(
+bool drcal_align_procrustes_vectors_R01(
     // out
     double* R01,
     // in
@@ -2012,7 +2012,7 @@ bool mrcal_align_procrustes_vectors_R01(
     return _align_procrustes_vectors_R01(R01, N, v0, v1, NULL, NULL, weights);
 }
 
-bool mrcal_align_procrustes_points_Rt01(
+bool drcal_align_procrustes_points_Rt01(
     // out
     double* Rt01,
     // in
@@ -2061,8 +2061,8 @@ bool mrcal_align_procrustes_points_Rt01(
 }
 
 // Compute a non-unique rotation to map a given vector to [0,0,1]
-// See docstring for mrcal.R_aligned_to_vector() for details
-void mrcal_R_aligned_to_vector(
+// See docstring for drcal.R_aligned_to_vector() for details
+void drcal_R_aligned_to_vector(
     // out
     double* R,
     // in

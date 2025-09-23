@@ -3,7 +3,7 @@ r"""Remaps a captured image into another camera model
 SYNOPSIS
 
   ### To "undistort" images to reproject to a pinhole projection
-  $ mrcal-reproject-image --to-pinhole
+  $ drcal-reproject-image --to-pinhole
       camera0.cameramodel
       image*.jpg
   Wrote image0-pinhole.jpg
@@ -11,7 +11,7 @@ SYNOPSIS
   ...
 
   ### To reproject images from one lens model to another
-  $ mrcal-reproject-image
+  $ drcal-reproject-image
       camera0.cameramodel camera1.cameramodel
       image*.jpg
   Wrote image0-reprojected.jpg
@@ -20,7 +20,7 @@ SYNOPSIS
   ...
 
   ### To reproject two sets of images to a common pinhole projection
-  $ mrcal-reproject-image --to-pinhole
+  $ drcal-reproject-image --to-pinhole
       camera0.cameramodel camera1.cameramodel
       'image*-cam0.jpg' 'image*-cam1.jpg'
   Wrote image0-reprojected.jpg
@@ -29,7 +29,7 @@ SYNOPSIS
   ...
 
   ### To "manually" stereo-rectify a pair of images
-  $ mrcal-stereo          \
+  $ drcal-stereo          \
       --az-fov-deg 80     \
       --el-fov-deg 50     \
       --outdir /tmp       \
@@ -38,29 +38,29 @@ SYNOPSIS
   Wrote '/tmp/rectified0.cameramodel'
   Wrote '/tmp/rectified1.cameramodel'
 
-  $ mrcal-reproject-image         \
+  $ drcal-reproject-image         \
       --outdir /tmp               \
       /tmp/left.cameramodel       \
       /tmp/rectified0.cameramodel \
       left.jpg
   Wrote /tmp/left-reprojected.jpg
 
-  $ mrcal-reproject-image          \
+  $ drcal-reproject-image          \
       --outdir /tmp                \
       /tmp/right.cameramodel       \
       /tmp/rectified1.cameramodel  \
       right.jpg
   Wrote /tmp/right-reprojected.jpg
 
-  $ mrcal-stereo                       \
+  $ drcal-stereo                       \
       --already-rectified              \
       --outdir /tmp                    \
       /tmp/rectified[01].cameramodel   \
       /tmp/left-reprojected.jpg        \
       /tmp/right-reprojected.jpg
 
-  # This is the same as using mrcal-stereo to do all the work:
-  $ mrcal-stereo          \
+  # This is the same as using drcal-stereo to do all the work:
+  $ drcal-stereo          \
       --az-fov-deg 80     \
       --el-fov-deg 50     \
       --outdir /tmp       \
@@ -73,7 +73,7 @@ SYNOPSIS
 This tool takes image(s) of a scene captured by one camera model, and produces
 image(s) of the same scene, as it would appear if captured by a different model,
 taking into account both the different lens parameters and geometries. This is
-similar to mrcal-reproject-points, but acts on a full image, rather than a
+similar to drcal-reproject-points, but acts on a full image, rather than a
 discrete set of points.
 
 There are several modes of operation, depending on how many camera models are
@@ -83,7 +83,7 @@ given.
 To "undistort" (remap to a pinhole projection) a set of images captured using a
 particular camera model, invoke this tool like this:
 
-  mrcal-reproject-image
+  drcal-reproject-image
     --to-pinhole
     model0.cameramodel image*.jpg
 
@@ -94,7 +94,7 @@ written to standard output.
 To remap images of a scene captured by model0 to images of the same scene
 captured by model1, do this:
 
-  mrcal-reproject-image
+  drcal-reproject-image
     model0.cameramodel model1.cameramodel image*.jpg
 
 Each of the given images will be reprojected, and written to disk as
@@ -117,7 +117,7 @@ can be used.
 To remap images of a scene captured by model0 and images of the same scene
 captured by model1 to a common pinhole projection, do this:
 
-  mrcal-reproject-image
+  drcal-reproject-image
     --to-pinhole
     model0.cameramodel model1.cameramodel 'image*-cam0.jpg' 'image*-cam1.jpg'
 
@@ -130,7 +130,7 @@ Finally instead of reprojecting to match up images of objects at infinity, it is
 possible to reproject to match up images of arbitrary planes. This can be done
 by a command like this:
 
-  mrcal-reproject-image
+  drcal-reproject-image
     --to-pinhole
     --plane-n 1.1 2.2 3.3
     --plane-d 4.4
@@ -138,7 +138,7 @@ by a command like this:
 
 If the models were already pinhole-projected, this does the same thing as
 
-  mrcal-reproject-image
+  drcal-reproject-image
     --plane-n 1.1 2.2 3.3
     --plane-d 4.4
     model0.cameramodel model1.cameramodel 'image*-cam0.jpg'
@@ -358,7 +358,7 @@ def parse_args():
         type=str,
         nargs="+",
         help="""Optionally, the camera model for the TO image. Followed, by the from/to image
-                        globs. See the mrcal-reproject-image documentation for
+                        globs. See the drcal-reproject-image documentation for
                         the details.""",
     )
 
@@ -576,7 +576,7 @@ def main():
 
         args.plane_n = np.array(args.plane_n, dtype=float)
 
-    # I do the same thing in mrcal-stereo. Please consolidate
+    # I do the same thing in drcal-stereo. Please consolidate
     #
     # weird business to handle weird signal handling in multiprocessing. I want
     # things like the user hitting C-c to work properly. So I ignore SIGINT for the

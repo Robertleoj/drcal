@@ -12,16 +12,16 @@ r"""Converts a kalibr-formatted camera model to the .cameramodel file format
 
 SYNOPSIS
 
-  $ mrcal-from-kalibr model.yaml
+  $ drcal-from-kalibr model.yaml
   Wrote model-cam0.cameramodel
   Wrote model-cam1.cameramodel
 
-File formats supported by mrcal are described at
-https://mrcal.secretsauce.net/cameramodels.html#cameramodel-file-formats
+File formats supported by drcal are described at
+https://drcal.secretsauce.net/cameramodels.html#cameramodel-file-formats
 
-This tool converts the given model(s) to the mrcal-native .cameramodel file
+This tool converts the given model(s) to the drcal-native .cameramodel file
 format. No changes to the content are made; this is purely a format converter
-(the mrcal-convert-lensmodel tool fits different lens models instead). Model
+(the drcal-convert-lensmodel tool fits different lens models instead). Model
 filenames are given on the commandline. Output is written to the same directory,
 with the same filename, but annotated with the camera name from the data file,
 and with a .cameramodel extension.
@@ -29,7 +29,7 @@ and with a .cameramodel extension.
 If the model is omitted or given as "-", the input is read from standard input,
 and the output is written to standard output
 
-Unlike mrcal .cameramodel files where one camera is described by one file, the
+Unlike drcal .cameramodel files where one camera is described by one file, the
 .yaml files used by kalibr are intended to describe multiple cameras. This
 format conversion tool will write out multiple .cameramodel file to represent
 the given data. To select a single camera, pass --camera CAMERA.

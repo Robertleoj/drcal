@@ -3,7 +3,7 @@
 import sys
 import numpy as np
 import numpysane as nps
-import mrcal
+import drcal
 
 
 def compute_Rt_implied_01(*models):
@@ -12,7 +12,7 @@ def compute_Rt_implied_01(*models):
 
     # v  shape (...,Ncameras,Nheight,Nwidth,...)
     # q0 shape (...,         Nheight,Nwidth,...)
-    v, q0 = mrcal.sample_imager_unproject(
+    v, q0 = drcal.sample_imager_unproject(
         60, None, *models[0].imagersize(), lensmodels, intrinsics_data, normalize=True
     )
 
@@ -31,7 +31,7 @@ def compute_Rt_implied_01(*models):
     if focus_center is None:
         focus_center = (models[0].imagersize() - 1.0) / 2.0
 
-    implied_Rt10 = mrcal.implied_Rt10__from_unprojections(
+    implied_Rt10 = drcal.implied_Rt10__from_unprojections(
         q0,
         # shape (len(distance),Nheight,Nwidth,3)
         v[0, ...] * distance,
@@ -41,17 +41,17 @@ def compute_Rt_implied_01(*models):
         focus_radius=focus_radius,
     )
 
-    return mrcal.invert_Rt(implied_Rt10)
+    return drcal.invert_Rt(implied_Rt10)
 
 
 models_filenames = sys.argv[1:5]
-models = [mrcal.cameramodel(f) for f in models_filenames]
+models = [drcal.cameramodel(f) for f in models_filenames]
 
 pairs = ((models[0], models[1]), (models[2], models[3]))
 
 # The "before" extrinsic transformation
 m0, m1 = pairs[0]
-Rt01 = mrcal.compose_Rt(m0.extrinsics_Rt_fromref(), m1.extrinsics_Rt_toref())
+Rt01 = drcal.compose_Rt(m0.extrinsics_Rt_fromref(), m1.extrinsics_Rt_toref())
 
 # The "after" extrinsics transformation. I remap both cameras into the "before"
 # space, so that we're looking at the extrinsics transformation in the "before"
@@ -62,19 +62,19 @@ Rt_implied__0before_0after = compute_Rt_implied_01(pairs[0][0], pairs[1][0])
 Rt_implied__1after_1before = compute_Rt_implied_01(pairs[1][1], pairs[0][1])
 
 m0, m1 = pairs[1]
-Rt_0after_1after = mrcal.compose_Rt(
+Rt_0after_1after = drcal.compose_Rt(
     m0.extrinsics_Rt_fromref(), m1.extrinsics_Rt_toref()
 )
 
-Rt01_after_extrinsicsbefore = mrcal.compose_Rt(
+Rt01_after_extrinsicsbefore = drcal.compose_Rt(
     Rt_implied__0before_0after, Rt_0after_1after, Rt_implied__1after_1before
 )
 
 # I have the two relative transforms. If camera0 is fixed, how much am I moving
 # camera1?
-Rt_1before_1after = mrcal.compose_Rt(mrcal.invert_Rt(Rt01), Rt01_after_extrinsicsbefore)
+Rt_1before_1after = drcal.compose_Rt(drcal.invert_Rt(Rt01), Rt01_after_extrinsicsbefore)
 
-r_1before_1after = mrcal.r_from_R(Rt_1before_1after[:3, :])
+r_1before_1after = drcal.r_from_R(Rt_1before_1after[:3, :])
 t_1before_1after = Rt_1before_1after[3, :]
 magnitude = nps.mag(t_1before_1after)
 direction = t_1before_1after / magnitude
@@ -90,7 +90,7 @@ print(f"rotation:    {angle_deg:.3f}deg around the axis {axis}")
 for i in range(len(models)):
     m = models[i]
 
-    qcenter, dq_dv, _ = mrcal.project(
+    qcenter, dq_dv, _ = drcal.project(
         np.array((0, 0, 1.0)), *m.intrinsics(), get_gradients=True
     )
 
@@ -99,7 +99,7 @@ for i in range(len(models)):
     # dq_dv[:,2] = dq_dv[:,1]*th so for a pitch: mag(dq/dth) = mag(dq_dv[:,1]).
     # Similarly for a yaw I have mag(dq_dv[:,0]). I find the worst one, and call
     # it good. I can do that because dq_dv will be diagonally dominant, and the
-    # diagonal elements will be very similar. mrcal.rectified_resolution() does
+    # diagonal elements will be very similar. drcal.rectified_resolution() does
     # this
     resolution__pix_per_rad = np.max(nps.transpose(nps.mag(dq_dv[:, :2])))
     resolution__pix_per_deg = resolution__pix_per_rad * np.pi / 180.0

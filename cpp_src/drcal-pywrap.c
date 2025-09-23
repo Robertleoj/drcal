@@ -24,8 +24,8 @@
 #include <cholmod_function.h>
 #endif
 
-#include "mrcal-internal.h"
-#include "mrcal.h"
+#include "drcal-internal.h"
+#include "drcal.h"
 #include "stereo.h"
 
 #include "python-wrapping-utilities.h"
@@ -627,7 +627,7 @@ SYNOPSIS
           [ 5. -2.] 
           [ 3. -8.]]
 
-    F  = mrcal.CHOLMOD_factorization(Jsparse)
+    F  = drcal.CHOLMOD_factorization(Jsparse)
     xt = F.solve_xt_JtJ_bt(bt)
     print(nps.transpose(xt))
     ===> [[ 0.02199662  0.33953751] 
@@ -639,7 +639,7 @@ SYNOPSIS
           [ 5. -2.] 
           [ 3. -8.]]
 
-The core of the mrcal optimizer is a sparse linear least squares solver using
+The core of the drcal optimizer is a sparse linear least squares solver using
 CHOLMOD to solve a large, sparse linear system. CHOLMOD is a C library, but it
 is sometimes useful to invoke it from Python.
 
@@ -711,7 +711,7 @@ SYNOPSIS
           [ 5. -2.] 
           [ 3. -8.]]
 
-    F  = mrcal.CHOLMOD_factorization(Jsparse)
+    F  = drcal.CHOLMOD_factorization(Jsparse)
     xt = F.solve_xt_JtJ_bt(bt)
     print(nps.transpose(xt))
     ===> [[ 0.02199662  0.33953751] 
@@ -723,7 +723,7 @@ SYNOPSIS
           [ 5. -2.] 
           [ 3. -8.]]
 
-The core of the mrcal optimizer is a sparse linear least squares solver using
+The core of the drcal optimizer is a sparse linear least squares solver using
 CHOLMOD to solve a large, sparse linear system. CHOLMOD is a C library, but it
 is sometimes useful to invoke it from Python.
 
@@ -787,7 +787,7 @@ Compute rough estimate of reciprocal of condition number
 SYNOPSIS
 
     b, x, J, factorization = \
-        mrcal.optimizer_callback(**optimization_inputs)
+        drcal.optimizer_callback(**optimization_inputs)
 
     rcond = factorization.rcond()
 
@@ -866,30 +866,30 @@ static PyObject* CHOLMOD_factorization_from_cholmod_sparse(
 
 static bool parse_lensmodel_from_arg(
     // output
-    mrcal_lensmodel_t* lensmodel,
+    drcal_lensmodel_t* lensmodel,
     // input
     const char* lensmodel_cstring
 ) {
-    mrcal_lensmodel_from_name(lensmodel, lensmodel_cstring);
-    if (!mrcal_lensmodel_type_is_valid(lensmodel->type)) {
+    drcal_lensmodel_from_name(lensmodel, lensmodel_cstring);
+    if (!drcal_lensmodel_type_is_valid(lensmodel->type)) {
         switch (lensmodel->type) {
-            case MRCAL_LENSMODEL_INVALID:
+            case drcal_LENSMODEL_INVALID:
                 // this should never (rarely?) happen
                 BARF("Lens model '%s': error parsing", lensmodel_cstring);
                 return false;
-            case MRCAL_LENSMODEL_INVALID_BADCONFIG:
+            case drcal_LENSMODEL_INVALID_BADCONFIG:
                 BARF(
                     "Lens model '%s': error parsing the required configuration",
                     lensmodel_cstring
                 );
                 return false;
-            case MRCAL_LENSMODEL_INVALID_MISSINGCONFIG:
+            case drcal_LENSMODEL_INVALID_MISSINGCONFIG:
                 BARF(
                     "Lens model '%s': missing the required configuration",
                     lensmodel_cstring
                 );
                 return false;
-            case MRCAL_LENSMODEL_INVALID_TYPE:
+            case drcal_LENSMODEL_INVALID_TYPE:
                 BARF(
                     "Invalid lens model type was passed in: '%s'. Must be one "
                     "of " VALID_LENSMODELS_FORMAT,
@@ -920,14 +920,14 @@ static PyObject* lensmodel_metadata_and_config(
     if (!PyArg_ParseTuple(args, "s", &lensmodel_string)) {
         goto done;
     }
-    mrcal_lensmodel_t lensmodel;
+    drcal_lensmodel_t lensmodel;
     if (!parse_lensmodel_from_arg(&lensmodel, lensmodel_string)) {
         goto done;
     }
 
-    mrcal_lensmodel_metadata_t meta = mrcal_lensmodel_metadata(&lensmodel);
+    drcal_lensmodel_metadata_t meta = drcal_lensmodel_metadata(&lensmodel);
 
-#define MRCAL_ITEM_BUILDVALUE_DEF( \
+#define drcal_ITEM_BUILDVALUE_DEF( \
     name,                          \
     type,                          \
     pybuildvaluecode,              \
@@ -937,7 +937,7 @@ static PyObject* lensmodel_metadata_and_config(
     cookie                         \
 )                                  \
     " s " pybuildvaluecode
-#define MRCAL_ITEM_BUILDVALUE_VALUE( \
+#define drcal_ITEM_BUILDVALUE_VALUE( \
     name,                            \
     type,                            \
     pybuildvaluecode,                \
@@ -948,32 +948,32 @@ static PyObject* lensmodel_metadata_and_config(
 )                                    \
     , #name, cookie name
 
-    if (lensmodel.type == MRCAL_LENSMODEL_CAHVORE) {
+    if (lensmodel.type == drcal_LENSMODEL_CAHVORE) {
         result = Py_BuildValue(
-            "{" MRCAL_LENSMODEL_META_LIST(MRCAL_ITEM_BUILDVALUE_DEF, )
-                MRCAL_LENSMODEL_CAHVORE_CONFIG_LIST(
-                    MRCAL_ITEM_BUILDVALUE_DEF,
-                ) "}" MRCAL_LENSMODEL_META_LIST(MRCAL_ITEM_BUILDVALUE_VALUE, meta.)
-                    MRCAL_LENSMODEL_CAHVORE_CONFIG_LIST(
-                        MRCAL_ITEM_BUILDVALUE_VALUE,
+            "{" drcal_LENSMODEL_META_LIST(drcal_ITEM_BUILDVALUE_DEF, )
+                drcal_LENSMODEL_CAHVORE_CONFIG_LIST(
+                    drcal_ITEM_BUILDVALUE_DEF,
+                ) "}" drcal_LENSMODEL_META_LIST(drcal_ITEM_BUILDVALUE_VALUE, meta.)
+                    drcal_LENSMODEL_CAHVORE_CONFIG_LIST(
+                        drcal_ITEM_BUILDVALUE_VALUE,
                         lensmodel.LENSMODEL_CAHVORE__config.
                     )
         );
-    } else if (lensmodel.type == MRCAL_LENSMODEL_SPLINED_STEREOGRAPHIC) {
+    } else if (lensmodel.type == drcal_LENSMODEL_SPLINED_STEREOGRAPHIC) {
         result = Py_BuildValue(
-            "{" MRCAL_LENSMODEL_META_LIST(MRCAL_ITEM_BUILDVALUE_DEF, )
-                MRCAL_LENSMODEL_SPLINED_STEREOGRAPHIC_CONFIG_LIST(
-                    MRCAL_ITEM_BUILDVALUE_DEF,
-                ) "}" MRCAL_LENSMODEL_META_LIST(MRCAL_ITEM_BUILDVALUE_VALUE, meta.)
-                    MRCAL_LENSMODEL_SPLINED_STEREOGRAPHIC_CONFIG_LIST(
-                        MRCAL_ITEM_BUILDVALUE_VALUE,
+            "{" drcal_LENSMODEL_META_LIST(drcal_ITEM_BUILDVALUE_DEF, )
+                drcal_LENSMODEL_SPLINED_STEREOGRAPHIC_CONFIG_LIST(
+                    drcal_ITEM_BUILDVALUE_DEF,
+                ) "}" drcal_LENSMODEL_META_LIST(drcal_ITEM_BUILDVALUE_VALUE, meta.)
+                    drcal_LENSMODEL_SPLINED_STEREOGRAPHIC_CONFIG_LIST(
+                        drcal_ITEM_BUILDVALUE_VALUE,
                         lensmodel.LENSMODEL_SPLINED_STEREOGRAPHIC__config.
                     )
         );
     } else {
-        result = Py_BuildValue("{" MRCAL_LENSMODEL_META_LIST(
-            MRCAL_ITEM_BUILDVALUE_DEF,
-        ) "}" MRCAL_LENSMODEL_META_LIST(MRCAL_ITEM_BUILDVALUE_VALUE, meta.));
+        result = Py_BuildValue("{" drcal_LENSMODEL_META_LIST(
+            drcal_ITEM_BUILDVALUE_DEF,
+        ) "}" drcal_LENSMODEL_META_LIST(drcal_ITEM_BUILDVALUE_VALUE, meta.));
     }
 
     Py_INCREF(result);
@@ -994,15 +994,15 @@ static PyObject* knots_for_splined_models(
     if (!PyArg_ParseTuple(args, "s", &lensmodel_string)) {
         goto done;
     }
-    mrcal_lensmodel_t lensmodel;
+    drcal_lensmodel_t lensmodel;
     if (!parse_lensmodel_from_arg(&lensmodel, lensmodel_string)) {
         goto done;
     }
 
-    if (lensmodel.type != MRCAL_LENSMODEL_SPLINED_STEREOGRAPHIC) {
+    if (lensmodel.type != drcal_LENSMODEL_SPLINED_STEREOGRAPHIC) {
         BARF(
             "This function works only with the "
-            "MRCAL_LENSMODEL_SPLINED_STEREOGRAPHIC model. %s passed in",
+            "drcal_LENSMODEL_SPLINED_STEREOGRAPHIC model. %s passed in",
             lensmodel_string
         );
         goto done;
@@ -1011,8 +1011,8 @@ static PyObject* knots_for_splined_models(
     {
         double ux[lensmodel.LENSMODEL_SPLINED_STEREOGRAPHIC__config.Nx];
         double uy[lensmodel.LENSMODEL_SPLINED_STEREOGRAPHIC__config.Ny];
-        if (!mrcal_knots_for_splined_models(ux, uy, &lensmodel)) {
-            BARF("mrcal_knots_for_splined_models() failed");
+        if (!drcal_knots_for_splined_models(ux, uy, &lensmodel)) {
+            BARF("drcal_knots_for_splined_models() failed");
             goto done;
         }
 
@@ -1064,12 +1064,12 @@ static PyObject* lensmodel_num_params(
     if (!PyArg_ParseTuple(args, "s", &lensmodel_string)) {
         goto done;
     }
-    mrcal_lensmodel_t lensmodel;
+    drcal_lensmodel_t lensmodel;
     if (!parse_lensmodel_from_arg(&lensmodel, lensmodel_string)) {
         goto done;
     }
 
-    int Nparams = mrcal_lensmodel_num_params(&lensmodel);
+    int Nparams = drcal_lensmodel_num_params(&lensmodel);
 
     result = Py_BuildValue("i", Nparams);
 
@@ -1082,7 +1082,7 @@ static PyObject* supported_lensmodels(
     PyObject* NPY_UNUSED(args)
 ) {
     PyObject* result = NULL;
-    const char* const* names = mrcal_supported_lensmodel_names();
+    const char* const* names = drcal_supported_lensmodel_names();
 
     // I now have a NULL-terminated list of NULL-terminated strings. Get N
     int N = 0;
@@ -1261,7 +1261,7 @@ static int PyArray_Converter_leaveNone(
             _(do_apply_outlier_rejection, int, 1, "p", , NULL, -1, {})        \
                 _(imagepaths, PyObject*, NULL, "O", , NULL, -1, {})
 /* imagepaths is in the argument list purely to make the
-   mrcal-show-residuals-board-observation tool work. The python code doesn't
+   drcal-show-residuals-board-observation tool work. The python code doesn't
    actually touch it */
 
 #define OPTIMIZER_CALLBACK_ARGUMENTS_OPTIONAL_EXTRA(_) \
@@ -1276,7 +1276,7 @@ typedef enum {
 
 static bool lensmodel_one_validate_args(
     // out
-    mrcal_lensmodel_t* mrcal_lensmodel,
+    drcal_lensmodel_t* drcal_lensmodel,
 
     // in
     LENSMODEL_ONE_ARGUMENTS(ARG_LIST_DEFINE, ) bool do_check_layout
@@ -1285,10 +1285,10 @@ static bool lensmodel_one_validate_args(
         LENSMODEL_ONE_ARGUMENTS(CHECK_LAYOUT, );
     }
 
-    if (!parse_lensmodel_from_arg(mrcal_lensmodel, lensmodel)) {
+    if (!parse_lensmodel_from_arg(drcal_lensmodel, lensmodel)) {
         return false;
     }
-    int NlensParams = mrcal_lensmodel_num_params(mrcal_lensmodel);
+    int NlensParams = drcal_lensmodel_num_params(drcal_lensmodel);
     int NlensParams_have =
         PyArray_DIMS(intrinsics)[PyArray_NDIM(intrinsics) - 1];
     if (NlensParams != NlensParams_have) {
@@ -1308,7 +1308,7 @@ done:
 // Using this for both optimize() and optimizer_callback()
 static bool optimize_validate_args(
     // out
-    mrcal_lensmodel_t* mrcal_lensmodel,
+    drcal_lensmodel_t* drcal_lensmodel,
 
     // in
     optimizemode_t optimizemode,
@@ -1319,8 +1319,8 @@ static bool optimize_validate_args(
                 void* dummy __attribute__((unused))
 ) {
     _Static_assert(
-        sizeof(mrcal_pose_t) / sizeof(double) == 6,
-        "mrcal_pose_t is assumed to contain 6 elements"
+        sizeof(drcal_pose_t) / sizeof(double) == 6,
+        "drcal_pose_t is assumed to contain 6 elements"
     );
 
     OPTIMIZE_ARGUMENTS_REQUIRED(CHECK_LAYOUT);
@@ -1403,7 +1403,7 @@ static bool optimize_validate_args(
     // I'm not going to do that again here: passing do_check_layout=false. So
     // that difference doesn't matter
     if (!lensmodel_one_validate_args(
-            mrcal_lensmodel,
+            drcal_lensmodel,
             lensmodel,
             intrinsics,
             false
@@ -1702,7 +1702,7 @@ done:
 
 static void fill_c_observations_board(
     // out
-    mrcal_observation_board_t* c_observations_board,
+    drcal_observation_board_t* c_observations_board,
 
     // in
     int Nobservations_board,
@@ -1728,7 +1728,7 @@ static void fill_c_observations_board(
 
 static void fill_c_observations_point(
     // out
-    mrcal_observation_point_t* c_observations_point,
+    drcal_observation_point_t* c_observations_point,
 
     // in
     int Nobservations_point,
@@ -1767,7 +1767,7 @@ done:
 }
 
 static bool fill_c_observations_point_triangulated_finish_set(
-    mrcal_observation_point_triangulated_t* c_observations_point_triangulated,
+    drcal_observation_point_triangulated_t* c_observations_point_triangulated,
     int ipoint_last_in_set,
     int Npoints_in_this_set
 ) {
@@ -1790,12 +1790,12 @@ static bool fill_c_observations_point_triangulated_finish_set(
 // return the number of points, or <0 on error
 static int fill_c_observations_point_triangulated(
     // output. I fill in the given arrays
-    mrcal_observation_point_triangulated_t* c_observations_point_triangulated,
+    drcal_observation_point_triangulated_t* c_observations_point_triangulated,
 
     // input
     const PyArrayObject* observations_point_triangulated,  // may be NULL
     // used only if observations_point_triangulated != NULL
-    const mrcal_lensmodel_t* lensmodel,
+    const drcal_lensmodel_t* lensmodel,
     const double* intrinsics,
 
     const PyArrayObject* indices_point_triangulated_camintrinsics_camextrinsics
@@ -1845,19 +1845,19 @@ static int fill_c_observations_point_triangulated(
 
     // Needed for the unproject() below
     int Nintrinsics_state = 0;
-    mrcal_projection_precomputed_t precomputed;
+    drcal_projection_precomputed_t precomputed;
     if (lensmodel != NULL) {
-        Nintrinsics_state = mrcal_lensmodel_num_params(lensmodel);
-        mrcal_lensmodel_metadata_t meta = mrcal_lensmodel_metadata(lensmodel);
+        Nintrinsics_state = drcal_lensmodel_num_params(lensmodel);
+        drcal_lensmodel_metadata_t meta = drcal_lensmodel_metadata(lensmodel);
         if (!meta.has_gradients) {
             BARF(
-                "mrcal_unproject(lensmodel='%s') is not yet implemented: we "
+                "drcal_unproject(lensmodel='%s') is not yet implemented: we "
                 "need gradients",
-                mrcal_lensmodel_name_unconfigured(lensmodel)
+                drcal_lensmodel_name_unconfigured(lensmodel)
             );
             return -1;
         }
-        _mrcal_precompute_lensmodel_data(&precomputed, lensmodel);
+        _drcal_precompute_lensmodel_data(&precomputed, lensmodel);
     }
 
     for (int i = 0; i < N; i++) {
@@ -1871,33 +1871,33 @@ static int fill_c_observations_point_triangulated(
 
         c_observations_point_triangulated[i].last_in_set = false;
         c_observations_point_triangulated[i].outlier = false;
-        c_observations_point_triangulated[i].icam = (mrcal_camera_index_t
+        c_observations_point_triangulated[i].icam = (drcal_camera_index_t
         ){.intrinsics = icam_intrinsics, .extrinsics = icam_extrinsics};
         if (observations_point_triangulated__data != NULL) {
-            const mrcal_point3_t* px_weight =
-                (const mrcal_point3_t*)(&observations_point_triangulated__data
+            const drcal_point3_t* px_weight =
+                (const drcal_point3_t*)(&observations_point_triangulated__data
                                             [3 * i]);
 
             // For now the triangulated observations are local observation
             // vectors
-            if (!_mrcal_unproject_internal(  // out
+            if (!_drcal_unproject_internal(  // out
                     &c_observations_point_triangulated[i].px,
 
                     // in
-                    (const mrcal_point2_t*)(px_weight->xyz),
+                    (const drcal_point2_t*)(px_weight->xyz),
                     1,
                     lensmodel,
                     &intrinsics[icam_intrinsics * Nintrinsics_state],
                     &precomputed
                 )) {
-                BARF("mrcal_unproject() failed");
+                BARF("drcal_unproject() failed");
                 return -1;
             }
 
             c_observations_point_triangulated[i].outlier =
                 (px_weight->z <= 0.0);
         } else {
-            c_observations_point_triangulated[i].px = (mrcal_point3_t){};
+            c_observations_point_triangulated[i].px = (drcal_point3_t){};
         }
 
         if (ipoint < 0) {
@@ -1961,8 +1961,8 @@ static int fill_c_observations_point_triangulated(
             do_optimize_calobject_warp = Nobservations_board > 0;             \
         /* stuff not in the above if doesn't have a <0 default; those are all \
          * 0 or 1 already */                                                  \
-        (mrcal_problem_selections_t                                           \
-        ){MRCAL_PROBLEM_SELECTIONS_LIST(PROBLEM_SELECTIONS_SET_BIT)};         \
+        (drcal_problem_selections_t                                           \
+        ){drcal_PROBLEM_SELECTIONS_LIST(PROBLEM_SELECTIONS_SET_BIT)};         \
     })
 
 static PyObject* _optimize(
@@ -1999,7 +1999,7 @@ static PyObject* _optimize(
                 args,
                 kwargs,
                 OPTIMIZE_ARGUMENTS_REQUIRED(PARSECODE
-                ) "|$" OPTIMIZE_ARGUMENTS_OPTIONAL(PARSECODE) ":mrcal.optimize",
+                ) "|$" OPTIMIZE_ARGUMENTS_OPTIONAL(PARSECODE) ":drcal.optimize",
 
                 keywords,
 
@@ -2018,7 +2018,7 @@ static PyObject* _optimize(
                 OPTIMIZE_ARGUMENTS_REQUIRED(PARSECODE
                 ) "|$" OPTIMIZE_ARGUMENTS_OPTIONAL(PARSECODE)
                     OPTIMIZER_CALLBACK_ARGUMENTS_OPTIONAL_EXTRA(PARSECODE
-                    ) ":mrcal.optimizer_callback",
+                    ) ":drcal.optimizer_callback",
 
                 keywords,
 
@@ -2089,11 +2089,11 @@ static PyObject* _optimize(
     SET_SIZE0_IF_NONE(imagersizes, NPY_INT32, 0, 2);
 #undef SET_NULL_IF_NONE
 
-    mrcal_lensmodel_t mrcal_lensmodel;
+    drcal_lensmodel_t drcal_lensmodel;
     // Check the arguments for optimize(). If optimizer_callback, then the other
     // stuff is defined, but it all has valid, default values
     if (!optimize_validate_args(
-            &mrcal_lensmodel,
+            &drcal_lensmodel,
             optimizemode,
             OPTIMIZE_ARGUMENTS_REQUIRED(ARG_LIST_CALL
             ) OPTIMIZE_ARGUMENTS_OPTIONAL(ARG_LIST_CALL)
@@ -2124,19 +2124,19 @@ static PyObject* _optimize(
         // The checks in optimize_validate_args() make sure these casts are
         // kosher
         double* c_intrinsics = (double*)PyArray_DATA(intrinsics);
-        mrcal_pose_t* c_extrinsics =
-            (mrcal_pose_t*)PyArray_DATA(extrinsics_rt_fromref);
-        mrcal_pose_t* c_frames = (mrcal_pose_t*)PyArray_DATA(frames_rt_toref);
-        mrcal_point3_t* c_points = (mrcal_point3_t*)PyArray_DATA(points);
-        mrcal_calobject_warp_t* c_calobject_warp =
+        drcal_pose_t* c_extrinsics =
+            (drcal_pose_t*)PyArray_DATA(extrinsics_rt_fromref);
+        drcal_pose_t* c_frames = (drcal_pose_t*)PyArray_DATA(frames_rt_toref);
+        drcal_point3_t* c_points = (drcal_point3_t*)PyArray_DATA(points);
+        drcal_calobject_warp_t* c_calobject_warp =
             IS_NULL(calobject_warp)
                 ? NULL
-                : (mrcal_calobject_warp_t*)PyArray_DATA(calobject_warp);
+                : (drcal_calobject_warp_t*)PyArray_DATA(calobject_warp);
 
         // Is contiguous; I made sure above
-        mrcal_point3_t* c_observations_board_pool =
-            (mrcal_point3_t*)PyArray_DATA(observations_board);
-        mrcal_observation_board_t c_observations_board[Nobservations_board];
+        drcal_point3_t* c_observations_board_pool =
+            (drcal_point3_t*)PyArray_DATA(observations_board);
+        drcal_observation_board_t c_observations_board[Nobservations_board];
         fill_c_observations_board(  // output
             c_observations_board,
             // input
@@ -2145,9 +2145,9 @@ static PyObject* _optimize(
         );
 
         // Is contiguous; I made sure above
-        mrcal_point3_t* c_observations_point_pool =
-            (mrcal_point3_t*)PyArray_DATA(observations_point);
-        mrcal_observation_point_t c_observations_point[Nobservations_point];
+        drcal_point3_t* c_observations_point_pool =
+            (drcal_point3_t*)PyArray_DATA(observations_point);
+        drcal_observation_point_t c_observations_point[Nobservations_point];
         fill_c_observations_point(  // output
             c_observations_point,
             // input
@@ -2157,27 +2157,27 @@ static PyObject* _optimize(
 
         int Nobservations_point_triangulated =
             PyArray_DIMS(observations_point_triangulated)[0];
-        mrcal_observation_point_triangulated_t
+        drcal_observation_point_triangulated_t
             c_observations_point_triangulated[Nobservations_point_triangulated];
         if (fill_c_observations_point_triangulated(
                 c_observations_point_triangulated,
                 observations_point_triangulated,
-                &mrcal_lensmodel,
+                &drcal_lensmodel,
                 c_intrinsics,
                 indices_point_triangulated_camintrinsics_camextrinsics
             ) < 0) {
             goto done;
         }
 
-        mrcal_problem_selections_t problem_selections =
+        drcal_problem_selections_t problem_selections =
             CONSTRUCT_PROBLEM_SELECTIONS();
 
-        mrcal_problem_constants_t problem_constants = {
+        drcal_problem_constants_t problem_constants = {
             .point_min_range = point_min_range,
             .point_max_range = point_max_range
         };
 
-        int Nmeasurements = mrcal_num_measurements(
+        int Nmeasurements = drcal_num_measurements(
             Nobservations_board,
             Nobservations_point,
             c_observations_point_triangulated,
@@ -2190,18 +2190,18 @@ static PyObject* _optimize(
             Npoints,
             Npoints_fixed,
             problem_selections,
-            &mrcal_lensmodel
+            &drcal_lensmodel
         );
 
-        int Nintrinsics_state = mrcal_num_intrinsics_optimization_params(
+        int Nintrinsics_state = drcal_num_intrinsics_optimization_params(
             problem_selections,
-            &mrcal_lensmodel
+            &drcal_lensmodel
         );
 
         // input
         int* c_imagersizes = PyArray_DATA(imagersizes);
 
-        int Nstate = mrcal_num_states(
+        int Nstate = drcal_num_states(
             Ncameras_intrinsics,
             Ncameras_extrinsics,
             Nframes,
@@ -2209,7 +2209,7 @@ static PyObject* _optimize(
             Npoints_fixed,
             Nobservations_board,
             problem_selections,
-            &mrcal_lensmodel
+            &drcal_lensmodel
         );
 
         // both optimize() and optimizer_callback() use this
@@ -2222,12 +2222,12 @@ static PyObject* _optimize(
         double* c_x_final = PyArray_DATA(x_final);
 
         if (optimizemode == OPTIMIZEMODE_OPTIMIZE) {
-            // we're wrapping mrcal_optimize()
+            // we're wrapping drcal_optimize()
             const int Npoints_fromBoards = Nobservations_board *
                                            calibration_object_width_n *
                                            calibration_object_height_n;
 
-            mrcal_stats_t stats = mrcal_optimize(
+            drcal_stats_t stats = drcal_optimize(
                 c_b_packed_final,
                 Nstate * sizeof(double),
                 c_x_final,
@@ -2255,7 +2255,7 @@ static PyObject* _optimize(
                 c_observations_board_pool,
                 c_observations_point_pool,
 
-                &mrcal_lensmodel,
+                &drcal_lensmodel,
                 c_imagersizes,
                 problem_selections,
                 &problem_constants,
@@ -2270,7 +2270,7 @@ static PyObject* _optimize(
 
             if (stats.rms_reproj_error__pixels < 0.0) {
                 // Error! I throw an exception
-                BARF("mrcal.optimize() failed!");
+                BARF("drcal.optimize() failed!");
                 goto done;
             }
 
@@ -2279,7 +2279,7 @@ static PyObject* _optimize(
                 BARF("PyDict_New() failed!");
                 goto done;
             }
-#define MRCAL_STATS_ITEM_POPULATE_DICT(type, name, pyconverter) \
+#define drcal_STATS_ITEM_POPULATE_DICT(type, name, pyconverter) \
     {                                                           \
         PyObject* obj = pyconverter((type)stats.name);          \
         if (obj == NULL) {                                      \
@@ -2293,7 +2293,7 @@ static PyObject* _optimize(
             goto done;                                          \
         }                                                       \
     }
-            MRCAL_STATS_ITEM(MRCAL_STATS_ITEM_POPULATE_DICT);
+            drcal_STATS_ITEM(drcal_STATS_ITEM_POPULATE_DICT);
 
             if (0 != PyDict_SetItemString(
                          pystats,
@@ -2312,7 +2312,7 @@ static PyObject* _optimize(
             Py_INCREF(result);
         } else if (optimizemode == OPTIMIZEMODE_CALLBACK ||
                    optimizemode == OPTIMIZEMODE_DRTRRP_DB) {
-            int N_j_nonzero = _mrcal_num_j_nonzero(
+            int N_j_nonzero = _drcal_num_j_nonzero(
                 Nobservations_board,
                 Nobservations_point,
                 c_observations_point_triangulated,
@@ -2327,7 +2327,7 @@ static PyObject* _optimize(
                 c_observations_board,
                 c_observations_point,
                 problem_selections,
-                &mrcal_lensmodel
+                &drcal_lensmodel
             );
             cholmod_sparse Jt = {
                 .nrow = Nstate,
@@ -2364,7 +2364,7 @@ static PyObject* _optimize(
                 Jt.x = PyArray_DATA(X);
             }
 
-            if (!mrcal_optimizer_callback(  // out
+            if (!drcal_optimizer_callback(  // out
                     c_b_packed_final,
                     Nstate * sizeof(double),
                     c_x_final,
@@ -2395,7 +2395,7 @@ static PyObject* _optimize(
                     c_observations_board_pool,
                     c_observations_point_pool,
 
-                    &mrcal_lensmodel,
+                    &drcal_lensmodel,
                     c_imagersizes,
                     problem_selections,
                     &problem_constants,
@@ -2405,7 +2405,7 @@ static PyObject* _optimize(
                     calibration_object_height_n,
                     verbose
                 )) {
-                BARF("mrcal_optimizer_callback() failed!'");
+                BARF("drcal_optimizer_callback() failed!'");
                 goto done;
             }
 
@@ -2451,7 +2451,7 @@ static PyObject* _optimize(
                 );
             } else {
                 // OPTIMIZEMODE_DRTRRP_DB
-                const int state_index_frame0 = mrcal_state_index_frames(
+                const int state_index_frame0 = drcal_state_index_frames(
                     0,
                     Ncameras_intrinsics,
                     Ncameras_extrinsics,
@@ -2460,9 +2460,9 @@ static PyObject* _optimize(
                     Npoints_fixed,
                     Nobservations_board,
                     problem_selections,
-                    &mrcal_lensmodel
+                    &drcal_lensmodel
                 );
-                const int state_index_point0 = mrcal_state_index_points(
+                const int state_index_point0 = drcal_state_index_points(
                     0,
                     Ncameras_intrinsics,
                     Ncameras_extrinsics,
@@ -2471,10 +2471,10 @@ static PyObject* _optimize(
                     Npoints_fixed,
                     Nobservations_board,
                     problem_selections,
-                    &mrcal_lensmodel
+                    &drcal_lensmodel
                 );
                 const int state_index_calobject_warp0 =
-                    mrcal_state_index_calobject_warp(
+                    drcal_state_index_calobject_warp(
                         Ncameras_intrinsics,
                         Ncameras_extrinsics,
                         Nframes,
@@ -2482,10 +2482,10 @@ static PyObject* _optimize(
                         Npoints_fixed,
                         Nobservations_board,
                         problem_selections,
-                        &mrcal_lensmodel
+                        &drcal_lensmodel
                     );
 
-                // _mrcal_drt_ref_refperturbed__dbpacked() returns an array of
+                // _drcal_drt_ref_refperturbed__dbpacked() returns an array of
                 // shape (6,Nstate_noi_noe). I eventually want to use each of
                 // its rows to solve a linear system using the big cholesky
                 // factorization: factorization.solve_xt_JtJ_bt(K). This uses
@@ -2508,7 +2508,7 @@ static PyObject* _optimize(
 
                 const npy_intp* strides = PyArray_STRIDES((PyArrayObject*)K);
 
-                if (!_mrcal_drt_ref_refperturbed__dbpacked(  // output
+                if (!_drcal_drt_ref_refperturbed__dbpacked(  // output
                         state_index_frame0 >= 0
                             ? &((double*)(PyArray_DATA((PyArrayObject*)K))
                               )[state_index_frame0]
@@ -2541,13 +2541,13 @@ static PyObject* _optimize(
                         Npoints_fixed,
                         Nobservations_board,
                         Nobservations_point,
-                        &mrcal_lensmodel,
+                        &drcal_lensmodel,
                         problem_selections,
 
                         calibration_object_width_n,
                         calibration_object_height_n
                     )) {
-                    BARF("_mrcal_drt_ref_refperturbed__dbpacked() failed");
+                    BARF("_drcal_drt_ref_refperturbed__dbpacked() failed");
                     Py_DECREF(K);
                     goto done;
                 }
@@ -2635,8 +2635,8 @@ typedef PyObject*(callback_state_index_t)(int i,
                                               indices_point_triangulated_camintrinsics_camextrinsics,
                                           const PyArrayObject*
                                               observations_point,
-                                          const mrcal_lensmodel_t* lensmodel,
-                                          mrcal_problem_selections_t
+                                          const drcal_lensmodel_t* lensmodel,
+                                          drcal_problem_selections_t
                                               problem_selections);
 #define STATE_INDEX_GENERIC(f, ...) \
     state_index_generic(callback_##f, #f, __VA_ARGS__)
@@ -2691,7 +2691,7 @@ static PyObject* state_index_generic(
               // line to get what I need
         "iiiiii" OPTIMIZE_ARGUMENTS_REQUIRED(PARSECODE)
             OPTIMIZE_ARGUMENTS_OPTIONAL(PARSECODE
-            ) ":mrcal." CALLED_FUNCTION_BUFFER;
+            ) ":drcal." CALLED_FUNCTION_BUFFER;
     if (strlen(CALLED_FUNCTION_BUFFER) < strlen(called_function)) {
         BARF(
             "CALLED_FUNCTION_BUFFER too small for '%s'. This is a a bug",
@@ -2744,14 +2744,14 @@ static PyObject* state_index_generic(
     }
 #undef CALLED_FUNCTION_BUFFER
 
-    mrcal_lensmodel_t mrcal_lensmodel = {};
+    drcal_lensmodel_t drcal_lensmodel = {};
 
     if (need_lensmodel) {
         if (lensmodel == NULL) {
             BARF("The 'lensmodel' argument is required");
             goto done;
         }
-        if (!parse_lensmodel_from_arg(&mrcal_lensmodel, lensmodel)) {
+        if (!parse_lensmodel_from_arg(&drcal_lensmodel, lensmodel)) {
             goto done;
         }
     }
@@ -2799,7 +2799,7 @@ static PyObject* state_index_generic(
         calibration_object_width_n = PyArray_DIMS(observations_board)[2];
     }
 
-    mrcal_problem_selections_t problem_selections =
+    drcal_problem_selections_t problem_selections =
         CONSTRUCT_PROBLEM_SELECTIONS();
 
     result =
@@ -2817,7 +2817,7 @@ static PyObject* state_index_generic(
            indices_point_camintrinsics_camextrinsics,
            indices_point_triangulated_camintrinsics_camextrinsics,
            observations_point,
-           &mrcal_lensmodel,
+           &drcal_lensmodel,
            problem_selections);
 
     // If an error is set I return it. result SHOULD be NULL, but if it isn't, I
@@ -2860,10 +2860,10 @@ static PyObject* callback_state_index_intrinsics(
     const PyArrayObject* indices_point_camintrinsics_camextrinsics,
     const PyArrayObject* indices_point_triangulated_camintrinsics_camextrinsics,
     const PyArrayObject* observations_point,
-    const mrcal_lensmodel_t* lensmodel,
-    mrcal_problem_selections_t problem_selections
+    const drcal_lensmodel_t* lensmodel,
+    drcal_problem_selections_t problem_selections
 ) {
-    int index = mrcal_state_index_intrinsics(
+    int index = drcal_state_index_intrinsics(
         i,
         Ncameras_intrinsics,
         Ncameras_extrinsics,
@@ -2912,10 +2912,10 @@ static PyObject* callback_num_states_intrinsics(
     const PyArrayObject* indices_point_camintrinsics_camextrinsics,
     const PyArrayObject* indices_point_triangulated_camintrinsics_camextrinsics,
     const PyArrayObject* observations_point,
-    const mrcal_lensmodel_t* lensmodel,
-    mrcal_problem_selections_t problem_selections
+    const drcal_lensmodel_t* lensmodel,
+    drcal_problem_selections_t problem_selections
 ) {
-    int index = mrcal_num_states_intrinsics(
+    int index = drcal_num_states_intrinsics(
         Ncameras_intrinsics,
         problem_selections,
         lensmodel
@@ -2957,10 +2957,10 @@ static PyObject* callback_state_index_extrinsics(
     const PyArrayObject* indices_point_camintrinsics_camextrinsics,
     const PyArrayObject* indices_point_triangulated_camintrinsics_camextrinsics,
     const PyArrayObject* observations_point,
-    const mrcal_lensmodel_t* lensmodel,
-    mrcal_problem_selections_t problem_selections
+    const drcal_lensmodel_t* lensmodel,
+    drcal_problem_selections_t problem_selections
 ) {
-    int index = mrcal_state_index_extrinsics(
+    int index = drcal_state_index_extrinsics(
         i,
         Ncameras_intrinsics,
         Ncameras_extrinsics,
@@ -3008,11 +3008,11 @@ static PyObject* callback_num_states_extrinsics(
     const PyArrayObject* indices_point_camintrinsics_camextrinsics,
     const PyArrayObject* indices_point_triangulated_camintrinsics_camextrinsics,
     const PyArrayObject* observations_point,
-    const mrcal_lensmodel_t* lensmodel,
-    mrcal_problem_selections_t problem_selections
+    const drcal_lensmodel_t* lensmodel,
+    drcal_problem_selections_t problem_selections
 ) {
     int index =
-        mrcal_num_states_extrinsics(Ncameras_extrinsics, problem_selections);
+        drcal_num_states_extrinsics(Ncameras_extrinsics, problem_selections);
     if (index >= 0) {
         return PyLong_FromLong(index);
     }
@@ -3050,10 +3050,10 @@ static PyObject* callback_state_index_frames(
     const PyArrayObject* indices_point_camintrinsics_camextrinsics,
     const PyArrayObject* indices_point_triangulated_camintrinsics_camextrinsics,
     const PyArrayObject* observations_point,
-    const mrcal_lensmodel_t* lensmodel,
-    mrcal_problem_selections_t problem_selections
+    const drcal_lensmodel_t* lensmodel,
+    drcal_problem_selections_t problem_selections
 ) {
-    int index = mrcal_state_index_frames(
+    int index = drcal_state_index_frames(
         i,
         Ncameras_intrinsics,
         Ncameras_extrinsics,
@@ -3101,10 +3101,10 @@ static PyObject* callback_num_states_frames(
     const PyArrayObject* indices_point_camintrinsics_camextrinsics,
     const PyArrayObject* indices_point_triangulated_camintrinsics_camextrinsics,
     const PyArrayObject* observations_point,
-    const mrcal_lensmodel_t* lensmodel,
-    mrcal_problem_selections_t problem_selections
+    const drcal_lensmodel_t* lensmodel,
+    drcal_problem_selections_t problem_selections
 ) {
-    int index = mrcal_num_states_frames(Nframes, problem_selections);
+    int index = drcal_num_states_frames(Nframes, problem_selections);
     if (index >= 0) {
         return PyLong_FromLong(index);
     }
@@ -3142,10 +3142,10 @@ static PyObject* callback_state_index_points(
     const PyArrayObject* indices_point_camintrinsics_camextrinsics,
     const PyArrayObject* indices_point_triangulated_camintrinsics_camextrinsics,
     const PyArrayObject* observations_point,
-    const mrcal_lensmodel_t* lensmodel,
-    mrcal_problem_selections_t problem_selections
+    const drcal_lensmodel_t* lensmodel,
+    drcal_problem_selections_t problem_selections
 ) {
-    int index = mrcal_state_index_points(
+    int index = drcal_state_index_points(
         i,
         Ncameras_intrinsics,
         Ncameras_extrinsics,
@@ -3193,11 +3193,11 @@ static PyObject* callback_num_states_points(
     const PyArrayObject* indices_point_camintrinsics_camextrinsics,
     const PyArrayObject* indices_point_triangulated_camintrinsics_camextrinsics,
     const PyArrayObject* observations_point,
-    const mrcal_lensmodel_t* lensmodel,
-    mrcal_problem_selections_t problem_selections
+    const drcal_lensmodel_t* lensmodel,
+    drcal_problem_selections_t problem_selections
 ) {
     int index =
-        mrcal_num_states_points(Npoints, Npoints_fixed, problem_selections);
+        drcal_num_states_points(Npoints, Npoints_fixed, problem_selections);
     if (index >= 0) {
         return PyLong_FromLong(index);
     }
@@ -3235,10 +3235,10 @@ static PyObject* callback_state_index_calobject_warp(
     const PyArrayObject* indices_point_camintrinsics_camextrinsics,
     const PyArrayObject* indices_point_triangulated_camintrinsics_camextrinsics,
     const PyArrayObject* observations_point,
-    const mrcal_lensmodel_t* lensmodel,
-    mrcal_problem_selections_t problem_selections
+    const drcal_lensmodel_t* lensmodel,
+    drcal_problem_selections_t problem_selections
 ) {
-    int index = mrcal_state_index_calobject_warp(
+    int index = drcal_state_index_calobject_warp(
         Ncameras_intrinsics,
         Ncameras_extrinsics,
         Nframes,
@@ -3285,10 +3285,10 @@ static PyObject* callback_num_states_calobject_warp(
     const PyArrayObject* indices_point_camintrinsics_camextrinsics,
     const PyArrayObject* indices_point_triangulated_camintrinsics_camextrinsics,
     const PyArrayObject* observations_point,
-    const mrcal_lensmodel_t* lensmodel,
-    mrcal_problem_selections_t problem_selections
+    const drcal_lensmodel_t* lensmodel,
+    drcal_problem_selections_t problem_selections
 ) {
-    int index = mrcal_num_states_calobject_warp(
+    int index = drcal_num_states_calobject_warp(
         problem_selections,
         Nobservations_board
     );
@@ -3329,10 +3329,10 @@ static PyObject* callback_num_states(
     const PyArrayObject* indices_point_camintrinsics_camextrinsics,
     const PyArrayObject* indices_point_triangulated_camintrinsics_camextrinsics,
     const PyArrayObject* observations_point,
-    const mrcal_lensmodel_t* lensmodel,
-    mrcal_problem_selections_t problem_selections
+    const drcal_lensmodel_t* lensmodel,
+    drcal_problem_selections_t problem_selections
 ) {
-    int index = mrcal_num_states(
+    int index = drcal_num_states(
         Ncameras_intrinsics,
         Ncameras_extrinsics,
         Nframes,
@@ -3372,11 +3372,11 @@ static PyObject* callback_num_intrinsics_optimization_params(
     const PyArrayObject* indices_point_camintrinsics_camextrinsics,
     const PyArrayObject* indices_point_triangulated_camintrinsics_camextrinsics,
     const PyArrayObject* observations_point,
-    const mrcal_lensmodel_t* lensmodel,
-    mrcal_problem_selections_t problem_selections
+    const drcal_lensmodel_t* lensmodel,
+    drcal_problem_selections_t problem_selections
 ) {
     int index =
-        mrcal_num_intrinsics_optimization_params(problem_selections, lensmodel);
+        drcal_num_intrinsics_optimization_params(problem_selections, lensmodel);
     if (index >= 0) {
         return PyLong_FromLong(index);
     }
@@ -3414,13 +3414,13 @@ static PyObject* callback_measurement_index_boards(
     const PyArrayObject* indices_point_camintrinsics_camextrinsics,
     const PyArrayObject* indices_point_triangulated_camintrinsics_camextrinsics,
     const PyArrayObject* observations_point,
-    const mrcal_lensmodel_t* lensmodel,
-    mrcal_problem_selections_t problem_selections
+    const drcal_lensmodel_t* lensmodel,
+    drcal_problem_selections_t problem_selections
 ) {
     int index = -1;
 
     if (calibration_object_width_n > 0 && calibration_object_height_n > 0) {
-        index = mrcal_measurement_index_boards(
+        index = drcal_measurement_index_boards(
             i,
             Nobservations_board,
             Nobservations_point,
@@ -3465,13 +3465,13 @@ static PyObject* callback_num_measurements_boards(
     const PyArrayObject* indices_point_camintrinsics_camextrinsics,
     const PyArrayObject* indices_point_triangulated_camintrinsics_camextrinsics,
     const PyArrayObject* observations_point,
-    const mrcal_lensmodel_t* lensmodel,
-    mrcal_problem_selections_t problem_selections
+    const drcal_lensmodel_t* lensmodel,
+    drcal_problem_selections_t problem_selections
 ) {
     int index = 0;
 
     if (calibration_object_width_n > 0 && calibration_object_height_n > 0) {
-        index = mrcal_num_measurements_boards(
+        index = drcal_num_measurements_boards(
             Nobservations_board,
             calibration_object_width_n,
             calibration_object_height_n
@@ -3514,10 +3514,10 @@ static PyObject* callback_measurement_index_points(
     const PyArrayObject* indices_point_camintrinsics_camextrinsics,
     const PyArrayObject* indices_point_triangulated_camintrinsics_camextrinsics,
     const PyArrayObject* observations_point,
-    const mrcal_lensmodel_t* lensmodel,
-    mrcal_problem_selections_t problem_selections
+    const drcal_lensmodel_t* lensmodel,
+    drcal_problem_selections_t problem_selections
 ) {
-    int index = mrcal_measurement_index_points(
+    int index = drcal_measurement_index_points(
         i,
         Nobservations_board,
         Nobservations_point,
@@ -3561,8 +3561,8 @@ static PyObject* callback_measurement_index_points_triangulated(
     const PyArrayObject* indices_point_camintrinsics_camextrinsics,
     const PyArrayObject* indices_point_triangulated_camintrinsics_camextrinsics,
     const PyArrayObject* observations_point,
-    const mrcal_lensmodel_t* lensmodel,
-    mrcal_problem_selections_t problem_selections
+    const drcal_lensmodel_t* lensmodel,
+    drcal_problem_selections_t problem_selections
 ) {
     // VERY similar to callback_num_measurements_points_triangulated() and
     // callback_measurement_index_regularization() and maybe others. Please
@@ -3575,7 +3575,7 @@ static PyObject* callback_measurement_index_points_triangulated(
         );
     }
 
-    mrcal_observation_point_triangulated_t c_observations_point_triangulated[N];
+    drcal_observation_point_triangulated_t c_observations_point_triangulated[N];
 
     int Nobservations_point_triangulated =
         N <= 0 ? 0
@@ -3591,7 +3591,7 @@ static PyObject* callback_measurement_index_points_triangulated(
         return NULL;
     }
 
-    int index = mrcal_measurement_index_points_triangulated(
+    int index = drcal_measurement_index_points_triangulated(
         i,
         Nobservations_board,
         Nobservations_point,
@@ -3638,10 +3638,10 @@ static PyObject* callback_num_measurements_points(
     const PyArrayObject* indices_point_camintrinsics_camextrinsics,
     const PyArrayObject* indices_point_triangulated_camintrinsics_camextrinsics,
     const PyArrayObject* observations_point,
-    const mrcal_lensmodel_t* lensmodel,
-    mrcal_problem_selections_t problem_selections
+    const drcal_lensmodel_t* lensmodel,
+    drcal_problem_selections_t problem_selections
 ) {
-    int index = mrcal_num_measurements_points(Nobservations_point);
+    int index = drcal_num_measurements_points(Nobservations_point);
     if (index >= 0) {
         return PyLong_FromLong(index);
     }
@@ -3679,8 +3679,8 @@ static PyObject* callback_num_measurements_points_triangulated(
     const PyArrayObject* indices_point_camintrinsics_camextrinsics,
     const PyArrayObject* indices_point_triangulated_camintrinsics_camextrinsics,
     const PyArrayObject* observations_point,
-    const mrcal_lensmodel_t* lensmodel,
-    mrcal_problem_selections_t problem_selections
+    const drcal_lensmodel_t* lensmodel,
+    drcal_problem_selections_t problem_selections
 ) {
     // VERY similar to callback_measurement_index_regularization(). Please
     // consolidate
@@ -3696,7 +3696,7 @@ static PyObject* callback_num_measurements_points_triangulated(
         return PyLong_FromLong(0);
     }
 
-    mrcal_observation_point_triangulated_t c_observations_point_triangulated[N];
+    drcal_observation_point_triangulated_t c_observations_point_triangulated[N];
 
     int Nobservations_point_triangulated =
         fill_c_observations_point_triangulated(
@@ -3710,7 +3710,7 @@ static PyObject* callback_num_measurements_points_triangulated(
         BARF("Error parsing triangulated points");
         return NULL;
     }
-    int index = mrcal_num_measurements_points_triangulated(
+    int index = drcal_num_measurements_points_triangulated(
         c_observations_point_triangulated,
         Nobservations_point_triangulated
     );
@@ -3751,8 +3751,8 @@ static PyObject* callback_measurement_index_regularization(
     const PyArrayObject* indices_point_camintrinsics_camextrinsics,
     const PyArrayObject* indices_point_triangulated_camintrinsics_camextrinsics,
     const PyArrayObject* observations_point,
-    const mrcal_lensmodel_t* lensmodel,
-    mrcal_problem_selections_t problem_selections
+    const drcal_lensmodel_t* lensmodel,
+    drcal_problem_selections_t problem_selections
 ) {
     // VERY similar to callback_num_measurements_points_triangulated(). Please
     // consolidate
@@ -3764,7 +3764,7 @@ static PyObject* callback_measurement_index_regularization(
         );
     }
 
-    mrcal_observation_point_triangulated_t c_observations_point_triangulated[N];
+    drcal_observation_point_triangulated_t c_observations_point_triangulated[N];
 
     int Nobservations_point_triangulated =
         N <= 0 ? 0
@@ -3779,7 +3779,7 @@ static PyObject* callback_measurement_index_regularization(
         BARF("Error parsing triangulated points");
         return NULL;
     }
-    int index = mrcal_measurement_index_regularization(
+    int index = drcal_measurement_index_regularization(
         c_observations_point_triangulated,
         Nobservations_point_triangulated,
         calibration_object_width_n,
@@ -3831,10 +3831,10 @@ static PyObject* callback_num_measurements_regularization(
     const PyArrayObject* indices_point_camintrinsics_camextrinsics,
     const PyArrayObject* indices_point_triangulated_camintrinsics_camextrinsics,
     const PyArrayObject* observations_point,
-    const mrcal_lensmodel_t* lensmodel,
-    mrcal_problem_selections_t problem_selections
+    const drcal_lensmodel_t* lensmodel,
+    drcal_problem_selections_t problem_selections
 ) {
-    int index = mrcal_num_measurements_regularization(
+    int index = drcal_num_measurements_regularization(
         Ncameras_intrinsics,
         Ncameras_extrinsics,
         Nframes,
@@ -3881,15 +3881,15 @@ static PyObject* callback_num_measurements(
     const PyArrayObject* indices_point_camintrinsics_camextrinsics,
     const PyArrayObject* indices_point_triangulated_camintrinsics_camextrinsics,
     const PyArrayObject* observations_point,
-    const mrcal_lensmodel_t* lensmodel,
-    mrcal_problem_selections_t problem_selections
+    const drcal_lensmodel_t* lensmodel,
+    drcal_problem_selections_t problem_selections
 ) {
 #if defined ENABLE_TRIANGULATED_WARNINGS && ENABLE_TRIANGULATED_WARNINGS
 #warning \
     "triangulated-solve: add tests to the num_measurements_..., state_index_... ..."
 #endif
 
-    mrcal_observation_point_triangulated_t* observations_point_triangulated =
+    drcal_observation_point_triangulated_t* observations_point_triangulated =
         NULL;
     int Nobservations_point_triangulated = 0;
 
@@ -3904,7 +3904,7 @@ static PyObject* callback_num_measurements(
         // No triangulated points. No error. I have N = 0 in this path
     }
 
-    mrcal_observation_point_triangulated_t c_observations_point_triangulated[N];
+    drcal_observation_point_triangulated_t c_observations_point_triangulated[N];
 
     if (N > 0) {
         Nobservations_point_triangulated =
@@ -3921,7 +3921,7 @@ static PyObject* callback_num_measurements(
         }
         observations_point_triangulated = c_observations_point_triangulated;
     }
-    int index = mrcal_num_measurements(
+    int index = drcal_num_measurements(
         Nobservations_board,
         Nobservations_point,
         observations_point_triangulated,
@@ -3973,8 +3973,8 @@ static PyObject* callback_corresponding_icam_extrinsics(
     const PyArrayObject* indices_point_camintrinsics_camextrinsics,
     const PyArrayObject* indices_point_triangulated_camintrinsics_camextrinsics,
     const PyArrayObject* observations_point,
-    const mrcal_lensmodel_t* lensmodel,
-    mrcal_problem_selections_t problem_selections
+    const drcal_lensmodel_t* lensmodel,
+    drcal_problem_selections_t problem_selections
 ) {
 #if defined ENABLE_TRIANGULATED_WARNINGS && ENABLE_TRIANGULATED_WARNINGS
 #warning "triangulated-solve: barf if we have any triangulated points"
@@ -4001,7 +4001,7 @@ static PyObject* callback_corresponding_icam_extrinsics(
         );
         return NULL;
     }
-    mrcal_observation_board_t c_observations_board[Nobservations_board];
+    drcal_observation_board_t c_observations_board[Nobservations_board];
     fill_c_observations_board(  // output
         c_observations_board,
         // input
@@ -4026,7 +4026,7 @@ static PyObject* callback_corresponding_icam_extrinsics(
             return NULL;
         }
     }
-    mrcal_observation_point_t c_observations_point[Nobservations_point];
+    drcal_observation_point_t c_observations_point[Nobservations_point];
     fill_c_observations_point(  // output
         c_observations_point,
         // input
@@ -4034,7 +4034,7 @@ static PyObject* callback_corresponding_icam_extrinsics(
         indices_point_camintrinsics_camextrinsics
     );
 
-    if (!mrcal_corresponding_icam_extrinsics(
+    if (!drcal_corresponding_icam_extrinsics(
             &icam_extrinsics,
 
             icam_intrinsics,
@@ -4045,7 +4045,7 @@ static PyObject* callback_corresponding_icam_extrinsics(
             Nobservations_point,
             c_observations_point
         )) {
-        BARF("Error calling mrcal_corresponding_icam_extrinsics()");
+        BARF("Error calling drcal_corresponding_icam_extrinsics()");
         return NULL;
     }
 
@@ -4081,8 +4081,8 @@ static PyObject* callback_decode_observation_indices_points_triangulated(
     const PyArrayObject* indices_point_camintrinsics_camextrinsics,
     const PyArrayObject* indices_point_triangulated_camintrinsics_camextrinsics,
     const PyArrayObject* observations_point,
-    const mrcal_lensmodel_t* lensmodel,
-    mrcal_problem_selections_t problem_selections
+    const drcal_lensmodel_t* lensmodel,
+    drcal_problem_selections_t problem_selections
 ) {
     if (indices_point_triangulated_camintrinsics_camextrinsics == NULL) {
         BARF("No triangulated points in this solve. Nothing to decode");
@@ -4096,7 +4096,7 @@ static PyObject* callback_decode_observation_indices_points_triangulated(
         return NULL;
     }
 
-    mrcal_observation_point_triangulated_t c_observations_point_triangulated[N];
+    drcal_observation_point_triangulated_t c_observations_point_triangulated[N];
 
     int Nobservations_point_triangulated =
         fill_c_observations_point_triangulated(
@@ -4111,7 +4111,7 @@ static PyObject* callback_decode_observation_indices_points_triangulated(
         return NULL;
     }
 
-    mrcal_observation_point_triangulated_t* observations_point_triangulated =
+    drcal_observation_point_triangulated_t* observations_point_triangulated =
         c_observations_point_triangulated;
 
     int iobservation0;
@@ -4121,7 +4121,7 @@ static PyObject* callback_decode_observation_indices_points_triangulated(
     int Nmeasurements_this_point;
     int ipoint;
 
-    bool result = mrcal_decode_observation_indices_points_triangulated(
+    bool result = drcal_decode_observation_indices_points_triangulated(
         &iobservation0,
         &iobservation1,
         &iobservation_point0,
@@ -4208,7 +4208,7 @@ static PyObject* _pack_unpack_state(
         "|$"  // everything is kwarg-only and optional. I apply logic down the
               // line to get what I need
         "iiiiii" OPTIMIZE_ARGUMENTS_REQUIRED(PARSECODE)
-            OPTIMIZE_ARGUMENTS_OPTIONAL(PARSECODE) ":mrcal." UNPACK_STATE;
+            OPTIMIZE_ARGUMENTS_OPTIONAL(PARSECODE) ":drcal." UNPACK_STATE;
     if (pack) {
         arg_string[strlen(arg_string) - strlen(UNPACK_STATE)] = '\0';
         strcat(arg_string, "pack_state");
@@ -4240,8 +4240,8 @@ static PyObject* _pack_unpack_state(
         goto done;
     }
 
-    mrcal_lensmodel_t mrcal_lensmodel;
-    if (!parse_lensmodel_from_arg(&mrcal_lensmodel, lensmodel)) {
+    drcal_lensmodel_t drcal_lensmodel;
+    if (!parse_lensmodel_from_arg(&drcal_lensmodel, lensmodel)) {
         goto done;
     }
 
@@ -4281,7 +4281,7 @@ static PyObject* _pack_unpack_state(
                                   : PyArray_DIMS(observations_point)[0];
     }
 
-    mrcal_problem_selections_t problem_selections =
+    drcal_problem_selections_t problem_selections =
         CONSTRUCT_PROBLEM_SELECTIONS();
 
     if (PyArray_TYPE(b) != NPY_DOUBLE) {
@@ -4301,7 +4301,7 @@ static PyObject* _pack_unpack_state(
         goto done;
     }
 
-    int Nstate = mrcal_num_states(
+    int Nstate = drcal_num_states(
         Ncameras_intrinsics,
         Ncameras_extrinsics,
         Nframes,
@@ -4309,7 +4309,7 @@ static PyObject* _pack_unpack_state(
         Npoints_fixed,
         Nobservations_board,
         problem_selections,
-        &mrcal_lensmodel
+        &drcal_lensmodel
     );
 
     if (dims[ndim - 1] != Nstate) {
@@ -4325,7 +4325,7 @@ static PyObject* _pack_unpack_state(
     double* x = (double*)PyArray_DATA(b);
     if (pack) {
         for (int i = 0; i < PyArray_SIZE(b) / Nstate; i++) {
-            mrcal_pack_solver_state_vector(
+            drcal_pack_solver_state_vector(
                 x,
                 Ncameras_intrinsics,
                 Ncameras_extrinsics,
@@ -4334,13 +4334,13 @@ static PyObject* _pack_unpack_state(
                 Npoints_fixed,
                 Nobservations_board,
                 problem_selections,
-                &mrcal_lensmodel
+                &drcal_lensmodel
             );
             x = &x[Nstate];
         }
     } else {
         for (int i = 0; i < PyArray_SIZE(b) / Nstate; i++) {
-            mrcal_unpack_solver_state_vector(
+            drcal_unpack_solver_state_vector(
                 x,
                 Ncameras_intrinsics,
                 Ncameras_extrinsics,
@@ -4349,7 +4349,7 @@ static PyObject* _pack_unpack_state(
                 Npoints_fixed,
                 Nobservations_board,
                 problem_selections,
-                &mrcal_lensmodel
+                &drcal_lensmodel
             );
             x = &x[Nstate];
         }
@@ -4415,11 +4415,11 @@ static PyObject* _rectified_resolution(
     double pixels_per_deg_el;
 
     // input
-    mrcal_lensmodel_t mrcal_lensmodel;
-    mrcal_point2_t azel_fov_deg;
-    mrcal_point2_t azel0_deg;
+    drcal_lensmodel_t drcal_lensmodel;
+    drcal_point2_t azel_fov_deg;
+    drcal_point2_t azel0_deg;
     char* rectification_model_string;
-    mrcal_lensmodel_t rectification_model;
+    drcal_lensmodel_t rectification_model;
 
     char* keywords[] = {
         LENSMODEL_ONE_ARGUMENTS(NAMELIST, )
@@ -4438,7 +4438,7 @@ static PyObject* _rectified_resolution(
             kwargs,
             LENSMODEL_ONE_ARGUMENTS(PARSECODE, )
                 RECTIFIED_RESOLUTION_ARGUMENTS(PARSECODE
-                ) "dddddds:mrcal.rectified_resolution",
+                ) "dddddds:drcal.rectified_resolution",
 
             keywords,
 
@@ -4456,7 +4456,7 @@ static PyObject* _rectified_resolution(
     }
 
     if (!lensmodel_one_validate_args(
-            &mrcal_lensmodel,
+            &drcal_lensmodel,
             LENSMODEL_ONE_ARGUMENTS(
                 ARG_LIST_CALL,
             ) true /* DO check the layout */
@@ -4477,19 +4477,19 @@ static PyObject* _rectified_resolution(
         goto done;
     }
 
-    if (!mrcal_rectified_resolution(
+    if (!drcal_rectified_resolution(
             &pixels_per_deg_az,
             &pixels_per_deg_el,
 
             // input
-            &mrcal_lensmodel,
+            &drcal_lensmodel,
             PyArray_DATA(intrinsics),
             &azel_fov_deg,
             &azel0_deg,
             PyArray_DATA(R_cam0_rect0),
             rectification_model.type
         )) {
-        BARF("mrcal_rectified_resolution() failed!");
+        BARF("drcal_rectified_resolution() failed!");
         goto done;
     }
 
@@ -4550,13 +4550,13 @@ static PyObject* _rectified_system(
     // input and output
     double pixels_per_deg_az;
     double pixels_per_deg_el;
-    mrcal_point2_t azel_fov_deg;
-    mrcal_point2_t azel0_deg;
+    drcal_point2_t azel_fov_deg;
+    drcal_point2_t azel0_deg;
 
     // input
-    mrcal_lensmodel_t mrcal_lensmodel0;
+    drcal_lensmodel_t drcal_lensmodel0;
     char* rectification_model_string;
-    mrcal_lensmodel_t rectification_model;
+    drcal_lensmodel_t rectification_model;
 
     bool az0_deg_autodetect = false;
     bool el0_deg_autodetect = false;
@@ -4593,7 +4593,7 @@ static PyObject* _rectified_system(
             kwargs,
             LENSMODEL_ONE_ARGUMENTS(PARSECODE, 0)
                 RECTIFIED_SYSTEM_ARGUMENTS(PARSECODE
-                ) "dddddds:mrcal.rectified_system",
+                ) "dddddds:drcal.rectified_system",
 
             keywords,
 
@@ -4615,7 +4615,7 @@ static PyObject* _rectified_system(
     }
 
     if (!lensmodel_one_validate_args(
-            &mrcal_lensmodel0,
+            &drcal_lensmodel0,
             LENSMODEL_ONE_ARGUMENTS(
                 ARG_LIST_CALL,
                 0
@@ -4636,7 +4636,7 @@ static PyObject* _rectified_system(
         goto done;
     }
 
-    if (!mrcal_rectified_system(  // output
+    if (!drcal_rectified_system(  // output
             imagersize_rectified,
             PyArray_DATA(fxycxy_rectified),
             PyArray_DATA(rt_rect0_ref),
@@ -4651,7 +4651,7 @@ static PyObject* _rectified_system(
             &azel0_deg,
 
             // input
-            &mrcal_lensmodel0,
+            &drcal_lensmodel0,
             PyArray_DATA(intrinsics0),
             PyArray_DATA(rt_cam0_ref),
             PyArray_DATA(rt_cam1_ref),
@@ -4661,7 +4661,7 @@ static PyObject* _rectified_system(
             az_fov_deg_autodetect,
             el_fov_deg_autodetect
         )) {
-        BARF("mrcal_rectified_system() failed!");
+        BARF("drcal_rectified_system() failed!");
         goto done;
     }
 
@@ -4751,9 +4751,9 @@ static PyObject* _rectification_maps(
     RECTIFICATION_MAPS_ARGUMENTS(ARG_DEFINE);
 
     // input
-    mrcal_lensmodel_t mrcal_lensmodel0;
-    mrcal_lensmodel_t mrcal_lensmodel1;
-    mrcal_lensmodel_t mrcal_lensmodel_rectified;
+    drcal_lensmodel_t drcal_lensmodel0;
+    drcal_lensmodel_t drcal_lensmodel1;
+    drcal_lensmodel_t drcal_lensmodel_rectified;
 
     char* keywords[] = {LENSMODEL_ONE_ARGUMENTS(NAMELIST, 0)
                             LENSMODEL_ONE_ARGUMENTS(NAMELIST, 1)
@@ -4768,7 +4768,7 @@ static PyObject* _rectification_maps(
                 LENSMODEL_ONE_ARGUMENTS(PARSECODE, 1)
                     LENSMODEL_ONE_ARGUMENTS(PARSECODE, _rectified)
                         RECTIFICATION_MAPS_ARGUMENTS(PARSECODE
-                        ) ":mrcal.rectification_maps",
+                        ) ":drcal.rectification_maps",
 
             keywords,
 
@@ -4781,7 +4781,7 @@ static PyObject* _rectification_maps(
     }
 
     if (!lensmodel_one_validate_args(
-            &mrcal_lensmodel0,
+            &drcal_lensmodel0,
             LENSMODEL_ONE_ARGUMENTS(
                 ARG_LIST_CALL,
                 0
@@ -4790,7 +4790,7 @@ static PyObject* _rectification_maps(
         goto done;
     }
     if (!lensmodel_one_validate_args(
-            &mrcal_lensmodel1,
+            &drcal_lensmodel1,
             LENSMODEL_ONE_ARGUMENTS(
                 ARG_LIST_CALL,
                 1
@@ -4799,7 +4799,7 @@ static PyObject* _rectification_maps(
         goto done;
     }
     if (!lensmodel_one_validate_args(
-            &mrcal_lensmodel_rectified,
+            &drcal_lensmodel_rectified,
             LENSMODEL_ONE_ARGUMENTS(
                 ARG_LIST_CALL,
                 _rectified
@@ -4818,24 +4818,24 @@ static PyObject* _rectification_maps(
     imagersize_rectified[0] = PyArray_DIMS(rectification_maps)[2];
     imagersize_rectified[1] = PyArray_DIMS(rectification_maps)[1];
 
-    if (!mrcal_rectification_maps(  // output
+    if (!drcal_rectification_maps(  // output
             PyArray_DATA(rectification_maps),
 
             // input
-            &mrcal_lensmodel0,
+            &drcal_lensmodel0,
             PyArray_DATA(intrinsics0),
             PyArray_DATA(r_cam0_ref),
 
-            &mrcal_lensmodel1,
+            &drcal_lensmodel1,
             PyArray_DATA(intrinsics1),
             PyArray_DATA(r_cam1_ref),
 
-            mrcal_lensmodel_rectified.type,
+            drcal_lensmodel_rectified.type,
             PyArray_DATA(intrinsics_rectified),
             imagersize_rectified,
             PyArray_DATA(r_rect0_ref)
         )) {
-        BARF("mrcal_rectification_maps() failed!");
+        BARF("drcal_rectification_maps() failed!");
         goto done;
     }
 
@@ -4905,7 +4905,7 @@ static PyObject* traverse_sensor_links(
     if (!PyArg_ParseTupleAndKeywords(
             args,
             kwargs,
-            "$O&O:mrcal.traverse_sensor_links",
+            "$O&O:drcal.traverse_sensor_links",
             keywords,
             PyArray_Converter,
             &connectivity_matrix,
@@ -4956,14 +4956,14 @@ static PyObject* traverse_sensor_links(
             }
         }
 
-        if (!mrcal_traverse_sensor_links(
+        if (!drcal_traverse_sensor_links(
                 Nsensors,
                 connectivity_matrix_upper,
                 &callback_sensor_link_C,
                 callback_sensor_link
             )) {
             if (!PyErr_Occurred()) {
-                BARF("mrcal_traverse_sensor_links() failed");
+                BARF("drcal_traverse_sensor_links() failed");
             }
             goto done;
         }
@@ -4983,24 +4983,24 @@ Return the index in the optimization vector of the intrinsics of camera i
 
 SYNOPSIS
 
-    m = mrcal.cameramodel('xxx.cameramodel')
+    m = drcal.cameramodel('xxx.cameramodel')
 
     optimization_inputs = m.optimization_inputs()
 
-    b = mrcal.optimizer_callback(**optimization_inputs)[0]
-    mrcal.unpack_state(b, **optimization_inputs)
+    b = drcal.optimizer_callback(**optimization_inputs)[0]
+    drcal.unpack_state(b, **optimization_inputs)
 
     icam_intrinsics = 1
-    i_state = mrcal.state_index_intrinsics(icam_intrinsics,
+    i_state = drcal.state_index_intrinsics(icam_intrinsics,
                                            **optimization_inputs)
 
-    Nintrinsics = mrcal.lensmodel_num_params(optimization_inputs['lensmodel'])
+    Nintrinsics = drcal.lensmodel_num_params(optimization_inputs['lensmodel'])
     intrinsics_data = b[i_state:i_state+Nintrinsics]
 
 The optimization algorithm sees its world described in one, big vector of state.
 The optimizer doesn't know or care about the meaning of each element of this
 vector, but for later analysis, it is useful to know what's what. The
-mrcal.state_index_...() functions report where particular items end up in the
+drcal.state_index_...() functions report where particular items end up in the
 state vector.
 
 THIS function reports the beginning of the i-th camera intrinsics in the state
@@ -5008,7 +5008,7 @@ vector. The intrinsics are stored contiguously. They consist of a 4-element
 "intrinsics core" (focallength-x, focallength-y, centerpixel-x, centerpixel-y)
 followed by a lensmodel-specific vector of "distortions". The number of
 intrinsics elements (including the core) for a particular lens model can be
-queried with mrcal.lensmodel_num_params(lensmodel). Note that
+queried with drcal.lensmodel_num_params(lensmodel). Note that
 do_optimize_intrinsics_core and do_optimize_intrinsics_distortions can be used
 to lock down one or both of those quantities, which would omit them from the
 optimization vector.
@@ -5031,7 +5031,7 @@ ARGUMENTS
 
 - lensmodel: string specifying the lensmodel we're using (this is always
   'LENSMODEL_...'). The full list of valid models is returned by
-  mrcal.supported_lensmodels(). This is required if we're not passing in the
+  drcal.supported_lensmodels(). This is required if we're not passing in the
   optimization inputs
 
 - do_optimize_intrinsics_core
@@ -5041,7 +5041,7 @@ ARGUMENTS
   do_optimize_frames
 
   optional booleans; default to True. These specify what we're optimizing. See
-  the documentation for mrcal.optimize() for details
+  the documentation for drcal.optimize() for details
 
 - Ncameras_intrinsics
   Ncameras_extrinsics
@@ -5051,7 +5051,7 @@ ARGUMENTS
   Nobservations_board
 
   optional integers; default to 0. These specify the sizes of various arrays in
-  the optimization. See the documentation for mrcal.optimize() for details
+  the optimization. See the documentation for drcal.optimize() for details
 
 RETURNED VALUE
 
@@ -5064,15 +5064,15 @@ Return the index in the optimization vector of the extrinsics of camera i
 
 SYNOPSIS
 
-    m = mrcal.cameramodel('xxx.cameramodel')
+    m = drcal.cameramodel('xxx.cameramodel')
 
     optimization_inputs = m.optimization_inputs()
 
-    b = mrcal.optimizer_callback(**optimization_inputs)[0]
-    mrcal.unpack_state(b, **optimization_inputs)
+    b = drcal.optimizer_callback(**optimization_inputs)[0]
+    drcal.unpack_state(b, **optimization_inputs)
 
     icam_extrinsics = 1
-    i_state = mrcal.state_index_extrinsics(icam_extrinsics,
+    i_state = drcal.state_index_extrinsics(icam_extrinsics,
                                            **optimization_inputs)
 
     extrinsics_rt_fromref = b[i_state:i_state+6]
@@ -5080,14 +5080,14 @@ SYNOPSIS
 The optimization algorithm sees its world described in one, big vector of state.
 The optimizer doesn't know or care about the meaning of each element of this
 vector, but for later analysis, it is useful to know what's what. The
-mrcal.state_index_...() functions report where particular items end up in the
+drcal.state_index_...() functions report where particular items end up in the
 state vector.
 
 THIS function reports the beginning of the i-th camera extrinsics in the state
 vector. The extrinsics are stored contiguously as an "rt transformation": a
 3-element rotation represented as a Rodrigues vector followed by a 3-element
 translation. These transform points represented in the reference coordinate
-system to the coordinate system of the specific camera. Note that mrcal allows
+system to the coordinate system of the specific camera. Note that drcal allows
 the reference coordinate system to be tied to a particular camera. In this case
 the extrinsics of that camera do not appear in the state vector at all, and
 icam_extrinsics == -1 in the indices_frame_camintrinsics_camextrinsics
@@ -5111,7 +5111,7 @@ ARGUMENTS
 
 - lensmodel: string specifying the lensmodel we're using (this is always
   'LENSMODEL_...'). The full list of valid models is returned by
-  mrcal.supported_lensmodels(). This is required if we're not passing in the
+  drcal.supported_lensmodels(). This is required if we're not passing in the
   optimization inputs
 
 - do_optimize_intrinsics_core
@@ -5121,7 +5121,7 @@ ARGUMENTS
   do_optimize_frames
 
   optional booleans; default to True. These specify what we're optimizing. See
-  the documentation for mrcal.optimize() for details
+  the documentation for drcal.optimize() for details
 
 - Ncameras_intrinsics
   Ncameras_extrinsics
@@ -5131,7 +5131,7 @@ ARGUMENTS
   Nobservations_board
 
   optional integers; default to 0. These specify the sizes of various arrays in
-  the optimization. See the documentation for mrcal.optimize() for details
+  the optimization. See the documentation for drcal.optimize() for details
 
 RETURNED VALUE
 
@@ -5146,15 +5146,15 @@ Return the index in the optimization vector of the pose of frame i
 
 SYNOPSIS
 
-    m = mrcal.cameramodel('xxx.cameramodel')
+    m = drcal.cameramodel('xxx.cameramodel')
 
     optimization_inputs = m.optimization_inputs()
 
-    b = mrcal.optimizer_callback(**optimization_inputs)[0]
-    mrcal.unpack_state(b, **optimization_inputs)
+    b = drcal.optimizer_callback(**optimization_inputs)[0]
+    drcal.unpack_state(b, **optimization_inputs)
 
     iframe = 1
-    i_state = mrcal.state_index_frames(iframe,
+    i_state = drcal.state_index_frames(iframe,
                                        **optimization_inputs)
 
     frames_rt_toref = b[i_state:i_state+6]
@@ -5162,7 +5162,7 @@ SYNOPSIS
 The optimization algorithm sees its world described in one, big vector of state.
 The optimizer doesn't know or care about the meaning of each element of this
 vector, but for later analysis, it is useful to know what's what. The
-mrcal.state_index_...() functions report where particular items end up in the
+drcal.state_index_...() functions report where particular items end up in the
 state vector.
 
 THIS function reports the beginning of the i-th frame pose in the state vector.
@@ -5190,7 +5190,7 @@ ARGUMENTS
 
 - lensmodel: string specifying the lensmodel we're using (this is always
   'LENSMODEL_...'). The full list of valid models is returned by
-  mrcal.supported_lensmodels(). This is required if we're not passing in the
+  drcal.supported_lensmodels(). This is required if we're not passing in the
   optimization inputs
 
 - do_optimize_intrinsics_core
@@ -5200,7 +5200,7 @@ ARGUMENTS
   do_optimize_frames
 
   optional booleans; default to True. These specify what we're optimizing. See
-  the documentation for mrcal.optimize() for details
+  the documentation for drcal.optimize() for details
 
 - Ncameras_intrinsics
   Ncameras_extrinsics
@@ -5210,7 +5210,7 @@ ARGUMENTS
   Nobservations_board
 
   optional integers; default to 0. These specify the sizes of various arrays in
-  the optimization. See the documentation for mrcal.optimize() for details
+  the optimization. See the documentation for drcal.optimize() for details
 
 RETURNED VALUE
 
@@ -5225,15 +5225,15 @@ Return the index in the optimization vector of the position of point i
 
 SYNOPSIS
 
-    m = mrcal.cameramodel('xxx.cameramodel')
+    m = drcal.cameramodel('xxx.cameramodel')
 
     optimization_inputs = m.optimization_inputs()
 
-    b = mrcal.optimizer_callback(**optimization_inputs)[0]
-    mrcal.unpack_state(b, **optimization_inputs)
+    b = drcal.optimizer_callback(**optimization_inputs)[0]
+    drcal.unpack_state(b, **optimization_inputs)
 
     i_point = 1
-    i_state = mrcal.state_index_points(i_point,
+    i_state = drcal.state_index_points(i_point,
                                        **optimization_inputs)
 
     point = b[i_state:i_state+3]
@@ -5241,7 +5241,7 @@ SYNOPSIS
 The optimization algorithm sees its world described in one, big vector of state.
 The optimizer doesn't know or care about the meaning of each element of this
 vector, but for later analysis, it is useful to know what's what. The
-mrcal.state_index_...() functions report where particular items end up in the
+drcal.state_index_...() functions report where particular items end up in the
 state vector.
 
 THIS function reports the beginning of the i-th point in the state vector. The
@@ -5266,7 +5266,7 @@ ARGUMENTS
 
 - lensmodel: string specifying the lensmodel we're using (this is always
   'LENSMODEL_...'). The full list of valid models is returned by
-  mrcal.supported_lensmodels(). This is required if we're not passing in the
+  drcal.supported_lensmodels(). This is required if we're not passing in the
   optimization inputs
 
 - do_optimize_intrinsics_core
@@ -5276,7 +5276,7 @@ ARGUMENTS
   do_optimize_frames
 
   optional booleans; default to True. These specify what we're optimizing. See
-  the documentation for mrcal.optimize() for details
+  the documentation for drcal.optimize() for details
 
 - Ncameras_intrinsics
   Ncameras_extrinsics
@@ -5286,7 +5286,7 @@ ARGUMENTS
   Nobservations_board
 
   optional integers; default to 0. These specify the sizes of various arrays in
-  the optimization. See the documentation for mrcal.optimize() for details
+  the optimization. See the documentation for drcal.optimize() for details
 
 RETURNED VALUE
 
@@ -5301,21 +5301,21 @@ Return the index in the optimization vector of the calibration object warp
 
 SYNOPSIS
 
-    m = mrcal.cameramodel('xxx.cameramodel')
+    m = drcal.cameramodel('xxx.cameramodel')
 
     optimization_inputs = m.optimization_inputs()
 
-    b = mrcal.optimizer_callback(**optimization_inputs)[0]
-    mrcal.unpack_state(b, **optimization_inputs)
+    b = drcal.optimizer_callback(**optimization_inputs)[0]
+    drcal.unpack_state(b, **optimization_inputs)
 
-    i_state = mrcal.state_index_calobject_warp(**optimization_inputs)
+    i_state = drcal.state_index_calobject_warp(**optimization_inputs)
 
     calobject_warp = b[i_state:i_state+2]
 
 The optimization algorithm sees its world described in one, big vector of state.
 The optimizer doesn't know or care about the meaning of each element of this
 vector, but for later analysis, it is useful to know what's what. The
-mrcal.state_index_...() functions report where particular items end up in the
+drcal.state_index_...() functions report where particular items end up in the
 state vector.
 
 THIS function reports the beginning of the calibration-object warping parameters
@@ -5340,7 +5340,7 @@ ARGUMENTS
 
 - lensmodel: string specifying the lensmodel we're using (this is always
   'LENSMODEL_...'). The full list of valid models is returned by
-  mrcal.supported_lensmodels(). This is required if we're not passing in the
+  drcal.supported_lensmodels(). This is required if we're not passing in the
   optimization inputs
 
 - do_optimize_intrinsics_core
@@ -5350,7 +5350,7 @@ ARGUMENTS
   do_optimize_frames
 
   optional booleans; default to True. These specify what we're optimizing. See
-  the documentation for mrcal.optimize() for details
+  the documentation for drcal.optimize() for details
 
 - Ncameras_intrinsics
   Ncameras_extrinsics
@@ -5360,7 +5360,7 @@ ARGUMENTS
   Nobservations_board
 
   optional integers; default to 0. These specify the sizes of various arrays in
-  the optimization. See the documentation for mrcal.optimize() for details
+  the optimization. See the documentation for drcal.optimize() for details
 
 RETURNED VALUE
 
@@ -5375,37 +5375,37 @@ Get the number of intrinsics parameters in the optimization vector
 
 SYNOPSIS
 
-    m = mrcal.cameramodel('xxx.cameramodel')
+    m = drcal.cameramodel('xxx.cameramodel')
 
     optimization_inputs = m.optimization_inputs()
 
-    b = mrcal.optimizer_callback(**optimization_inputs)[0]
-    mrcal.unpack_state(b, **optimization_inputs)
+    b = drcal.optimizer_callback(**optimization_inputs)[0]
+    drcal.unpack_state(b, **optimization_inputs)
 
-    i_state0 = mrcal.state_index_intrinsics(0, **optimization_inputs)
-    Nstates  = mrcal.num_states_intrinsics (   **optimization_inputs)
+    i_state0 = drcal.state_index_intrinsics(0, **optimization_inputs)
+    Nstates  = drcal.num_states_intrinsics (   **optimization_inputs)
 
     intrinsics_all = b[i_state0:i_state0+Nstates]
 
 The optimization algorithm sees its world described in one, big vector of state.
 The optimizer doesn't know or care about the meaning of each element of this
 vector, but for later analysis, it is useful to know what's what. The
-mrcal.num_states_...() functions report how many variables in the optimization
+drcal.num_states_...() functions report how many variables in the optimization
 vector are taken up by each particular kind of measurement.
 
 THIS function reports how many optimization variables are used to represent ALL
 the camera intrinsics. The intrinsics are stored contiguously. They consist of a
 4-element "intrinsics core" (focallength-x, focallength-y, centerpixel-x,
 centerpixel-y) followed by a lensmodel-specific vector of "distortions". A
-similar function mrcal.num_intrinsics_optimization_params() is available to
+similar function drcal.num_intrinsics_optimization_params() is available to
 report the number of optimization variables used for just ONE camera. If all the
-intrinsics are being optimized, then the mrcal.lensmodel_num_params() returns
+intrinsics are being optimized, then the drcal.lensmodel_num_params() returns
 the same value: the number of values needed to describe the intrinsics of a
 single camera. It is possible to lock down some of the intrinsics during
 optimization (by setting the do_optimize_intrinsics_... variables
 appropriately). These variables control what
-mrcal.num_intrinsics_optimization_params() and mrcal.num_states_intrinsics()
-return, but not mrcal.lensmodel_num_params().
+drcal.num_intrinsics_optimization_params() and drcal.num_states_intrinsics()
+return, but not drcal.lensmodel_num_params().
 
 In order to determine the variable mapping, we need quite a bit of context. If
 we have the full set of inputs to the optimization function, we can pass in
@@ -5423,7 +5423,7 @@ ARGUMENTS
 
 - lensmodel: string specifying the lensmodel we're using (this is always
   'LENSMODEL_...'). The full list of valid models is returned by
-  mrcal.supported_lensmodels(). This is required if we're not passing in the
+  drcal.supported_lensmodels(). This is required if we're not passing in the
   optimization inputs
 
 - do_optimize_intrinsics_core
@@ -5433,7 +5433,7 @@ ARGUMENTS
   do_optimize_frames
 
   optional booleans; default to True. These specify what we're optimizing. See
-  the documentation for mrcal.optimize() for details
+  the documentation for drcal.optimize() for details
 
 - Ncameras_intrinsics
   Ncameras_extrinsics
@@ -5442,7 +5442,7 @@ ARGUMENTS
   Npoints_fixed
 
   optional integers; default to 0. These specify the sizes of various arrays in
-  the optimization. See the documentation for mrcal.optimize() for details
+  the optimization. See the documentation for drcal.optimize() for details
 
 RETURNED VALUE
 
@@ -5455,29 +5455,29 @@ Get the number of extrinsics parameters in the optimization vector
 
 SYNOPSIS
 
-    m = mrcal.cameramodel('xxx.cameramodel')
+    m = drcal.cameramodel('xxx.cameramodel')
 
     optimization_inputs = m.optimization_inputs()
 
-    b = mrcal.optimizer_callback(**optimization_inputs)[0]
-    mrcal.unpack_state(b, **optimization_inputs)
+    b = drcal.optimizer_callback(**optimization_inputs)[0]
+    drcal.unpack_state(b, **optimization_inputs)
 
-    i_state0 = mrcal.state_index_extrinsics(0, **optimization_inputs)
-    Nstates  = mrcal.num_states_extrinsics (   **optimization_inputs)
+    i_state0 = drcal.state_index_extrinsics(0, **optimization_inputs)
+    Nstates  = drcal.num_states_extrinsics (   **optimization_inputs)
 
     extrinsics_rt_fromref_all = b[i_state0:i_state0+Nstates]
 
 The optimization algorithm sees its world described in one, big vector of state.
 The optimizer doesn't know or care about the meaning of each element of this
 vector, but for later analysis, it is useful to know what's what. The
-mrcal.num_states_...() functions report how many variables in the optimization
+drcal.num_states_...() functions report how many variables in the optimization
 vector are taken up by each particular kind of measurement.
 
 THIS function reports how many variables are used to represent ALL the camera
 extrinsics. The extrinsics are stored contiguously as an "rt transformation": a
 3-element rotation represented as a Rodrigues vector followed by a 3-element
 translation. These transform points represented in the reference coordinate
-system to the coordinate system of the specific camera. Note that mrcal allows
+system to the coordinate system of the specific camera. Note that drcal allows
 the reference coordinate system to be tied to a particular camera. In this case
 the extrinsics of that camera do not appear in the state vector at all, and
 icam_extrinsics == -1 in the indices_frame_camintrinsics_camextrinsics
@@ -5499,7 +5499,7 @@ ARGUMENTS
 
 - lensmodel: string specifying the lensmodel we're using (this is always
   'LENSMODEL_...'). The full list of valid models is returned by
-  mrcal.supported_lensmodels(). This is required if we're not passing in the
+  drcal.supported_lensmodels(). This is required if we're not passing in the
   optimization inputs
 
 - do_optimize_intrinsics_core
@@ -5509,7 +5509,7 @@ ARGUMENTS
   do_optimize_frames
 
   optional booleans; default to True. These specify what we're optimizing. See
-  the documentation for mrcal.optimize() for details
+  the documentation for drcal.optimize() for details
 
 - Ncameras_intrinsics
   Ncameras_extrinsics
@@ -5518,7 +5518,7 @@ ARGUMENTS
   Npoints_fixed
 
   optional integers; default to 0. These specify the sizes of various arrays in
-  the optimization. See the documentation for mrcal.optimize() for details
+  the optimization. See the documentation for drcal.optimize() for details
 
 RETURNED VALUE
 
@@ -5531,22 +5531,22 @@ Get the number of calibration object pose parameters in the optimization vector
 
 SYNOPSIS
 
-    m = mrcal.cameramodel('xxx.cameramodel')
+    m = drcal.cameramodel('xxx.cameramodel')
 
     optimization_inputs = m.optimization_inputs()
 
-    b = mrcal.optimizer_callback(**optimization_inputs)[0]
-    mrcal.unpack_state(b, **optimization_inputs)
+    b = drcal.optimizer_callback(**optimization_inputs)[0]
+    drcal.unpack_state(b, **optimization_inputs)
 
-    i_state0 = mrcal.state_index_frames(0, **optimization_inputs)
-    Nstates  = mrcal.num_states_frames (   **optimization_inputs)
+    i_state0 = drcal.state_index_frames(0, **optimization_inputs)
+    Nstates  = drcal.num_states_frames (   **optimization_inputs)
 
     frames_rt_toref_all = b[i_state0:i_state0+Nstates]
 
 The optimization algorithm sees its world described in one, big vector of state.
 The optimizer doesn't know or care about the meaning of each element of this
 vector, but for later analysis, it is useful to know what's what. The
-mrcal.num_states_...() functions report how many variables in the optimization
+drcal.num_states_...() functions report how many variables in the optimization
 vector are taken up by each particular kind of measurement.
 
 THIS function reports how many variables are used to represent ALL the frame
@@ -5572,7 +5572,7 @@ ARGUMENTS
 
 - lensmodel: string specifying the lensmodel we're using (this is always
   'LENSMODEL_...'). The full list of valid models is returned by
-  mrcal.supported_lensmodels(). This is required if we're not passing in the
+  drcal.supported_lensmodels(). This is required if we're not passing in the
   optimization inputs
 
 - do_optimize_intrinsics_core
@@ -5582,7 +5582,7 @@ ARGUMENTS
   do_optimize_frames
 
   optional booleans; default to True. These specify what we're optimizing. See
-  the documentation for mrcal.optimize() for details
+  the documentation for drcal.optimize() for details
 
 - Ncameras_intrinsics
   Ncameras_extrinsics
@@ -5591,7 +5591,7 @@ ARGUMENTS
   Npoints_fixed
 
   optional integers; default to 0. These specify the sizes of various arrays in
-  the optimization. See the documentation for mrcal.optimize() for details
+  the optimization. See the documentation for drcal.optimize() for details
 
 RETURNED VALUE
 
@@ -5604,22 +5604,22 @@ Get the number of point-position parameters in the optimization vector
 
 SYNOPSIS
 
-    m = mrcal.cameramodel('xxx.cameramodel')
+    m = drcal.cameramodel('xxx.cameramodel')
 
     optimization_inputs = m.optimization_inputs()
 
-    b = mrcal.optimizer_callback(**optimization_inputs)[0]
-    mrcal.unpack_state(b, **optimization_inputs)
+    b = drcal.optimizer_callback(**optimization_inputs)[0]
+    drcal.unpack_state(b, **optimization_inputs)
 
-    i_state0 = mrcal.state_index_points(0, **optimization_inputs)
-    Nstates  = mrcal.num_states_points (   **optimization_inputs)
+    i_state0 = drcal.state_index_points(0, **optimization_inputs)
+    Nstates  = drcal.num_states_points (   **optimization_inputs)
 
     points_all = b[i_state0:i_state0+Nstates]
 
 The optimization algorithm sees its world described in one, big vector of state.
 The optimizer doesn't know or care about the meaning of each element of this
 vector, but for later analysis, it is useful to know what's what. The
-mrcal.num_states_...() functions report how many variables in the optimization
+drcal.num_states_...() functions report how many variables in the optimization
 vector are taken up by each particular kind of measurement.
 
 THIS function reports how many variables are used to represent ALL the points.
@@ -5642,7 +5642,7 @@ ARGUMENTS
 
 - lensmodel: string specifying the lensmodel we're using (this is always
   'LENSMODEL_...'). The full list of valid models is returned by
-  mrcal.supported_lensmodels(). This is required if we're not passing in the
+  drcal.supported_lensmodels(). This is required if we're not passing in the
   optimization inputs
 
 - do_optimize_intrinsics_core
@@ -5652,7 +5652,7 @@ ARGUMENTS
   do_optimize_frames
 
   optional booleans; default to True. These specify what we're optimizing. See
-  the documentation for mrcal.optimize() for details
+  the documentation for drcal.optimize() for details
 
 - Ncameras_intrinsics
   Ncameras_extrinsics
@@ -5661,7 +5661,7 @@ ARGUMENTS
   Npoints_fixed
 
   optional integers; default to 0. These specify the sizes of various arrays in
-  the optimization. See the documentation for mrcal.optimize() for details
+  the optimization. See the documentation for drcal.optimize() for details
 
 RETURNED VALUE
 
@@ -5674,22 +5674,22 @@ Get the number of parameters in the optimization vector for the board warp
 
 SYNOPSIS
 
-    m = mrcal.cameramodel('xxx.cameramodel')
+    m = drcal.cameramodel('xxx.cameramodel')
 
     optimization_inputs = m.optimization_inputs()
 
-    b = mrcal.optimizer_callback(**optimization_inputs)[0]
-    mrcal.unpack_state(b, **optimization_inputs)
+    b = drcal.optimizer_callback(**optimization_inputs)[0]
+    drcal.unpack_state(b, **optimization_inputs)
 
-    i_state0 = mrcal.state_index_calobject_warp(**optimization_inputs)
-    Nstates  = mrcal.num_states_calobject_warp (**optimization_inputs)
+    i_state0 = drcal.state_index_calobject_warp(**optimization_inputs)
+    Nstates  = drcal.num_states_calobject_warp (**optimization_inputs)
 
     calobject_warp = b[i_state0:i_state0+Nstates]
 
 The optimization algorithm sees its world described in one, big vector of state.
 The optimizer doesn't know or care about the meaning of each element of this
 vector, but for later analysis, it is useful to know what's what. The
-mrcal.num_states_...() functions report how many variables in the optimization
+drcal.num_states_...() functions report how many variables in the optimization
 vector are taken up by each particular kind of measurement.
 
 THIS function reports how many variables are used to represent the
@@ -5714,7 +5714,7 @@ ARGUMENTS
 
 - lensmodel: string specifying the lensmodel we're using (this is always
   'LENSMODEL_...'). The full list of valid models is returned by
-  mrcal.supported_lensmodels(). This is required if we're not passing in the
+  drcal.supported_lensmodels(). This is required if we're not passing in the
   optimization inputs
 
 - do_optimize_intrinsics_core
@@ -5724,7 +5724,7 @@ ARGUMENTS
   do_optimize_frames
 
   optional booleans; default to True. These specify what we're optimizing. See
-  the documentation for mrcal.optimize() for details
+  the documentation for drcal.optimize() for details
 
 - Ncameras_intrinsics
   Ncameras_extrinsics
@@ -5734,7 +5734,7 @@ ARGUMENTS
   Nobservations_board
 
   optional integers; default to 0. These specify the sizes of various arrays in
-  the optimization. See the documentation for mrcal.optimize() for details
+  the optimization. See the documentation for drcal.optimize() for details
 
 RETURNED VALUE
 
@@ -5748,14 +5748,14 @@ Scales a state vector to the packed, unitless form used by the optimizer
 
 SYNOPSIS
 
-    m = mrcal.cameramodel('xxx.cameramodel')
+    m = drcal.cameramodel('xxx.cameramodel')
 
     optimization_inputs = m.optimization_inputs()
 
-    Jpacked = mrcal.optimizer_callback(**optimization_inputs)[2].toarray()
+    Jpacked = drcal.optimizer_callback(**optimization_inputs)[2].toarray()
 
     J = Jpacked.copy()
-    mrcal.pack_state(J, **optimization_inputs)
+    drcal.pack_state(J, **optimization_inputs)
 
 In order to make the optimization well-behaved, we scale all the variables in
 the state and the gradients before passing them to the optimizer. The internal
@@ -5792,7 +5792,7 @@ ARGUMENTS
 
 - lensmodel: string specifying the lensmodel we're using (this is always
   'LENSMODEL_...'). The full list of valid models is returned by
-  mrcal.supported_lensmodels(). This is required if we're not passing in the
+  drcal.supported_lensmodels(). This is required if we're not passing in the
   optimization inputs
 
 - do_optimize_intrinsics_core
@@ -5802,7 +5802,7 @@ ARGUMENTS
   do_optimize_frames
 
   optional booleans; default to True. These specify what we're optimizing. See
-  the documentation for mrcal.optimize() for details
+  the documentation for drcal.optimize() for details
 
 - Ncameras_intrinsics
   Ncameras_extrinsics
@@ -5811,7 +5811,7 @@ ARGUMENTS
   Npoints_fixed
 
   optional integers; default to 0. These specify the sizes of various arrays in
-  the optimization. See the documentation for mrcal.optimize() for details
+  the optimization. See the documentation for drcal.optimize() for details
 
 RETURNED VALUE
 
@@ -5824,14 +5824,14 @@ Scales a state vector from the packed, unitless form used by the optimizer
 
 SYNOPSIS
 
-    m = mrcal.cameramodel('xxx.cameramodel')
+    m = drcal.cameramodel('xxx.cameramodel')
 
     optimization_inputs = m.optimization_inputs()
 
-    b_packed = mrcal.optimizer_callback(**optimization_inputs)[0]
+    b_packed = drcal.optimizer_callback(**optimization_inputs)[0]
 
     b = b_packed.copy()
-    mrcal.unpack_state(b, **optimization_inputs)
+    drcal.unpack_state(b, **optimization_inputs)
 
 In order to make the optimization well-behaved, we scale all the variables in
 the state and the gradients before passing them to the optimizer. The internal
@@ -5868,7 +5868,7 @@ ARGUMENTS
 
 - lensmodel: string specifying the lensmodel we're using (this is always
   'LENSMODEL_...'). The full list of valid models is returned by
-  mrcal.supported_lensmodels(). This is required if we're not passing in the
+  drcal.supported_lensmodels(). This is required if we're not passing in the
   optimization inputs
 
 - do_optimize_intrinsics_core
@@ -5878,7 +5878,7 @@ ARGUMENTS
   do_optimize_frames
 
   optional booleans; default to True. These specify what we're optimizing. See
-  the documentation for mrcal.optimize() for details
+  the documentation for drcal.optimize() for details
 
 - Ncameras_intrinsics
   Ncameras_extrinsics
@@ -5887,7 +5887,7 @@ ARGUMENTS
   Npoints_fixed
 
   optional integers; default to 0. These specify the sizes of various arrays in
-  the optimization. See the documentation for mrcal.optimize() for details
+  the optimization. See the documentation for drcal.optimize() for details
 
 RETURNED VALUE
 
@@ -5900,21 +5900,21 @@ Return the measurement index of the start of a given board observation
 
 SYNOPSIS
 
-    m = mrcal.cameramodel('xxx.cameramodel')
+    m = drcal.cameramodel('xxx.cameramodel')
 
     optimization_inputs = m.optimization_inputs()
 
-    x = mrcal.optimizer_callback(**optimization_inputs)[1]
+    x = drcal.optimizer_callback(**optimization_inputs)[1]
 
-    Nmeas   = mrcal.num_measurements_boards (   **optimization_inputs)
-    i_meas0 = mrcal.measurement_index_boards(0, **optimization_inputs)
+    Nmeas   = drcal.num_measurements_boards (   **optimization_inputs)
+    i_meas0 = drcal.measurement_index_boards(0, **optimization_inputs)
 
     x_boards_all = x[i_meas0:i_meas0+Nmeas]
 
 The optimization algorithm tries to minimize the norm of a "measurements" vector
 x. The optimizer doesn't know or care about the meaning of each element of this
 vector, but for later analysis, it is useful to know what's what. The
-mrcal.measurement_index_...() functions report where particular items end up in
+drcal.measurement_index_...() functions report where particular items end up in
 the vector of measurements.
 
 THIS function reports the index in the measurement vector where a particular
@@ -5941,7 +5941,7 @@ ARGUMENTS
 
 - lensmodel: string specifying the lensmodel we're using (this is always
   'LENSMODEL_...'). The full list of valid models is returned by
-  mrcal.supported_lensmodels(). This is required if we're not passing in the
+  drcal.supported_lensmodels(). This is required if we're not passing in the
   optimization inputs
 
 - do_optimize_intrinsics_core
@@ -5952,7 +5952,7 @@ ARGUMENTS
   do_apply_regularization
 
   optional booleans; default to True. These specify what we're optimizing. See
-  the documentation for mrcal.optimize() for details
+  the documentation for drcal.optimize() for details
 
 - Ncameras_intrinsics
   Ncameras_extrinsics
@@ -5965,7 +5965,7 @@ ARGUMENTS
   calibration_object_height_n
 
   optional integers; default to 0. These specify the sizes of various arrays in
-  the optimization. See the documentation for mrcal.optimize() for details
+  the optimization. See the documentation for drcal.optimize() for details
 
 RETURNED VALUE
 
@@ -5979,21 +5979,21 @@ Return the measurement index of the start of a given point observation
 
 SYNOPSIS
 
-    m = mrcal.cameramodel('xxx.cameramodel')
+    m = drcal.cameramodel('xxx.cameramodel')
 
     optimization_inputs = m.optimization_inputs()
 
-    x = mrcal.optimizer_callback(**optimization_inputs)[1]
+    x = drcal.optimizer_callback(**optimization_inputs)[1]
 
-    Nmeas   = mrcal.num_measurements_points(    **optimization_inputs)
-    i_meas0 = mrcal.measurement_index_points(0, **optimization_inputs)
+    Nmeas   = drcal.num_measurements_points(    **optimization_inputs)
+    i_meas0 = drcal.measurement_index_points(0, **optimization_inputs)
 
     x_points_all = x[i_meas0:i_meas0+Nmeas]
 
 The optimization algorithm tries to minimize the norm of a "measurements" vector
 x. The optimizer doesn't know or care about the meaning of each element of this
 vector, but for later analysis, it is useful to know what's what. The
-mrcal.measurement_index_...() functions report where particular items end up in
+drcal.measurement_index_...() functions report where particular items end up in
 the vector of measurements.
 
 THIS function reports the index in the measurement vector where a particular
@@ -6020,7 +6020,7 @@ ARGUMENTS
 
 - lensmodel: string specifying the lensmodel we're using (this is always
   'LENSMODEL_...'). The full list of valid models is returned by
-  mrcal.supported_lensmodels(). This is required if we're not passing in the
+  drcal.supported_lensmodels(). This is required if we're not passing in the
   optimization inputs
 
 - do_optimize_intrinsics_core
@@ -6031,7 +6031,7 @@ ARGUMENTS
   do_apply_regularization
 
   optional booleans; default to True. These specify what we're optimizing. See
-  the documentation for mrcal.optimize() for details
+  the documentation for drcal.optimize() for details
 
 - Ncameras_intrinsics
   Ncameras_extrinsics
@@ -6044,7 +6044,7 @@ ARGUMENTS
   calibration_object_height_n
 
   optional integers; default to 0. These specify the sizes of various arrays in
-  the optimization. See the documentation for mrcal.optimize() for details
+  the optimization. See the documentation for drcal.optimize() for details
 
 RETURNED VALUE
 
@@ -6062,21 +6062,21 @@ Return the index of the start of the regularization measurements
 
 SYNOPSIS
 
-    m = mrcal.cameramodel('xxx.cameramodel')
+    m = drcal.cameramodel('xxx.cameramodel')
 
     optimization_inputs = m.optimization_inputs()
 
-    x = mrcal.optimizer_callback(**optimization_inputs)[1]
+    x = drcal.optimizer_callback(**optimization_inputs)[1]
 
-    Nmeas   = mrcal.num_measurements_regularization( **optimization_inputs)
-    i_meas0 = mrcal.measurement_index_regularization(**optimization_inputs)
+    Nmeas   = drcal.num_measurements_regularization( **optimization_inputs)
+    i_meas0 = drcal.measurement_index_regularization(**optimization_inputs)
 
     x_regularization = x[i_meas0:i_meas0+Nmeas]
 
 The optimization algorithm tries to minimize the norm of a "measurements" vector
 x. The optimizer doesn't know or care about the meaning of each element of this
 vector, but for later analysis, it is useful to know what's what. The
-mrcal.measurement_index_...() functions report where particular items end up in
+drcal.measurement_index_...() functions report where particular items end up in
 the vector of measurements.
 
 THIS function reports the index in the measurement vector where the
@@ -6100,7 +6100,7 @@ ARGUMENTS
 
 - lensmodel: string specifying the lensmodel we're using (this is always
   'LENSMODEL_...'). The full list of valid models is returned by
-  mrcal.supported_lensmodels(). This is required if we're not passing in the
+  drcal.supported_lensmodels(). This is required if we're not passing in the
   optimization inputs
 
 - do_optimize_intrinsics_core
@@ -6111,7 +6111,7 @@ ARGUMENTS
   do_apply_regularization
 
   optional booleans; default to True. These specify what we're optimizing. See
-  the documentation for mrcal.optimize() for details
+  the documentation for drcal.optimize() for details
 
 - Ncameras_intrinsics
   Ncameras_extrinsics
@@ -6124,7 +6124,7 @@ ARGUMENTS
   calibration_object_height_n
 
   optional integers; default to 0. These specify the sizes of various arrays in
-  the optimization. See the documentation for mrcal.optimize() for details
+  the optimization. See the documentation for drcal.optimize() for details
 
 RETURNED VALUE
 
@@ -6138,21 +6138,21 @@ Return how many measurements we have from calibration object observations
 
 SYNOPSIS
 
-    m = mrcal.cameramodel('xxx.cameramodel')
+    m = drcal.cameramodel('xxx.cameramodel')
 
     optimization_inputs = m.optimization_inputs()
 
-    x = mrcal.optimizer_callback(**optimization_inputs)[1]
+    x = drcal.optimizer_callback(**optimization_inputs)[1]
 
-    Nmeas   = mrcal.num_measurements_boards (   **optimization_inputs)
-    i_meas0 = mrcal.measurement_index_boards(0, **optimization_inputs)
+    Nmeas   = drcal.num_measurements_boards (   **optimization_inputs)
+    i_meas0 = drcal.measurement_index_boards(0, **optimization_inputs)
 
     x_boards_all = x[i_meas0:i_meas0+Nmeas]
 
 The optimization algorithm tries to minimize the norm of a "measurements" vector
 x. The optimizer doesn't know or care about the meaning of each element of this
 vector, but for later analysis, it is useful to know what's what. The
-mrcal.num_measurements_...() functions report how many measurements are produced
+drcal.num_measurements_...() functions report how many measurements are produced
 by particular items.
 
 THIS function reports how many measurements come from the observations of the
@@ -6175,7 +6175,7 @@ ARGUMENTS
 
 - lensmodel: string specifying the lensmodel we're using (this is always
   'LENSMODEL_...'). The full list of valid models is returned by
-  mrcal.supported_lensmodels(). This is required if we're not passing in the
+  drcal.supported_lensmodels(). This is required if we're not passing in the
   optimization inputs
 
 - do_optimize_intrinsics_core
@@ -6186,7 +6186,7 @@ ARGUMENTS
   do_apply_regularization
 
   optional booleans; default to True. These specify what we're optimizing. See
-  the documentation for mrcal.optimize() for details
+  the documentation for drcal.optimize() for details
 
 - Ncameras_intrinsics
   Ncameras_extrinsics
@@ -6199,7 +6199,7 @@ ARGUMENTS
   calibration_object_height_n
 
   optional integers; default to 0. These specify the sizes of various arrays in
-  the optimization. See the documentation for mrcal.optimize() for details
+  the optimization. See the documentation for drcal.optimize() for details
 
 RETURNED VALUE
 
@@ -6213,21 +6213,21 @@ Return how many measurements we have from point observations
 
 SYNOPSIS
 
-    m = mrcal.cameramodel('xxx.cameramodel')
+    m = drcal.cameramodel('xxx.cameramodel')
 
     optimization_inputs = m.optimization_inputs()
 
-    x = mrcal.optimizer_callback(**optimization_inputs)[1]
+    x = drcal.optimizer_callback(**optimization_inputs)[1]
 
-    Nmeas   = mrcal.num_measurements_points(    **optimization_inputs)
-    i_meas0 = mrcal.measurement_index_points(0, **optimization_inputs)
+    Nmeas   = drcal.num_measurements_points(    **optimization_inputs)
+    i_meas0 = drcal.measurement_index_points(0, **optimization_inputs)
 
     x_points_all = x[i_meas0:i_meas0+Nmeas]
 
 The optimization algorithm tries to minimize the norm of a "measurements" vector
 x. The optimizer doesn't know or care about the meaning of each element of this
 vector, but for later analysis, it is useful to know what's what. The
-mrcal.num_measurements_...() functions report how many measurements are produced
+drcal.num_measurements_...() functions report how many measurements are produced
 by particular items.
 
 THIS function reports how many measurements come from the observations of
@@ -6251,7 +6251,7 @@ ARGUMENTS
 
 - lensmodel: string specifying the lensmodel we're using (this is always
   'LENSMODEL_...'). The full list of valid models is returned by
-  mrcal.supported_lensmodels(). This is required if we're not passing in the
+  drcal.supported_lensmodels(). This is required if we're not passing in the
   optimization inputs
 
 - do_optimize_intrinsics_core
@@ -6262,7 +6262,7 @@ ARGUMENTS
   do_apply_regularization
 
   optional booleans; default to True. These specify what we're optimizing. See
-  the documentation for mrcal.optimize() for details
+  the documentation for drcal.optimize() for details
 
 - Ncameras_intrinsics
   Ncameras_extrinsics
@@ -6275,7 +6275,7 @@ ARGUMENTS
   calibration_object_height_n
 
   optional integers; default to 0. These specify the sizes of various arrays in
-  the optimization. See the documentation for mrcal.optimize() for details
+  the optimization. See the documentation for drcal.optimize() for details
 
 RETURNED VALUE
 
@@ -6293,21 +6293,21 @@ Return how many measurements we have from regularization
 
 SYNOPSIS
 
-    m = mrcal.cameramodel('xxx.cameramodel')
+    m = drcal.cameramodel('xxx.cameramodel')
 
     optimization_inputs = m.optimization_inputs()
 
-    x = mrcal.optimizer_callback(**optimization_inputs)[1]
+    x = drcal.optimizer_callback(**optimization_inputs)[1]
 
-    Nmeas   = mrcal.num_measurements_regularization( **optimization_inputs)
-    i_meas0 = mrcal.measurement_index_regularization(**optimization_inputs)
+    Nmeas   = drcal.num_measurements_regularization( **optimization_inputs)
+    i_meas0 = drcal.measurement_index_regularization(**optimization_inputs)
 
     x_regularization = x[i_meas0:i_meas0+Nmeas]
 
 The optimization algorithm tries to minimize the norm of a "measurements" vector
 x. The optimizer doesn't know or care about the meaning of each element of this
 vector, but for later analysis, it is useful to know what's what. The
-mrcal.num_measurements_...() functions report where particular items end up in
+drcal.num_measurements_...() functions report where particular items end up in
 the vector of measurements.
 
 THIS function reports how many measurements come from the regularization terms
@@ -6331,7 +6331,7 @@ ARGUMENTS
 
 - lensmodel: string specifying the lensmodel we're using (this is always
   'LENSMODEL_...'). The full list of valid models is returned by
-  mrcal.supported_lensmodels(). This is required if we're not passing in the
+  drcal.supported_lensmodels(). This is required if we're not passing in the
   optimization inputs
 
 - do_optimize_intrinsics_core
@@ -6342,7 +6342,7 @@ ARGUMENTS
   do_apply_regularization
 
   optional booleans; default to True. These specify what we're optimizing. See
-  the documentation for mrcal.optimize() for details
+  the documentation for drcal.optimize() for details
 
 - Ncameras_intrinsics
   Ncameras_extrinsics
@@ -6355,7 +6355,7 @@ ARGUMENTS
   calibration_object_height_n
 
   optional integers; default to 0. These specify the sizes of various arrays in
-  the optimization. See the documentation for mrcal.optimize() for details
+  the optimization. See the documentation for drcal.optimize() for details
 
 RETURNED VALUE
 
@@ -6369,13 +6369,13 @@ Return how many measurements we have in the full optimization problem
 
 SYNOPSIS
 
-    m = mrcal.cameramodel('xxx.cameramodel')
+    m = drcal.cameramodel('xxx.cameramodel')
 
     optimization_inputs = m.optimization_inputs()
 
-    x,J = mrcal.optimizer_callback(**optimization_inputs)[1:3]
+    x,J = drcal.optimizer_callback(**optimization_inputs)[1:3]
 
-    Nmeas   = mrcal.num_measurements(**optimization_inputs)
+    Nmeas   = drcal.num_measurements(**optimization_inputs)
 
     print(x.shape[0] - Nmeas)
     ===>
@@ -6388,7 +6388,7 @@ SYNOPSIS
 The optimization algorithm tries to minimize the norm of a "measurements" vector
 x. The optimizer doesn't know or care about the meaning of each element of this
 vector, but for later analysis, it is useful to know what's what. The
-mrcal.num_measurements_...() functions report where particular items end up in
+drcal.num_measurements_...() functions report where particular items end up in
 the vector of measurements.
 
 THIS function reports the total number of measurements we have. This corresponds
@@ -6411,7 +6411,7 @@ ARGUMENTS
 
 - lensmodel: string specifying the lensmodel we're using (this is always
   'LENSMODEL_...'). The full list of valid models is returned by
-  mrcal.supported_lensmodels(). This is required if we're not passing in the
+  drcal.supported_lensmodels(). This is required if we're not passing in the
   optimization inputs
 
 - do_optimize_intrinsics_core
@@ -6422,7 +6422,7 @@ ARGUMENTS
   do_apply_regularization
 
   optional booleans; default to True. These specify what we're optimizing. See
-  the documentation for mrcal.optimize() for details
+  the documentation for drcal.optimize() for details
 
 - Ncameras_intrinsics
   Ncameras_extrinsics
@@ -6435,7 +6435,7 @@ ARGUMENTS
   calibration_object_height_n
 
   optional integers; default to 0. These specify the sizes of various arrays in
-  the optimization. See the documentation for mrcal.optimize() for details
+  the optimization. See the documentation for drcal.optimize() for details
 
 RETURNED VALUE
 
@@ -6448,14 +6448,14 @@ Return the icam_extrinsics corresponding to a given icam_intrinsics
 
 SYNOPSIS
 
-    m = mrcal.cameramodel('xxx.cameramodel')
+    m = drcal.cameramodel('xxx.cameramodel')
 
     optimization_inputs = m.optimization_inputs()
 
     icam_intrinsics = m.icam_intrinsics()
 
     icam_extrinsics = \
-        mrcal.corresponding_icam_extrinsics(icam_intrinsics,
+        drcal.corresponding_icam_extrinsics(icam_intrinsics,
                                             **optimization_inputs)
 
     if icam_extrinsics >= 0:
@@ -6463,7 +6463,7 @@ SYNOPSIS
             optimization_inputs['extrinsics_rt_fromref'][icam_extrinsics]
     else:
         extrinsics_rt_fromref_at_calibration_time = \
-            mrcal.identity_rt()
+            drcal.identity_rt()
 
 When calibrating cameras, each observation is associated with some camera
 intrinsics (lens parameters) and some camera extrinsics (geometry). Those two
@@ -6500,7 +6500,7 @@ ARGUMENTS
 - Nobservations_board
 - Nobservations_point
   optional integers; default to 0. These specify the sizes of various arrays in
-  the optimization. See the documentation for mrcal.optimize() for details
+  the optimization. See the documentation for drcal.optimize() for details
 
 - indices_frame_camintrinsics_camextrinsics: array of dims (Nobservations_board,
   3). For each observation these are an
@@ -6531,7 +6531,7 @@ Get the total number of parameters in the optimization vector
 
 SYNOPSIS
 
-    m = mrcal.cameramodel('xxx.cameramodel')
+    m = drcal.cameramodel('xxx.cameramodel')
 
     f( m.optimization_inputs() )
 
@@ -6539,13 +6539,13 @@ SYNOPSIS
     ...
 
     def f(optimization_inputs):
-        Nstates  = mrcal.num_states (**optimization_inputs)
+        Nstates  = drcal.num_states (**optimization_inputs)
         ...
 
 The optimization algorithm sees its world described in one, big vector of state.
 The optimizer doesn't know or care about the meaning of each element of this
 vector, but for later analysis, it is useful to know what's what. The
-mrcal.num_states_...() functions report how many variables in the optimization
+drcal.num_states_...() functions report how many variables in the optimization
 vector are taken up by each particular kind of measurement.
 
 THIS function reports how many variables are used to represent the FULL state
@@ -6567,7 +6567,7 @@ ARGUMENTS
 
 - lensmodel: string specifying the lensmodel we're using (this is always
   'LENSMODEL_...'). The full list of valid models is returned by
-  mrcal.supported_lensmodels(). This is required if we're not passing in the
+  drcal.supported_lensmodels(). This is required if we're not passing in the
   optimization inputs
 
 - do_optimize_intrinsics_core
@@ -6577,7 +6577,7 @@ ARGUMENTS
   do_optimize_frames
 
   optional booleans; default to True. These specify what we're optimizing. See
-  the documentation for mrcal.optimize() for details
+  the documentation for drcal.optimize() for details
 
 - Ncameras_intrinsics
   Ncameras_extrinsics
@@ -6586,7 +6586,7 @@ ARGUMENTS
   Npoints_fixed
 
   optional integers; default to 0. These specify the sizes of various arrays in
-  the optimization. See the documentation for mrcal.optimize() for details
+  the optimization. See the documentation for drcal.optimize() for details
 
 RETURNED VALUE
 
@@ -6599,7 +6599,7 @@ Get the number of optimization parameters for a single camera's intrinsics
 
 SYNOPSIS
 
-    m = mrcal.cameramodel('xxx.cameramodel')
+    m = drcal.cameramodel('xxx.cameramodel')
 
     f( m.optimization_inputs() )
 
@@ -6607,7 +6607,7 @@ SYNOPSIS
     ...
 
     def f(optimization_inputs):
-        Nstates  = mrcal.num_intrinsics_optimization_params(**optimization_inputs)
+        Nstates  = drcal.num_intrinsics_optimization_params(**optimization_inputs)
         ...
 
 
@@ -6620,9 +6620,9 @@ vector, but for later analysis, it is useful to know what's what.
 
 This function reports how many optimization parameters are used to represent the
 intrinsics of a single camera. This is very similar to
-mrcal.lensmodel_num_params(), except THIS function takes into account the
+drcal.lensmodel_num_params(), except THIS function takes into account the
 do_optimize_intrinsics_... variables used to lock down some parts of the
-intrinsics vector. Similarly, we have mrcal.num_states_intrinsics(), which takes
+intrinsics vector. Similarly, we have drcal.num_states_intrinsics(), which takes
 into account the optimization details also, but reports the number of variables
 needed to describe ALL the cameras instead of just one.
 
@@ -6642,7 +6642,7 @@ ARGUMENTS
 
 - lensmodel: string specifying the lensmodel we're using (this is always
   'LENSMODEL_...'). The full list of valid models is returned by
-  mrcal.supported_lensmodels(). This is required if we're not passing in the
+  drcal.supported_lensmodels(). This is required if we're not passing in the
   optimization inputs
 
 - do_optimize_intrinsics_core
@@ -6652,7 +6652,7 @@ ARGUMENTS
   do_optimize_frames
 
   optional booleans; default to True. These specify what we're optimizing. See
-  the documentation for mrcal.optimize() for details
+  the documentation for drcal.optimize() for details
 
 RETURNED VALUE
 
@@ -6666,7 +6666,7 @@ Invoke the calibration routine
 
 SYNOPSIS
 
-    stats = mrcal.optimize( intrinsics_data,
+    stats = drcal.optimize( intrinsics_data,
                             extrinsics_rt_fromref,
                             frames_rt_toref, points,
                             observations_board, indices_frame_camintrinsics_camextrinsics,
@@ -6683,8 +6683,8 @@ SYNOPSIS
                             do_apply_regularization           = True,
                             verbose                           = False)
 
-Please see the mrcal documentation at
-https://mrcal.secretsauce.net/formulation.html for details.
+Please see the drcal documentation at
+https://drcal.secretsauce.net/formulation.html for details.
 
 This is a flexible implementation of a calibration system core that uses sparse
 Jacobians, performs outlier rejection and reports some metrics back to the user.
@@ -6900,21 +6900,21 @@ Call the optimization callback function
 
 SYNOPSIS
 
-    model               = mrcal.cameramodel('xxx.cameramodel')
+    model               = drcal.cameramodel('xxx.cameramodel')
 
     optimization_inputs = model.optimization_inputs()
 
     b_packed,x,J_packed,factorization = \
-      mrcal.optimizer_callback( **optimization_inputs )
+      drcal.optimizer_callback( **optimization_inputs )
 
-Please see the mrcal documentation at
-https://mrcal.secretsauce.net/formulation.html for details.
+Please see the drcal documentation at
+https://drcal.secretsauce.net/formulation.html for details.
 
-The main optimization routine in mrcal.optimize() searches for optimal
+The main optimization routine in drcal.optimize() searches for optimal
 parameters by repeatedly calling a function to evaluate each hypothethical
 parameter set. This evaluation function is available by itself here, separated
 from the optimization loop. The arguments are largely the same as those to
-mrcal.optimize(), but the inputs are all read-only. Some arguments that have
+drcal.optimize(), but the inputs are all read-only. Some arguments that have
 meaning in calls to optimize() have no meaning in calls to optimizer_callback().
 These are accepted, and effectively ignored. Currently these are:
 
@@ -6923,7 +6923,7 @@ These are accepted, and effectively ignored. Currently these are:
 ARGUMENTS
 
 This function accepts lots of arguments, but they're the same as the arguments
-to mrcal.optimize() so please see that documentation for details. Arguments
+to drcal.optimize() so please see that documentation for details. Arguments
 accepted by optimizer_callback() on top of those in optimize():
 
 - no_jacobian: optional boolean defaulting to False. If True, we do not compute
@@ -6947,8 +6947,8 @@ The output is returned in a tuple:
   search for different parameters, trying to find those that minimize norm2(x).
   This packed state can be converted to the expanded representation like this:
 
-    b = mrcal.optimizer_callback(**optimization_inputs)[0
-    mrcal.unpack_state(b, **optimization_inputs)
+    b = drcal.optimizer_callback(**optimization_inputs)[0
+    drcal.unpack_state(b, **optimization_inputs)
 
 - x: a numpy array of shape (Nmeasurements,). This is the error vector. If the
   optimization routine was running, it would be testing different parameters,
@@ -6959,7 +6959,7 @@ The output is returned in a tuple:
   of type scipy.sparse.csr_matrix. This object can be converted to a numpy array
   like this:
 
-    b,x,J_sparse = mrcal.optimizer_callback(...)[:3]
+    b,x,J_sparse = drcal.optimizer_callback(...)[:3]
     J_numpy      = J_sparse.toarray()
 
   Note that the numpy array is dense, so it is very inefficient for sparse data,
@@ -6969,15 +6969,15 @@ The output is returned in a tuple:
   which uses packed, unitless state. To convert a densified packed jacobian to
   full units, one can do this:
 
-    J_sparse = mrcal.optimizer_callback(**optimization_inputs)[2]
+    J_sparse = drcal.optimizer_callback(**optimization_inputs)[2]
     J_numpy      = J_sparse.toarray()
-    mrcal.pack_state(J_numpy, **optimization_inputs)
+    drcal.pack_state(J_numpy, **optimization_inputs)
 
   Note that we're calling pack_state() instead of unpack_state() because the
   packed variables are in the denominator
 
 - factorization: a Cholesky factorization of JtJ in a
-  mrcal.CHOLMOD_factorization object. The core of the optimization algorithm is
+  drcal.CHOLMOD_factorization object. The core of the optimization algorithm is
   solving a linear system JtJ x = b. J is a large, sparse matrix, so we do this
   with a Cholesky factorization of J using the CHOLMOD library. This
   factorization is also useful in other contexts, such as uncertainty
@@ -6996,7 +6996,7 @@ Returns a model's meta-information and configuration
 SYNOPSIS
 
   import pprint
-  pprint.pprint(mrcal.lensmodel_metadata_and_config('LENSMODEL_SPLINED_STEREOGRAPHIC_order=3_Nx=16_Ny=14_fov_x_deg=200'))
+  pprint.pprint(drcal.lensmodel_metadata_and_config('LENSMODEL_SPLINED_STEREOGRAPHIC_order=3_Nx=16_Ny=14_fov_x_deg=200'))
 
     {'Nx': 16,
      'Ny': 14,
@@ -7012,7 +7012,7 @@ but aren't subject to optimization). The configuration parameters are embedded
 in the model string. This function returns a dict containing the metadata and
 all the configuration values. See the documentation for details:
 
-  https://mrcal.secretsauce.net/lensmodels.html#representation
+  https://drcal.secretsauce.net/lensmodels.html#representation
 
 ARGUMENTS
 
@@ -7030,7 +7030,7 @@ Get the number of lens parameters for a particular model type
 
 SYNOPSIS
 
-    print(mrcal.lensmodel_num_params('LENSMODEL_OPENCV4'))
+    print(drcal.lensmodel_num_params('LENSMODEL_OPENCV4'))
 
     8
 
@@ -7047,14 +7047,14 @@ is given as a string such as
   LENSMODEL_CAHVOR
   LENSMODEL_SPLINED_STEREOGRAPHIC_order=3_Nx=16_Ny=12_fov_x_deg=100
 
-The full list can be obtained with mrcal.supported_lensmodels()
+The full list can be obtained with drcal.supported_lensmodels()
 
 Note that when optimizing a lens model, some lens parameters may be locked down,
 resulting in fewer parameters than this function returns. To retrieve the number
 of parameters used to represent the intrinsics of a camera in an optimization,
-call mrcal.num_intrinsics_optimization_params(). Or to get the number of
+call drcal.num_intrinsics_optimization_params(). Or to get the number of
 parameters used to represent the intrinsics of ALL the cameras in an
-optimization, call mrcal.num_states_intrinsics()
+optimization, call drcal.num_states_intrinsics()
 
 ARGUMENTS
 
@@ -7071,7 +7071,7 @@ Returns a tuple of strings for the various lens models we support
 
 SYNOPSIS
 
-    print(mrcal.supported_lensmodels())
+    print(drcal.supported_lensmodels())
 
     ('LENSMODEL_PINHOLE',
      'LENSMODEL_STEREOGRAPHIC',
@@ -7083,7 +7083,7 @@ SYNOPSIS
      'LENSMODEL_CAHVOR',
      'LENSMODEL_CAHVORE_linearity=...')
 
-mrcal knows about some set of lens models, which can be queried here. The above
+drcal knows about some set of lens models, which can be queried here. The above
 list is correct as of this writing, but more models could be added with time.
 
 The returned lens models are all supported, with possible gaps in capabilities.
@@ -7103,7 +7103,7 @@ Return a tuple of locations of x and y spline knots
 
 SYNOPSIS
 
-    print(mrcal.knots_for_splined_models('LENSMODEL_SPLINED_STEREOGRAPHIC_order=2_Nx=4_Ny=3_fov_x_deg=200'))
+    print(drcal.knots_for_splined_models('LENSMODEL_SPLINED_STEREOGRAPHIC_order=2_Nx=4_Ny=3_fov_x_deg=200'))
 
     ( array([-3.57526078, -1.19175359,  1.19175359,  3.57526078]),
       array([-2.38350719,  0.        ,  2.38350719]))
@@ -7120,9 +7120,9 @@ surface. In the case of LENSMODEL_SPLINED_STEREOGRAPHIC, these are the
 normalized stereographic projection coordinates. These can be unprojected to
 observation vectors at the knots:
 
-    ux,uy = mrcal.knots_for_splined_models('LENSMODEL_SPLINED_STEREOGRAPHIC_order=2_Nx=4_Ny=3_fov_x_deg=200')
+    ux,uy = drcal.knots_for_splined_models('LENSMODEL_SPLINED_STEREOGRAPHIC_order=2_Nx=4_Ny=3_fov_x_deg=200')
     u  = np.ascontiguousarray(nps.mv(nps.cat(*np.meshgrid(ux,uy)), 0, -1))
-    v  = mrcal.unproject_stereographic(u)
+    v  = drcal.unproject_stereographic(u)
 
     # v[index_y, index_x] is now an observation vector that will project to this
     # knot
@@ -7145,7 +7145,7 @@ A tuple:
 static const char _rectified_resolution_docstring[] = R"(
 Compute the resolution to be used for the rectified system
 
-This is an internal function. You probably want mrcal.rectified_resolution(). See the
+This is an internal function. You probably want drcal.rectified_resolution(). See the
 docs for that function for details.
 
 )";
@@ -7153,7 +7153,7 @@ docs for that function for details.
 static const char _rectified_system_docstring[] = R"(
 Build rectified models for stereo rectification
 
-This is an internal function. You probably want mrcal.rectified_system(). See the
+This is an internal function. You probably want drcal.rectified_system(). See the
 docs for that function for details.
 
 )";
@@ -7161,7 +7161,7 @@ docs for that function for details.
 static const char _rectification_maps_docstring[] = R"(
 Construct image transformation maps to make rectified images
 
-This is an internal function. You probably want mrcal.rectification_maps(). See
+This is an internal function. You probably want drcal.rectification_maps(). See
 the docs for that function for details.
 
 )";
@@ -7183,7 +7183,7 @@ SYNOPSIS
                                     ( 0, 0, 5, 0, 0),),
                                    dtype=np.uint16)
 
-    mrcal.traverse_sensor_links( \
+    drcal.traverse_sensor_links( \
         connectivity_matrix  = connectivity_matrix,
         callback_sensor_link = lambda idx_to, idx_from: \
                                       print(f"{idx_from}-{idx_to}") )
@@ -7331,19 +7331,19 @@ static void _init_bindings_common(
 }
 
 #define MODULE_DOCSTRING                                                       \
-    "Low-level routines for core mrcal operations\n"                           \
+    "Low-level routines for core drcal operations\n"                           \
     "\n"                                                                       \
     "This is the written-in-C Python extension module that underlies the "     \
     "routines in\n"                                                            \
-    "mrcal.h. Most of the functions in this module (those prefixed with "      \
+    "drcal.h. Most of the functions in this module (those prefixed with "      \
     "\"_\") are\n"                                                             \
     "not meant to be called directly, but have Python wrappers that should "   \
     "be used\n"                                                                \
     "instead.\n"                                                               \
     "\n"                                                                       \
-    "All functions are exported into the mrcal module. So you can call these " \
+    "All functions are exported into the drcal module. So you can call these " \
     "via\n"                                                                    \
-    "mrcal._mrcal.fff() or mrcal.fff(). The latter is preferred.\n"
+    "drcal._drcal.fff() or drcal.fff(). The latter is preferred.\n"
 
 static struct PyModuleDef module_def =
     {PyModuleDef_HEAD_INIT, "bindings", MODULE_DOCSTRING, -1, methods};

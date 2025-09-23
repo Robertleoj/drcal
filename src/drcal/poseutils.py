@@ -1,11 +1,11 @@
 """Routines to manipulate poses, transformations and points
 
 Most of these are Python wrappers around the written-in-C Python extension
-module mrcal._poseutils_npsp. Most of the time you want to use this module
-instead of touching mrcal._poseutils_npsp directly.
+module drcal._poseutils_npsp. Most of the time you want to use this module
+instead of touching drcal._poseutils_npsp directly.
 
-All functions are exported into the mrcal module. So you can call these via
-mrcal.poseutils.fff() or mrcal.fff(). The latter is preferred.
+All functions are exported into the drcal module. So you can call these via
+drcal.poseutils.fff() or drcal.fff(). The latter is preferred.
 
 """
 
@@ -52,7 +52,7 @@ def r_from_R(R, *, get_gradients=False, out=None):
 
     SYNOPSIS
 
-        r = mrcal.r_from_R(R)
+        r = drcal.r_from_R(R)
 
         rotation_magnitude = nps.mag(r)
         rotation_axis      = r / rotation_magnitude
@@ -131,7 +131,7 @@ def R_from_r(r, *, get_gradients=False, out=None):
     SYNOPSIS
 
         r = rotation_axis * rotation_magnitude
-        R = mrcal.R_from_r(r)
+        R = drcal.R_from_r(r)
 
     Given a rotation specified as a Rodrigues vector (a unit rotation axis scaled by
     the rotation magnitude, in radians.), converts it to a rotation matrix.
@@ -192,16 +192,16 @@ SYNOPSIS
     ===>
     (3,3)
 
-    R10 = mrcal.invert_R(R01)
+    R10 = drcal.invert_R(R01)
 
     print(x1.shape)
     ===>
     (3,)
 
-    x0 = mrcal.rotate_point_R(R01, x1)
+    x0 = drcal.rotate_point_R(R01, x1)
 
     print( nps.norm2( x1 - \
-                      mrcal.rotate_point_R(R10, x0) ))
+                      drcal.rotate_point_R(R10, x0) ))
     ===>
     0
 
@@ -243,7 +243,7 @@ def rt_from_Rt(Rt, *, get_gradients=False, out=None):
         ===>
         (4,3)
 
-        rt = mrcal.rt_from_Rt(Rt)
+        rt = drcal.rt_from_Rt(Rt)
 
         print(rt.shape)
         ===>
@@ -263,7 +263,7 @@ def rt_from_Rt(Rt, *, get_gradients=False, out=None):
     the rotation is defined by a matrix multiplication. x and t are stored as a row
     vector (that's how numpy stores 1-dimensional arrays), but the multiplication
     works as if x was a column vector (to match linear algebra conventions). See the
-    docs for mrcal._transform_point_Rt() for more detail.
+    docs for drcal._transform_point_Rt() for more detail.
 
     By default this function returns the rt transformations only. If we also want
     gradients, pass get_gradients=True. Logic:
@@ -330,7 +330,7 @@ def Rt_from_rt(rt, *, get_gradients=False, out=None):
         ===>
         (6,)
 
-        Rt = mrcal.Rt_from_rt(rt)
+        Rt = drcal.Rt_from_rt(rt)
 
         print(Rt.shape)
         ===>
@@ -349,7 +349,7 @@ def Rt_from_rt(rt, *, get_gradients=False, out=None):
     the rotation is defined by a matrix multiplication. x and t are stored as a row
     vector (that's how numpy stores 1-dimensional arrays), but the multiplication
     works as if x was a column vector (to match linear algebra conventions). See the
-    docs for mrcal._transform_point_Rt() for more detail.
+    docs for drcal._transform_point_Rt() for more detail.
 
     By default this function returns the Rt transformations only. If we also want
     gradients, pass get_gradients=True. Logic:
@@ -410,16 +410,16 @@ SYNOPSIS
     ===>
     (4,3)
 
-    Rt10 = mrcal.invert_Rt(Rt01)
+    Rt10 = drcal.invert_Rt(Rt01)
 
     print(x1.shape)
     ===>
     (3,)
 
-    x0 = mrcal.transform_point_Rt(Rt01, x1)
+    x0 = drcal.transform_point_Rt(Rt01, x1)
 
     print( nps.norm2( x1 - \
-                      mrcal.transform_point_Rt(Rt10, x0) ))
+                      drcal.transform_point_Rt(Rt10, x0) ))
     ===>
     0
 
@@ -432,8 +432,8 @@ Thus if you have a point in coordinate system 1 (let's call it x1), we can
 convert it to a representation in system 0, and then back. And we'll get the
 same thing out:
 
-  x1 == mrcal.transform_point_Rt( mrcal.invert_Rt(Rt01),
-          mrcal.transform_point_Rt( Rt01, x1 ))
+  x1 == drcal.transform_point_Rt( drcal.invert_Rt(Rt01),
+          drcal.transform_point_Rt( Rt01, x1 ))
 
 An Rt transformation represents a rotation and a translation. It is a (4,3)
 array formed by nps.glue(R,t, axis=-2) where R is a (3,3) rotation matrix and t
@@ -443,7 +443,7 @@ Applied to a point x the transformed result is rotate(x)+t. Given a matrix R,
 the rotation is defined by a matrix multiplication. x and t are stored as a row
 vector (that's how numpy stores 1-dimensional arrays), but the multiplication
 works as if x was a column vector (to match linear algebra conventions). See the
-docs for mrcal._transform_point_Rt() for more detail.
+docs for drcal._transform_point_Rt() for more detail.
 
 This function supports broadcasting fully.
 
@@ -483,16 +483,16 @@ def invert_rt(rt, *, get_gradients=False, out=None):
         ===>
         (6,)
 
-        rt10 = mrcal.invert_rt(rt01)
+        rt10 = drcal.invert_rt(rt01)
 
         print(x1.shape)
         ===>
         (3,)
 
-        x0 = mrcal.transform_point_rt(rt01, x1)
+        x0 = drcal.transform_point_rt(rt01, x1)
 
         print( nps.norm2( x1 -
-                          mrcal.transform_point_rt(rt10, x0) ))
+                          drcal.transform_point_rt(rt10, x0) ))
         ===>
         0
 
@@ -505,8 +505,8 @@ def invert_rt(rt, *, get_gradients=False, out=None):
     convert it to a representation in system 0, and then back. And we'll get the
     same thing out:
 
-      x1 == mrcal.transform_point_rt( mrcal.invert_rt(rt01),
-              mrcal.transform_point_rt( rt01, x1 ))
+      x1 == drcal.transform_point_rt( drcal.invert_rt(rt01),
+              drcal.transform_point_rt( rt01, x1 ))
 
     An rt transformation represents a rotation and a translation. It is a (6,) array
     formed by nps.glue(r,t, axis=-1) where r is a (3,) Rodrigues vector and t is a
@@ -514,7 +514,7 @@ def invert_rt(rt, *, get_gradients=False, out=None):
 
     Applied to a point x the transformed result is rotate(x)+t. x and t are stored
     as a row vector (that's how numpy stores 1-dimensional arrays). See the docs for
-    mrcal._transform_point_rt() for more detail.
+    drcal._transform_point_rt() for more detail.
 
     By default this function returns the rt transformation only. If we also want
     gradients, pass get_gradients=True. Logic:
@@ -590,16 +590,16 @@ def compose_Rt(*Rt, out=None, inverted0=False, inverted1=False):
         ===>
         (4,3)
 
-        Rt30 = mrcal.compose_Rt( Rt32, Rt21, Rt10 )
+        Rt30 = drcal.compose_Rt( Rt32, Rt21, Rt10 )
 
         print(x0.shape)
         ===>
         (3,)
 
-        print( nps.norm2( mrcal.transform_point_Rt(Rt30, x0) -
-                          mrcal.transform_point_Rt(Rt32,
-                            mrcal.transform_point_Rt(Rt21,
-                              mrcal.transform_point_Rt(Rt10, x0)))))
+        print( nps.norm2( drcal.transform_point_Rt(Rt30, x0) -
+                          drcal.transform_point_Rt(Rt32,
+                            drcal.transform_point_Rt(Rt21,
+                              drcal.transform_point_Rt(Rt10, x0)))))
         ===>
         0
 
@@ -667,20 +667,20 @@ def compose_r(*r, get_gradients=False, out=None, inverted0=False, inverted1=Fals
         ===>
         (3,)
 
-        r30 = mrcal.compose_r( r32, r21, r10 )
+        r30 = drcal.compose_r( r32, r21, r10 )
 
         print(x0.shape)
         ===>
         (3,)
 
-        print( nps.norm2( mrcal.rotate_point_r(r30, x0) -
-                          mrcal.rotate_point_r(r32,
-                            mrcal.rotate_point_r(r21,
-                              mrcal.rotate_point_r(r10, x0)))))
+        print( nps.norm2( drcal.rotate_point_r(r30, x0) -
+                          drcal.rotate_point_r(r32,
+                            drcal.rotate_point_r(r21,
+                              drcal.rotate_point_r(r10, x0)))))
         ===>
         0
 
-        print( [arr.shape for arr in mrcal.compose_r(r21,r10,
+        print( [arr.shape for arr in drcal.compose_r(r21,r10,
                                                      get_gradients = True)] )
         ===>
         [(3,), (3,3), (3,3)]
@@ -786,20 +786,20 @@ def compose_rt(*rt, get_gradients=False, out=None, inverted0=False, inverted1=Fa
         ===>
         (6,)
 
-        rt30 = mrcal.compose_rt( rt32, rt21, rt10 )
+        rt30 = drcal.compose_rt( rt32, rt21, rt10 )
 
         print(x0.shape)
         ===>
         (3,)
 
-        print( nps.norm2( mrcal.transform_point_rt(rt30, x0) -
-                          mrcal.transform_point_rt(rt32,
-                            mrcal.transform_point_rt(rt21,
-                              mrcal.transform_point_rt(rt10, x0)))))
+        print( nps.norm2( drcal.transform_point_rt(rt30, x0) -
+                          drcal.transform_point_rt(rt32,
+                            drcal.transform_point_rt(rt21,
+                              drcal.transform_point_rt(rt10, x0)))))
         ===>
         0
 
-        print( [arr.shape for arr in mrcal.compose_rt(rt21,rt10,
+        print( [arr.shape for arr in drcal.compose_rt(rt21,rt10,
                                                       get_gradients = True)] )
         ===>
         [(6,), (6,6), (6,6)]
@@ -1153,11 +1153,11 @@ def rotate_point_r(r, x, *, get_gradients=False, out=None, inverted=False):
         ===>
         (10,3)
 
-        print(mrcal.rotate_point_r(r, x).shape)
+        print(drcal.rotate_point_r(r, x).shape)
         ===>
         (10,3)
 
-        print( [arr.shape for arr in mrcal.rotate_point_r(r, x,
+        print( [arr.shape for arr in drcal.rotate_point_r(r, x,
                                                           get_gradients = True)] )
         ===>
         [(10,3), (10,3,3), (10,3,3)]
@@ -1229,7 +1229,7 @@ def rotate_point_R(R, x, *, get_gradients=False, out=None, inverted=False):
     SYNOPSIS
 
         r = rotation_axis * rotation_magnitude
-        R = mrcal.R_from_r(r)
+        R = drcal.R_from_r(r)
 
         print(R.shape)
         ===>
@@ -1239,11 +1239,11 @@ def rotate_point_R(R, x, *, get_gradients=False, out=None, inverted=False):
         ===>
         (10,3)
 
-        print( mrcal.rotate_point_R(R, x).shape )
+        print( drcal.rotate_point_R(R, x).shape )
         ===>
         (10,3)
 
-        print( [arr.shape for arr in mrcal.rotate_point_R(R, x,
+        print( [arr.shape for arr in drcal.rotate_point_R(R, x,
                                                           get_gradients = True)] )
         ===>
         [(10,3), (10,3,3,3), (10,3,3)]
@@ -1332,12 +1332,12 @@ def transform_point_rt(rt, x, *, get_gradients=False, out=None, inverted=False):
         ===>
         (10,3)
 
-        print( mrcal.transform_point_rt(rt, x).shape )
+        print( drcal.transform_point_rt(rt, x).shape )
         ===>
         (10,3)
 
         print( [arr.shape
-                for arr in mrcal.transform_point_rt(rt, x,
+                for arr in drcal.transform_point_rt(rt, x,
                                                     get_gradients = True)] )
         ===>
         [(10,3), (10,3,6), (10,3,3)]
@@ -1429,12 +1429,12 @@ def transform_point_Rt(Rt, x, *, get_gradients=False, out=None, inverted=False):
         ===>
         (10,3)
 
-        print( mrcal.transform_point_Rt(Rt, x).shape )
+        print( drcal.transform_point_Rt(Rt, x).shape )
         ===>
         (10,3)
 
         print( [arr.shape
-                for arr in mrcal.transform_point_Rt(Rt, x,
+                for arr in drcal.transform_point_Rt(Rt, x,
                                                     get_gradients = True)] )
         ===>
         [(10,3), (10,3,4,3), (10,3,3)]
@@ -1527,7 +1527,7 @@ def qt_from_Rt(Rt, *, out=None):
         ===>
         (4,3)
 
-        qt = mrcal.qt_from_Rt(Rt)
+        qt = drcal.qt_from_Rt(Rt)
 
         print(qt.shape)
         ===>
@@ -1546,11 +1546,11 @@ def qt_from_Rt(Rt, *, out=None):
     the rotation is defined by a matrix multiplication. x and t are stored as a row
     vector (that's how numpy stores 1-dimensional arrays), but the multiplication
     works as if x was a column vector (to match linear algebra conventions). See the
-    docs for mrcal._transform_point_Rt() for more detail.
+    docs for drcal._transform_point_Rt() for more detail.
 
     This function supports broadcasting fully.
 
-    Note: mrcal does not use unit quaternions anywhere to represent rotations. This
+    Note: drcal does not use unit quaternions anywhere to represent rotations. This
     function is provided for convenience, but isn't thoroughly tested.
 
     ARGUMENTS
@@ -1591,7 +1591,7 @@ def Rt_from_qt(qt, *, out=None):
         ===>
         (7,)
 
-        Rt = mrcal.Rt_from_qt(qt)
+        Rt = drcal.Rt_from_qt(qt)
 
         print(Rt.shape)
         ===>
@@ -1610,11 +1610,11 @@ def Rt_from_qt(qt, *, out=None):
     the rotation is defined by a matrix multiplication. x and t are stored as a row
     vector (that's how numpy stores 1-dimensional arrays), but the multiplication
     works as if x was a column vector (to match linear algebra conventions). See the
-    docs for mrcal._transform_point_Rt() for more detail.
+    docs for drcal._transform_point_Rt() for more detail.
 
     This function supports broadcasting fully.
 
-    Note: mrcal does not use unit quaternions anywhere to represent rotations. This
+    Note: drcal does not use unit quaternions anywhere to represent rotations. This
     function is provided for convenience, but isn't thoroughly tested.
 
     ARGUMENTS

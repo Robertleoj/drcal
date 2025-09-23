@@ -33,9 +33,9 @@ import os
 
 testdir = os.path.dirname(os.path.realpath(__file__))
 
-# I import the LOCAL mrcal since that's what I'm testing
+# I import the LOCAL drcal since that's what I'm testing
 sys.path[:0] = (f"{testdir}/..",)
-import mrcal
+import drcal
 import testutils
 from test_calibration_helpers import grad
 
@@ -44,30 +44,30 @@ import re
 
 def check(intrinsics, p_ref, q_ref):
     ########## project
-    q_projected = mrcal.project(p_ref, *intrinsics)
+    q_projected = drcal.project(p_ref, *intrinsics)
     testutils.confirm_equal(
         q_projected, q_ref, msg=f"Projecting {intrinsics[0]}", eps=1e-2
     )
 
     q_projected *= 0
-    mrcal.project(p_ref, *intrinsics, out=q_projected)
+    drcal.project(p_ref, *intrinsics, out=q_projected)
     testutils.confirm_equal(
         q_projected, q_ref, msg=f"Projecting {intrinsics[0]} in-place", eps=1e-2
     )
 
-    meta = mrcal.lensmodel_metadata_and_config(intrinsics[0])
+    meta = drcal.lensmodel_metadata_and_config(intrinsics[0])
     if meta["has_gradients"]:
 
         @nps.broadcast_define(((3,), ("N",)))
         def grad_broadcasted(p_ref, i_ref):
             return grad(
-                lambda pi: mrcal.project(pi[:3], intrinsics[0], pi[3:]),
+                lambda pi: drcal.project(pi[:3], intrinsics[0], pi[3:]),
                 nps.glue(p_ref, i_ref, axis=-1),
             )
 
         dq_dpi_ref = grad_broadcasted(p_ref, intrinsics[1])
 
-        q_projected, dq_dp, dq_di = mrcal.project(
+        q_projected, dq_dp, dq_di = drcal.project(
             p_ref, *intrinsics, get_gradients=True
         )
         testutils.confirm_equal(
@@ -84,7 +84,7 @@ def check(intrinsics, p_ref, q_ref):
         out[0] *= 0
         out[1] *= 0
         out[2] *= 0
-        mrcal.project(p_ref, *intrinsics, get_gradients=True, out=out)
+        drcal.project(p_ref, *intrinsics, get_gradients=True, out=out)
 
         testutils.confirm_equal(
             q_projected,
@@ -104,7 +104,7 @@ def check(intrinsics, p_ref, q_ref):
             # CAHVORE. I set E=0, and the projection becomes central. Then
             # unproject() is well-defined and I can run the tests
             intrinsics[1][-3:] = 0
-            q_projected = mrcal.project(p_ref, *intrinsics)
+            q_projected = drcal.project(p_ref, *intrinsics)
 
         else:
             # Some other kind of noncentral model. I don't bother with
@@ -114,7 +114,7 @@ def check(intrinsics, p_ref, q_ref):
     ########## unproject
     if 1:
         ##### Un-normalized
-        v_unprojected = mrcal.unproject(q_projected, *intrinsics, normalize=False)
+        v_unprojected = drcal.unproject(q_projected, *intrinsics, normalize=False)
 
         cos = nps.inner(v_unprojected, p_ref) / nps.mag(p_ref)
         cos = np.clip(cos, -1, 1)
@@ -126,7 +126,7 @@ def check(intrinsics, p_ref, q_ref):
         )
     if 1:
         ##### Normalized
-        v_unprojected_nograd = mrcal.unproject(q_projected, *intrinsics, normalize=True)
+        v_unprojected_nograd = drcal.unproject(q_projected, *intrinsics, normalize=True)
 
         testutils.confirm_equal(
             nps.norm2(v_unprojected_nograd),
@@ -148,7 +148,7 @@ def check(intrinsics, p_ref, q_ref):
         return
 
     v_unprojected *= 0
-    mrcal.unproject(q_projected, *intrinsics, normalize=True, out=v_unprojected)
+    drcal.unproject(q_projected, *intrinsics, normalize=True, out=v_unprojected)
     testutils.confirm_equal(
         nps.norm2(v_unprojected),
         1,
@@ -165,7 +165,7 @@ def check(intrinsics, p_ref, q_ref):
     )
 
     ### unproject gradients
-    v_unprojected, dv_dq, dv_di = mrcal.unproject(
+    v_unprojected, dv_dq, dv_di = drcal.unproject(
         q_projected, *intrinsics, get_gradients=True
     )
 
@@ -192,7 +192,7 @@ def check(intrinsics, p_ref, q_ref):
             @nps.broadcast_define(((2,), ("N",)))
             def grad_broadcasted(q_ref, i_ref):
                 return grad(
-                    lambda qi: mrcal.unproject(qi[:2], intrinsics[0], qi[2:]),
+                    lambda qi: drcal.unproject(qi[:2], intrinsics[0], qi[2:]),
                     nps.glue(q_ref, i_ref, axis=-1),
                 )
 
@@ -203,9 +203,9 @@ def check(intrinsics, p_ref, q_ref):
             @nps.broadcast_define(((2,), ("N",)))
             def grad_broadcasted(q_ref, i_ref):
                 return grad(
-                    lambda qi: mrcal.unproject_stereographic(
-                        mrcal.project_stereographic(
-                            mrcal.unproject(qi[:2], intrinsics[0], qi[2:])
+                    lambda qi: drcal.unproject_stereographic(
+                        drcal.project_stereographic(
+                            drcal.unproject(qi[:2], intrinsics[0], qi[2:])
                         )
                     ),
                     nps.glue(q_ref, i_ref, axis=-1),
@@ -214,7 +214,7 @@ def check(intrinsics, p_ref, q_ref):
             dv_dqi_ref = grad_broadcasted(q_projected, intrinsics[1])
 
         testutils.confirm_equal(
-            mrcal.project(v_unprojected, *intrinsics),
+            drcal.project(v_unprojected, *intrinsics),
             q_projected,
             msg=f"Unprojecting {intrinsics[0]} with grad",
             eps=1e-2,
@@ -237,7 +237,7 @@ def check(intrinsics, p_ref, q_ref):
         )
 
     # Normalized unprojected gradients
-    v_unprojected, dv_dq, dv_di = mrcal.unproject(
+    v_unprojected, dv_dq, dv_di = drcal.unproject(
         q_projected, *intrinsics, normalize=True, get_gradients=True
     )
     testutils.confirm_equal(
@@ -262,7 +262,7 @@ def check(intrinsics, p_ref, q_ref):
         @nps.broadcast_define(((2,), ("N",)))
         def grad_normalized_broadcasted(q_ref, i_ref):
             return grad(
-                lambda qi: mrcal.unproject(
+                lambda qi: drcal.unproject(
                     qi[:2], intrinsics[0], qi[2:], normalize=True
                 ),
                 nps.glue(q_ref, i_ref, axis=-1),
@@ -295,7 +295,7 @@ def check(intrinsics, p_ref, q_ref):
         out[1] *= 0
         out[2] *= 0
 
-        mrcal.unproject(
+        drcal.unproject(
             q_projected, *intrinsics, normalize=True, get_gradients=True, out=out
         )
         testutils.confirm_equal(
@@ -338,7 +338,7 @@ def check(intrinsics, p_ref, q_ref):
         out[1] *= 0
         out[2] *= 0
 
-        mrcal.unproject(
+        drcal.unproject(
             q_projected, *intrinsics, normalize=False, get_gradients=True, out=out
         )
         cos = nps.inner(v_unprojected, p_ref) / nps.mag(p_ref)

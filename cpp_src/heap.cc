@@ -22,15 +22,15 @@ struct Compare_nodes_greater {
     }
 };
 
-extern "C" bool mrcal_heap_empty(
-    mrcal_heap_t* heap,
+extern "C" bool drcal_heap_empty(
+    drcal_heap_t* heap,
     node_t* nodes
 ) {
     return heap->size == 0;
 }
 
-extern "C" void mrcal_heap_push(
-    mrcal_heap_t* heap,
+extern "C" void drcal_heap_push(
+    drcal_heap_t* heap,
     node_t* nodes,
     uint16_t x
 ) {
@@ -42,8 +42,8 @@ extern "C" void mrcal_heap_push(
     );
 }
 
-extern "C" uint16_t mrcal_heap_pop(
-    mrcal_heap_t* heap,
+extern "C" uint16_t drcal_heap_pop(
+    drcal_heap_t* heap,
     node_t* nodes
 ) {
     uint16_t x = heap->buffer[0];
@@ -56,8 +56,8 @@ extern "C" uint16_t mrcal_heap_pop(
     return x;
 }
 
-extern "C" void mrcal_heap_resort(
-    mrcal_heap_t* heap,
+extern "C" void drcal_heap_resort(
+    drcal_heap_t* heap,
     node_t* nodes
 ) {
     std::make_heap(

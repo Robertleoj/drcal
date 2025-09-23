@@ -2,7 +2,7 @@ r"""Converts a camera model from one lens model to another
 
 SYNOPSIS
 
-  $ mrcal-convert-lensmodel
+  $ drcal-convert-lensmodel
       --viz LENSMODEL_OPENCV4 left.cameramodel
 
   ... lots of output as the solve runs ...
@@ -21,7 +21,7 @@ lens model. Two different methods are implemented:
    the data that was used to compute this model in the first place, and we can
    re-run the original optimization, using the new lens model. This is the
    default behavior, and is the preferred choice. However it can only work with
-   models that were computed by mrcal originally. We re-run the full original
+   models that were computed by drcal originally. We re-run the full original
    solve, even it contained multiple cameras, unless --monocular is given. With
    that option, we re-solve only the subset of the images observed by the one
    requested camera
@@ -29,7 +29,7 @@ lens model. Two different methods are implemented:
 2. We can sample a grid of points on the imager, unproject them to observation
    vectors in the camera coordinate system, and then fit a new camera model that
    reprojects these vectors as closely to the original pixel coordinates as
-   possible. This can be applied to models that didn't come from mrcal. Select
+   possible. This can be applied to models that didn't come from drcal. Select
    this mode by passing --sampled.
 
 Since camera models (lens parameters AND geometry) are computed off real pixel
@@ -546,7 +546,7 @@ def main():
         )
         optimization_inputs["intrinsics"][:, :4] = intrinsics_from_core
 
-        # I do this in stages, similar to how mrcal-calibrate-cameras does it. First
+        # I do this in stages, similar to how drcal-calibrate-cameras does it. First
         # just the frames and extrinsics. Assuming a core-only intrinsics
         optimization_inputs["do_optimize_intrinsics_core"] = False
         optimization_inputs["do_optimize_intrinsics_distortions"] = False
@@ -568,7 +568,7 @@ def main():
             # with the spline parameters. So I lock down the core when targeting
             # splined models
             optimization_inputs["do_optimize_intrinsics_core"] = False
-        # stolen expand_intrinsics() in mrcal-calibrate-extrinsics. Please consolidate
+        # stolen expand_intrinsics() in drcal-calibrate-extrinsics. Please consolidate
         optimization_inputs["intrinsics"][:, 4:] = (
             (np.random.random((Ncameras, Ndistortions)) - 0.5) * 2.0 * 1e-6
         )
@@ -611,7 +611,7 @@ def main():
 
         # This is a procrustes-based transformation. This transform is usable, but
         # isn't based on camera observations, and often produces poor diffs if used
-        # directly. Let mrcal.projection_diff() figure out the implied_Rt10 instead
+        # directly. Let drcal.projection_diff() figure out the implied_Rt10 instead
         # of using this
         implied_Rt10 = drcal.align_procrustes_points_Rt01(
             calobject_camframe_after, calobject_camframe_before
@@ -738,7 +738,7 @@ def main():
         p = nps.clump(p, n=2)
 
         # The list of distances. The meaning is the same as expected by
-        # mrcal.show_projection_diff(): we visualize the diff of the FIRST distance
+        # drcal.show_projection_diff(): we visualize the diff of the FIRST distance
         distance_for_diff = d
 
         # Ignore any failed unprojections
@@ -770,7 +770,7 @@ def main():
             observations_points = nps.glue(q, nps.transpose(weights), axis=-1)
             observations_points = np.ascontiguousarray(
                 observations_points
-            )  # must be contiguous. mrcal.optimize() should really be more lax here
+            )  # must be contiguous. drcal.optimize() should really be more lax here
 
             # Which points we're observing. This is dense and kinda silly for this
             # application. Each slice is (i_point,i_camera,i_camera-1). Initially O

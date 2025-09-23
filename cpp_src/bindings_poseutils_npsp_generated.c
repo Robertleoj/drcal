@@ -3,44 +3,44 @@
 
 
 #define FUNCTIONS(_) \
-  _(identity_R, "Return an identity rotation matrix\n\nSYNOPSIS\n\n    print( mrcal.identity_R() )\n    ===>\n    [[1. 0. 0.]\n     [0. 1. 0.]\n     [0. 0. 1.]]\n\nAs with all the poseutils functions, the output can be written directly into a\n(possibly-non-contiguous) array, by specifying the destination in the 'out'\nkwarg ") \
-  _(identity_r, "Return an identity Rodrigues rotation\n\nSYNOPSIS\n\n    print( mrcal.identity_r() )\n    ===>\n    [0. 0. 0.]\n\nAs with all the poseutils functions, the output can be written directly into a\n(possibly-non-contiguous) array, by specifying the destination in the 'out'\nkwarg") \
-  _(identity_Rt, "Return an identity Rt transformation\n\nSYNOPSIS\n\n    print( mrcal.identity_Rt() )\n    ===>\n    [[1. 0. 0.]\n     [0. 1. 0.]\n     [0. 0. 1.]\n     [0. 0. 0.]]\n\nAs with all the poseutils functions, the output can be written directly into a\n(possibly-non-contiguous) array, by specifying the destination in the 'out'\nkwarg") \
-  _(identity_rt, "Return an identity rt transformation\n\nSYNOPSIS\n\n    print( mrcal.identity_rt() )\n    ===>\n    [0. 0. 0. 0. 0. 0.]\n\nAs with all the poseutils functions, the output can be written directly into a\n(possibly-non-contiguous) array, by specifying the destination in the 'out'\nkwarg") \
-  _(_rotate_point_R, "Rotate a point using a rotation matrix\n\nThis is an internal function. You probably want mrcal.rotate_point_R(). See the\ndocs for that function for details.\n\n") \
-  _(_rotate_point_R_withgrad, "Rotate a point using a rotation matrix; report the result and gradients\n\nThis is an internal function. You probably want mrcal.rotate_point_R(). See the\ndocs for that function for details.\n") \
-  _(_rotate_point_r, "Rotate a point using a Rodrigues vector\n\nThis is an internal function. You probably want mrcal.rotate_point_r(). See the\ndocs for that function for details.\n") \
-  _(_rotate_point_r_withgrad, "Rotate a point using a Rodrigues vector; report the result and gradients\n\nThis is an internal function. You probably want mrcal.rotate_point_r(). See the\ndocs for that function for details.\n") \
-  _(_transform_point_Rt, "Transform a point using an Rt transformation\n\nThis is an internal function. You probably want mrcal.transform_point_Rt(). See\nthe docs for that function for details.\n") \
-  _(_transform_point_Rt_withgrad, "Transform a point using an Rt transformation; report the result and gradients\n\nThis is an internal function. You probably want mrcal.transform_point_Rt(). See\nthe docs for that function for details.\n") \
-  _(_transform_point_rt, "Transform a point using an rt transformation\n\nThis is an internal function. You probably want mrcal.transform_point_rt(). See\nthe docs for that function for details.\n") \
-  _(_transform_point_rt_withgrad, "Transform a point using an rt transformation; report the result and gradients\n\nThis is an internal function. You probably want mrcal.transform_point_rt(). See\nthe docs for that function for details.\n") \
-  _(_r_from_R, "Compute a Rodrigues vector from a rotation matrix\n\nThis is an internal function. You probably want mrcal.r_from_R(). See the docs\nfor that function for details.\n") \
-  _(_r_from_R_withgrad, "Compute a Rodrigues vector from a rotation matrix\n\nThis is an internal function. You probably want mrcal.r_from_R(). See the docs\nfor that function for details.\n") \
-  _(_R_from_r, "Compute a rotation matrix from a Rodrigues vector\n\nThis is an internal function. You probably want mrcal.R_from_r(). See the docs\nfor that function for details.\n") \
-  _(_R_from_r_withgrad, "Compute a rotation matrix from a Rodrigues vector\n\nThis is an internal function. You probably want mrcal.R_from_r(). See the docs\nfor that function for details.\n") \
-  _(_invert_R, "Invert a rotation matrix\n\nThis is an internal function. You probably want mrcal.invert_R(). See the docs\nfor that function for details.\n") \
-  _(_rt_from_Rt, "Compute an rt transformation from a Rt transformation\n\nThis is an internal function. You probably want mrcal.rt_from_Rt(). See the docs\nfor that function for details.\n") \
-  _(_rt_from_Rt_withgrad, "Compute an rt transformation from a Rt transformation\n\nThis is an internal function. You probably want mrcal.rt_from_Rt(). See the docs\nfor that function for details.\n") \
-  _(_Rt_from_rt, "Compute an Rt transformation from a rt transformation\n\nThis is an internal function. You probably want mrcal.Rt_from_rt(). See the docs\nfor that function for details.\n") \
-  _(_Rt_from_rt_withgrad, "Compute an Rt transformation from a rt transformation\n\nThis is an internal function. You probably want mrcal.Rt_from_rt(). See the docs\nfor that function for details.\n") \
-  _(_invert_Rt, "Invert an Rt transformation\n\nThis is an internal function. You probably want mrcal.invert_Rt(). See the docs\nfor that function for details.\n") \
-  _(_invert_rt, "Invert an rt transformation\n\nThis is an internal function. You probably want mrcal.invert_rt(). See the docs\nfor that function for details.\n") \
-  _(_invert_rt_withgrad, "Invert an rt transformation\n\nThis is an internal function. You probably want mrcal.invert_rt(). See the docs\nfor that function for details.\n\nNote that the C library returns limited gradients:\n\n- It returns dtout_drin,dtout_dtin only because\n\n- drout_drin always -I\n- drout_dtin always 0\n\nTHIS function combines these into a full drtout_drtin array\n\n") \
-  _(_compose_Rt, "Composes two Rt transformations\n\nThis is an internal function. You probably want mrcal.compose_Rt(). See the docs\nfor that function for details. This internal function differs from compose_Rt():\n\n- It supports exactly two arguments, while compose_Rt() can compose N\n  transformations\n") \
-  _(_compose_r, "Compose two angle-axis rotations\n\nThis is an internal function. You probably want mrcal.compose_r(). See the docs\nfor that function for details. This internal function differs from compose_r():\n\n- It supports exactly two arguments, while compose_r() can compose N rotations\n\n- It never reports gradients\n") \
-  _(_compose_r_withgrad, "Compose two angle-axis rotations; return (r,dr/dr0,dr/dr1)\n\nThis is an internal function. You probably want mrcal.compose_r(). See the docs\nfor that function for details. This internal function differs from compose_r():\n\n- It supports exactly two arguments, while compose_r() can compose N rotations\n\n- It always reports gradients\n\n") \
+  _(identity_R, "Return an identity rotation matrix\n\nSYNOPSIS\n\n    print( drcal.identity_R() )\n    ===>\n    [[1. 0. 0.]\n     [0. 1. 0.]\n     [0. 0. 1.]]\n\nAs with all the poseutils functions, the output can be written directly into a\n(possibly-non-contiguous) array, by specifying the destination in the 'out'\nkwarg ") \
+  _(identity_r, "Return an identity Rodrigues rotation\n\nSYNOPSIS\n\n    print( drcal.identity_r() )\n    ===>\n    [0. 0. 0.]\n\nAs with all the poseutils functions, the output can be written directly into a\n(possibly-non-contiguous) array, by specifying the destination in the 'out'\nkwarg") \
+  _(identity_Rt, "Return an identity Rt transformation\n\nSYNOPSIS\n\n    print( drcal.identity_Rt() )\n    ===>\n    [[1. 0. 0.]\n     [0. 1. 0.]\n     [0. 0. 1.]\n     [0. 0. 0.]]\n\nAs with all the poseutils functions, the output can be written directly into a\n(possibly-non-contiguous) array, by specifying the destination in the 'out'\nkwarg") \
+  _(identity_rt, "Return an identity rt transformation\n\nSYNOPSIS\n\n    print( drcal.identity_rt() )\n    ===>\n    [0. 0. 0. 0. 0. 0.]\n\nAs with all the poseutils functions, the output can be written directly into a\n(possibly-non-contiguous) array, by specifying the destination in the 'out'\nkwarg") \
+  _(_rotate_point_R, "Rotate a point using a rotation matrix\n\nThis is an internal function. You probably want drcal.rotate_point_R(). See the\ndocs for that function for details.\n\n") \
+  _(_rotate_point_R_withgrad, "Rotate a point using a rotation matrix; report the result and gradients\n\nThis is an internal function. You probably want drcal.rotate_point_R(). See the\ndocs for that function for details.\n") \
+  _(_rotate_point_r, "Rotate a point using a Rodrigues vector\n\nThis is an internal function. You probably want drcal.rotate_point_r(). See the\ndocs for that function for details.\n") \
+  _(_rotate_point_r_withgrad, "Rotate a point using a Rodrigues vector; report the result and gradients\n\nThis is an internal function. You probably want drcal.rotate_point_r(). See the\ndocs for that function for details.\n") \
+  _(_transform_point_Rt, "Transform a point using an Rt transformation\n\nThis is an internal function. You probably want drcal.transform_point_Rt(). See\nthe docs for that function for details.\n") \
+  _(_transform_point_Rt_withgrad, "Transform a point using an Rt transformation; report the result and gradients\n\nThis is an internal function. You probably want drcal.transform_point_Rt(). See\nthe docs for that function for details.\n") \
+  _(_transform_point_rt, "Transform a point using an rt transformation\n\nThis is an internal function. You probably want drcal.transform_point_rt(). See\nthe docs for that function for details.\n") \
+  _(_transform_point_rt_withgrad, "Transform a point using an rt transformation; report the result and gradients\n\nThis is an internal function. You probably want drcal.transform_point_rt(). See\nthe docs for that function for details.\n") \
+  _(_r_from_R, "Compute a Rodrigues vector from a rotation matrix\n\nThis is an internal function. You probably want drcal.r_from_R(). See the docs\nfor that function for details.\n") \
+  _(_r_from_R_withgrad, "Compute a Rodrigues vector from a rotation matrix\n\nThis is an internal function. You probably want drcal.r_from_R(). See the docs\nfor that function for details.\n") \
+  _(_R_from_r, "Compute a rotation matrix from a Rodrigues vector\n\nThis is an internal function. You probably want drcal.R_from_r(). See the docs\nfor that function for details.\n") \
+  _(_R_from_r_withgrad, "Compute a rotation matrix from a Rodrigues vector\n\nThis is an internal function. You probably want drcal.R_from_r(). See the docs\nfor that function for details.\n") \
+  _(_invert_R, "Invert a rotation matrix\n\nThis is an internal function. You probably want drcal.invert_R(). See the docs\nfor that function for details.\n") \
+  _(_rt_from_Rt, "Compute an rt transformation from a Rt transformation\n\nThis is an internal function. You probably want drcal.rt_from_Rt(). See the docs\nfor that function for details.\n") \
+  _(_rt_from_Rt_withgrad, "Compute an rt transformation from a Rt transformation\n\nThis is an internal function. You probably want drcal.rt_from_Rt(). See the docs\nfor that function for details.\n") \
+  _(_Rt_from_rt, "Compute an Rt transformation from a rt transformation\n\nThis is an internal function. You probably want drcal.Rt_from_rt(). See the docs\nfor that function for details.\n") \
+  _(_Rt_from_rt_withgrad, "Compute an Rt transformation from a rt transformation\n\nThis is an internal function. You probably want drcal.Rt_from_rt(). See the docs\nfor that function for details.\n") \
+  _(_invert_Rt, "Invert an Rt transformation\n\nThis is an internal function. You probably want drcal.invert_Rt(). See the docs\nfor that function for details.\n") \
+  _(_invert_rt, "Invert an rt transformation\n\nThis is an internal function. You probably want drcal.invert_rt(). See the docs\nfor that function for details.\n") \
+  _(_invert_rt_withgrad, "Invert an rt transformation\n\nThis is an internal function. You probably want drcal.invert_rt(). See the docs\nfor that function for details.\n\nNote that the C library returns limited gradients:\n\n- It returns dtout_drin,dtout_dtin only because\n\n- drout_drin always -I\n- drout_dtin always 0\n\nTHIS function combines these into a full drtout_drtin array\n\n") \
+  _(_compose_Rt, "Composes two Rt transformations\n\nThis is an internal function. You probably want drcal.compose_Rt(). See the docs\nfor that function for details. This internal function differs from compose_Rt():\n\n- It supports exactly two arguments, while compose_Rt() can compose N\n  transformations\n") \
+  _(_compose_r, "Compose two angle-axis rotations\n\nThis is an internal function. You probably want drcal.compose_r(). See the docs\nfor that function for details. This internal function differs from compose_r():\n\n- It supports exactly two arguments, while compose_r() can compose N rotations\n\n- It never reports gradients\n") \
+  _(_compose_r_withgrad, "Compose two angle-axis rotations; return (r,dr/dr0,dr/dr1)\n\nThis is an internal function. You probably want drcal.compose_r(). See the docs\nfor that function for details. This internal function differs from compose_r():\n\n- It supports exactly two arguments, while compose_r() can compose N rotations\n\n- It always reports gradients\n\n") \
   _(compose_r_tinyr0_gradientr0, "Special-case rotation composition for the uncertainty computation\n\nSYNOPSIS\n\n    r1 = rotation_axis1 * rotation_magnitude1\n\n    dr01_dr0 = compose_r_tinyr0_gradientr0(r1)\n\n    ### Another way to get the same thing (but possibly less efficiently)\n     _,dr01_dr0,_ = compose_r(np.zeros((3,),),\n                              r1,\n                              get_gradients=True)\n\nThis is a special-case subset of compose_r(). It is the same, except:\n\n- r0 is assumed to be 0, so we don't ingest it, and we don't report the\n  composition result\n- we ONLY report the dr01/dr0 gradient\n\nThis special-case function is a part of the projection uncertainty computation,\nso it exists separate from compose_r(). See the documentation for compose_r()\nfor all the details.\n\nThis function supports broadcasting fully.\n\nARGUMENTS\n\n- r1: the second of the two rotations being composed. The first rotation is an\n  identity, so it's not given\n\n- out: optional argument specifying the destination. By default, a new numpy\n  array is created and returned. To write the results into an existing (and\n  possibly non-contiguous) array, specify it with the 'out' kwarg\n\nRETURNED VALUE\n\nWe return a single array of shape (...,3,3): dr01/dr0\n\n") \
   _(compose_r_tinyr1_gradientr1, "Special-case rotation composition for the uncertainty computation\n\nSYNOPSIS\n\n    r0 = rotation_axis0 * rotation_magnitude0\n\n    dr01_dr1 = compose_r_tinyr1_gradientr1(r0)\n\n    ### Another way to get the same thing (but possibly less efficiently)\n     _,_,dr01_dr1 = compose_r(r0,\n                              np.zeros((3,),),\n                              get_gradients=True)\n\nThis is a special-case subset of compose_r(). It is the same, except:\n\n- r1 is assumed to be 0, so we don't ingest it, and we don't report the\n  composition result\n- we ONLY report the dr01/dr1 gradient\n\nThis special-case function is a part of the projection uncertainty computation,\nso it exists separate from compose_r(). See the documentation for compose_r()\nfor all the details.\n\nThis function supports broadcasting fully.\n\nARGUMENTS\n\n- r0: the first of the two rotations being composed. The second rotation is an\n  identity, so it's not given\n\n- out: optional argument specifying the destination. By default, a new numpy\n  array is created and returned. To write the results into an existing (and\n  possibly non-contiguous) array, specify it with the 'out' kwarg\n\nRETURNED VALUE\n\nWe return a single array of shape (...,3,3): dr01/dr1\n\n") \
-  _(_compose_rt, "Compose two rt transformations\n\nThis is an internal function. You probably want mrcal.compose_rt(). See the docs\nfor that function for details. This internal function differs from compose_rt():\n\n- It supports exactly two arguments, while compose_rt() can compose N\n  transformations\n\n- It never reports gradients\n") \
-  _(_compose_rt_withgrad, "Compose two rt transformations; return (rt,drt/drt0,drt/drt1)\n\nThis is an internal function. You probably want mrcal.compose_rt(). See the docs\nfor that function for details. This internal function differs from compose_rt():\n\n- It supports exactly two arguments, while compose_rt() can compose N\n  transformations\n\n- It always reports gradients\n\nNote that the C library returns limited gradients:\n\n- dr/dt0 is not returned: it is always 0\n- dr/dt1 is not returned: it is always 0\n\nTHIS function combines these into the full drtout_drt0,drtout_drt1 arrays\n\n") \
-  _(R_from_quat, "Convert a rotation defined as a unit quaternion rotation to a rotation matrix\n\nSYNOPSIS\n\n    s    = np.sin(rotation_magnitude/2.)\n    c    = np.cos(rotation_magnitude/2.)\n    quat = nps.glue( c, s*rotation_axis, axis = -1)\n\n    print(quat.shape)\n    ===>\n    (4,)\n\n    R = mrcal.R_from_quat(quat)\n\n    print(R.shape)\n    ===>\n    (3,3)\n\nThis is mostly for compatibility with some old stuff. mrcal doesn't use\nquaternions anywhere. Test this thoroughly before using.\n\nThis function supports broadcasting fully.\n\nARGUMENTS\n\n- quat: array of shape (4,). The unit quaternion that defines the rotation. The\n  values in the array are (u,i,j,k)\n\n- out: optional argument specifying the destination. By default, new numpy\n  array(s) are created and returned. To write the results into existing (and\n  possibly non-contiguous) arrays, specify them with the 'out' kwarg. If 'out'\n  is given, we return the 'out' that was passed in. This is the standard\n  behavior provided by numpysane_pywrap.\n\nRETURNED VALUE\n\nWe return an array of rotation matrices. Each broadcasted slice has shape (3,3)\n\n    ") \
-  _(skew_symmetric, "Return the skew-symmetric matrix used in a cross product\n\nSYNOPSIS\n\n    a = np.array(( 1.,  5.,  7.))\n    b = np.array(( 3., -.1, -10.))\n\n    A = mrcal.skew_symmetric(a)\n\n    print( nps.inner(A,b) )\n    ===>\n    [-49.3  31.  -15.1]\n\n    print( np.cross(a,b) )\n    ===>\n    [-49.3  31.  -15.1]\n\nA vector cross-product a x b can be represented as a matrix multiplication A*b\nwhere A is a skew-symmetric matrix based on the vector a. This function computes\nthis matrix A from the vector a.\n\nThis function supports broadcasting fully.\n\nARGUMENTS\n\n- a: array of shape (3,)\n\n- out: optional argument specifying the destination. By default, new numpy\n  array(s) are created and returned. To write the results into existing (and\n  possibly non-contiguous) arrays, specify them with the 'out' kwarg. If 'out'\n  is given, we return the 'out' that was passed in. This is the standard\n  behavior provided by numpysane_pywrap.\n\nRETURNED VALUE\n\nWe return the matrix A in a (3,3) numpy array\n\n    ") \
-  _(_align_procrustes_vectors_R01_weights, "Compute a rotation to align two sets of direction vectors or points\n\n        This is the written-in-C Python extension module. Most of the time you want to\n        use the mrcal.poseutils wrapper module instead of this module directly. Any\n        functions not prefixed with \"_\" are meant to be called directly, without the\n        wrapper.\n\n        All functions are exported into the mrcal module. So you can call these via\n        mrcal._poseutils.fff() or mrcal.fff(). The latter is preferred.\n\n            ") \
-  _(_align_procrustes_points_Rt01_weights, "Compute a rotation to align two sets of direction vectors or points\n\n        This is the written-in-C Python extension module. Most of the time you want to\n        use the mrcal.poseutils wrapper module instead of this module directly. Any\n        functions not prefixed with \"_\" are meant to be called directly, without the\n        wrapper.\n\n        All functions are exported into the mrcal module. So you can call these via\n        mrcal._poseutils.fff() or mrcal.fff(). The latter is preferred.\n\n            ") \
-  _(_align_procrustes_vectors_R01_noweights, "Compute a rotation to align two sets of direction vectors or points\n\n        This is the written-in-C Python extension module. Most of the time you want to\n        use the mrcal.poseutils wrapper module instead of this module directly. Any\n        functions not prefixed with \"_\" are meant to be called directly, without the\n        wrapper.\n\n        All functions are exported into the mrcal module. So you can call these via\n        mrcal._poseutils.fff() or mrcal.fff(). The latter is preferred.\n\n            ") \
-  _(_align_procrustes_points_Rt01_noweights, "Compute a rotation to align two sets of direction vectors or points\n\n        This is the written-in-C Python extension module. Most of the time you want to\n        use the mrcal.poseutils wrapper module instead of this module directly. Any\n        functions not prefixed with \"_\" are meant to be called directly, without the\n        wrapper.\n\n        All functions are exported into the mrcal module. So you can call these via\n        mrcal._poseutils.fff() or mrcal.fff(). The latter is preferred.\n\n            ") \
-  _(R_aligned_to_vector, "Compute a rotation to map a given vector to [0,0,1]\n\nSYNOPSIS\n\n    # I have a plane that passes through a point p, and has a normal n. I\n    # compute a transformation from the world to a coord system aligned to the\n    # plane, with p at the origin. R_plane_world p + t_plane_world = 0:\n\n    Rt_plane_world = np.zeros((4,3), dtype=float)\n    Rt_plane_world[:3,:] = mrcal.R_aligned_to_vector(n)\n    Rt_plane_world[ 3,:] = -mrcal.rotate_point_R(Rt_plane_world[:3,:],p)\n\nThis rotation is not unique: adding any rotation around v still maps v to\n[0,0,1]. An arbitrary acceptable rotation is returned.\n\nARGUMENTS\n\n- v: a numpy array of shape (3,). The vector that the computed rotation maps to\n  [0,0,1]. Does not need to be normalized. Must be non-0\n\nRETURNED VALUES\n\nThe rotation in a (3,3) array\n\n    ")
+  _(_compose_rt, "Compose two rt transformations\n\nThis is an internal function. You probably want drcal.compose_rt(). See the docs\nfor that function for details. This internal function differs from compose_rt():\n\n- It supports exactly two arguments, while compose_rt() can compose N\n  transformations\n\n- It never reports gradients\n") \
+  _(_compose_rt_withgrad, "Compose two rt transformations; return (rt,drt/drt0,drt/drt1)\n\nThis is an internal function. You probably want drcal.compose_rt(). See the docs\nfor that function for details. This internal function differs from compose_rt():\n\n- It supports exactly two arguments, while compose_rt() can compose N\n  transformations\n\n- It always reports gradients\n\nNote that the C library returns limited gradients:\n\n- dr/dt0 is not returned: it is always 0\n- dr/dt1 is not returned: it is always 0\n\nTHIS function combines these into the full drtout_drt0,drtout_drt1 arrays\n\n") \
+  _(R_from_quat, "Convert a rotation defined as a unit quaternion rotation to a rotation matrix\n\nSYNOPSIS\n\n    s    = np.sin(rotation_magnitude/2.)\n    c    = np.cos(rotation_magnitude/2.)\n    quat = nps.glue( c, s*rotation_axis, axis = -1)\n\n    print(quat.shape)\n    ===>\n    (4,)\n\n    R = drcal.R_from_quat(quat)\n\n    print(R.shape)\n    ===>\n    (3,3)\n\nThis is mostly for compatibility with some old stuff. drcal doesn't use\nquaternions anywhere. Test this thoroughly before using.\n\nThis function supports broadcasting fully.\n\nARGUMENTS\n\n- quat: array of shape (4,). The unit quaternion that defines the rotation. The\n  values in the array are (u,i,j,k)\n\n- out: optional argument specifying the destination. By default, new numpy\n  array(s) are created and returned. To write the results into existing (and\n  possibly non-contiguous) arrays, specify them with the 'out' kwarg. If 'out'\n  is given, we return the 'out' that was passed in. This is the standard\n  behavior provided by numpysane_pywrap.\n\nRETURNED VALUE\n\nWe return an array of rotation matrices. Each broadcasted slice has shape (3,3)\n\n    ") \
+  _(skew_symmetric, "Return the skew-symmetric matrix used in a cross product\n\nSYNOPSIS\n\n    a = np.array(( 1.,  5.,  7.))\n    b = np.array(( 3., -.1, -10.))\n\n    A = drcal.skew_symmetric(a)\n\n    print( nps.inner(A,b) )\n    ===>\n    [-49.3  31.  -15.1]\n\n    print( np.cross(a,b) )\n    ===>\n    [-49.3  31.  -15.1]\n\nA vector cross-product a x b can be represented as a matrix multiplication A*b\nwhere A is a skew-symmetric matrix based on the vector a. This function computes\nthis matrix A from the vector a.\n\nThis function supports broadcasting fully.\n\nARGUMENTS\n\n- a: array of shape (3,)\n\n- out: optional argument specifying the destination. By default, new numpy\n  array(s) are created and returned. To write the results into existing (and\n  possibly non-contiguous) arrays, specify them with the 'out' kwarg. If 'out'\n  is given, we return the 'out' that was passed in. This is the standard\n  behavior provided by numpysane_pywrap.\n\nRETURNED VALUE\n\nWe return the matrix A in a (3,3) numpy array\n\n    ") \
+  _(_align_procrustes_vectors_R01_weights, "Compute a rotation to align two sets of direction vectors or points\n\n        This is the written-in-C Python extension module. Most of the time you want to\n        use the drcal.poseutils wrapper module instead of this module directly. Any\n        functions not prefixed with \"_\" are meant to be called directly, without the\n        wrapper.\n\n        All functions are exported into the drcal module. So you can call these via\n        drcal._poseutils.fff() or drcal.fff(). The latter is preferred.\n\n            ") \
+  _(_align_procrustes_points_Rt01_weights, "Compute a rotation to align two sets of direction vectors or points\n\n        This is the written-in-C Python extension module. Most of the time you want to\n        use the drcal.poseutils wrapper module instead of this module directly. Any\n        functions not prefixed with \"_\" are meant to be called directly, without the\n        wrapper.\n\n        All functions are exported into the drcal module. So you can call these via\n        drcal._poseutils.fff() or drcal.fff(). The latter is preferred.\n\n            ") \
+  _(_align_procrustes_vectors_R01_noweights, "Compute a rotation to align two sets of direction vectors or points\n\n        This is the written-in-C Python extension module. Most of the time you want to\n        use the drcal.poseutils wrapper module instead of this module directly. Any\n        functions not prefixed with \"_\" are meant to be called directly, without the\n        wrapper.\n\n        All functions are exported into the drcal module. So you can call these via\n        drcal._poseutils.fff() or drcal.fff(). The latter is preferred.\n\n            ") \
+  _(_align_procrustes_points_Rt01_noweights, "Compute a rotation to align two sets of direction vectors or points\n\n        This is the written-in-C Python extension module. Most of the time you want to\n        use the drcal.poseutils wrapper module instead of this module directly. Any\n        functions not prefixed with \"_\" are meant to be called directly, without the\n        wrapper.\n\n        All functions are exported into the drcal module. So you can call these via\n        drcal._poseutils.fff() or drcal.fff(). The latter is preferred.\n\n            ") \
+  _(R_aligned_to_vector, "Compute a rotation to map a given vector to [0,0,1]\n\nSYNOPSIS\n\n    # I have a plane that passes through a point p, and has a normal n. I\n    # compute a transformation from the world to a coord system aligned to the\n    # plane, with p at the origin. R_plane_world p + t_plane_world = 0:\n\n    Rt_plane_world = np.zeros((4,3), dtype=float)\n    Rt_plane_world[:3,:] = drcal.R_aligned_to_vector(n)\n    Rt_plane_world[ 3,:] = -drcal.rotate_point_R(Rt_plane_world[:3,:],p)\n\nThis rotation is not unique: adding any rotation around v still maps v to\n[0,0,1]. An arbitrary acceptable rotation is returned.\n\nARGUMENTS\n\n- v: a numpy array of shape (3,). The vector that the computed rotation maps to\n  [0,0,1]. Does not need to be normalized. Must be non-0\n\nRETURNED VALUES\n\nThe rotation in a (3,3) array\n\n    ")
 
 
 ///////// {{{{{{{{{ /home/robert/projects/drcal/.venv/lib/python3.13/site-packages/pywrap-templates/pywrap_module_header.c
@@ -341,7 +341,7 @@ bool __identity_R__0__slice(
   __identity_R__cookie_t* cookie __attribute__((unused)))
 {
 
-    mrcal_identity_R_full( (double*)data_slice__output,
+    drcal_identity_R_full( (double*)data_slice__output,
                            strides_slice__output[0],
                            strides_slice__output[1] );
     return true;
@@ -1027,7 +1027,7 @@ bool __identity_r__0__slice(
   __identity_r__cookie_t* cookie __attribute__((unused)))
 {
 
-    mrcal_identity_r_full( (double*)data_slice__output,
+    drcal_identity_r_full( (double*)data_slice__output,
                            strides_slice__output[0] );
     return true;
 
@@ -1712,7 +1712,7 @@ bool __identity_Rt__0__slice(
   __identity_Rt__cookie_t* cookie __attribute__((unused)))
 {
 
-    mrcal_identity_Rt_full( (double*)data_slice__output,
+    drcal_identity_Rt_full( (double*)data_slice__output,
                             strides_slice__output[0],
                             strides_slice__output[1] );
     return true;
@@ -2398,7 +2398,7 @@ bool __identity_rt__0__slice(
   __identity_rt__cookie_t* cookie __attribute__((unused)))
 {
 
-    mrcal_identity_rt_full( (double*)data_slice__output,
+    drcal_identity_rt_full( (double*)data_slice__output,
                             strides_slice__output[0] );
     return true;
 
@@ -3195,7 +3195,7 @@ bool ___rotate_point_R__0__slice(
   ___rotate_point_R__cookie_t* cookie __attribute__((unused)))
 {
 
-    mrcal_rotate_point_R_full( (double*)data_slice__output,
+    drcal_rotate_point_R_full( (double*)data_slice__output,
                                strides_slice__output[0],
                                NULL,0,0,0,
                                NULL,0,0,
@@ -4125,7 +4125,7 @@ bool ___rotate_point_R_withgrad__0__slice(
   ___rotate_point_R_withgrad__cookie_t* cookie __attribute__((unused)))
 {
 
-    mrcal_rotate_point_R_full( (double*)data_slice__output0,
+    drcal_rotate_point_R_full( (double*)data_slice__output0,
                                strides_slice__output0[0],
                                (double*)data_slice__output1,
                                strides_slice__output1[0],
@@ -4991,7 +4991,7 @@ bool ___rotate_point_r__0__slice(
   ___rotate_point_r__cookie_t* cookie __attribute__((unused)))
 {
 
-    mrcal_rotate_point_r_full( (double*)data_slice__output,
+    drcal_rotate_point_r_full( (double*)data_slice__output,
                                strides_slice__output[0],
                                NULL,0,0,
                                NULL,0,0,
@@ -5920,7 +5920,7 @@ bool ___rotate_point_r_withgrad__0__slice(
   ___rotate_point_r_withgrad__cookie_t* cookie __attribute__((unused)))
 {
 
-    mrcal_rotate_point_r_full( (double*)data_slice__output0,
+    drcal_rotate_point_r_full( (double*)data_slice__output0,
                                strides_slice__output0[0],
                                (double*)data_slice__output1,
                                strides_slice__output1[0],
@@ -6784,7 +6784,7 @@ bool ___transform_point_Rt__0__slice(
   ___transform_point_Rt__cookie_t* cookie __attribute__((unused)))
 {
 
-    mrcal_transform_point_Rt_full( (double*)data_slice__output,
+    drcal_transform_point_Rt_full( (double*)data_slice__output,
                                    strides_slice__output[0],
                                    NULL,0,0,0,
                                    NULL,0,0,
@@ -7714,7 +7714,7 @@ bool ___transform_point_Rt_withgrad__0__slice(
   ___transform_point_Rt_withgrad__cookie_t* cookie __attribute__((unused)))
 {
 
-    mrcal_transform_point_Rt_full( (double*)data_slice__output0,
+    drcal_transform_point_Rt_full( (double*)data_slice__output0,
                                    strides_slice__output0[0],
                                    (double*)data_slice__output1,
                                    strides_slice__output1[0],
@@ -8580,7 +8580,7 @@ bool ___transform_point_rt__0__slice(
   ___transform_point_rt__cookie_t* cookie __attribute__((unused)))
 {
 
-    mrcal_transform_point_rt_full( (double*)data_slice__output,
+    drcal_transform_point_rt_full( (double*)data_slice__output,
                                    strides_slice__output[0],
                                    NULL,0,0,
                                    NULL,0,0,
@@ -9509,7 +9509,7 @@ bool ___transform_point_rt_withgrad__0__slice(
   ___transform_point_rt_withgrad__cookie_t* cookie __attribute__((unused)))
 {
 
-    mrcal_transform_point_rt_full( (double*)data_slice__output0,
+    drcal_transform_point_rt_full( (double*)data_slice__output0,
                                    strides_slice__output0[0],
                                    (double*)data_slice__output1,
                                    strides_slice__output1[0],
@@ -10316,7 +10316,7 @@ bool ___r_from_R__0__slice(
   ___r_from_R__cookie_t* cookie __attribute__((unused)))
 {
 
-    mrcal_r_from_R_full(
+    drcal_r_from_R_full(
         (double*)data_slice__output,strides_slice__output[0],
         NULL,0,0,0,
         (const double*)data_slice__R,strides_slice__R[0], strides_slice__R[1] );
@@ -11120,7 +11120,7 @@ bool ___r_from_R_withgrad__0__slice(
   ___r_from_R_withgrad__cookie_t* cookie __attribute__((unused)))
 {
 
-    mrcal_r_from_R_full(
+    drcal_r_from_R_full(
         (double*)data_slice__output0,strides_slice__output0[0],
         (double*)data_slice__output1,strides_slice__output1[0], strides_slice__output1[1],strides_slice__output1[2],
         (const double*)data_slice__R,strides_slice__R[0], strides_slice__R[1] );
@@ -11903,7 +11903,7 @@ bool ___R_from_r__0__slice(
   ___R_from_r__cookie_t* cookie __attribute__((unused)))
 {
 
-    mrcal_R_from_r_full(
+    drcal_R_from_r_full(
         (double*)data_slice__output, strides_slice__output[0], strides_slice__output[1],
         NULL,0,0,0,
         (const double*)data_slice__r, strides_slice__r[0] );
@@ -12707,7 +12707,7 @@ bool ___R_from_r_withgrad__0__slice(
   ___R_from_r_withgrad__cookie_t* cookie __attribute__((unused)))
 {
 
-    mrcal_R_from_r_full(
+    drcal_R_from_r_full(
         (double*)data_slice__output0,strides_slice__output0[0], strides_slice__output0[1],
         (double*)data_slice__output1,strides_slice__output1[0], strides_slice__output1[1],strides_slice__output1[2],
         (const double*)data_slice__r, strides_slice__r[0] );
@@ -13490,7 +13490,7 @@ bool ___invert_R__0__slice(
   ___invert_R__cookie_t* cookie __attribute__((unused)))
 {
 
-    mrcal_invert_R_full( (double*)data_slice__output,
+    drcal_invert_R_full( (double*)data_slice__output,
                          strides_slice__output[0], strides_slice__output[1],
                          (const double*)data_slice__R,
                          strides_slice__R[0], strides_slice__R[1] );
@@ -14239,7 +14239,7 @@ bool ___rt_from_Rt__0__slice(
   ___rt_from_Rt__cookie_t* cookie __attribute__((unused)))
 {
 
-    mrcal_rt_from_Rt_full(
+    drcal_rt_from_Rt_full(
         (double*)data_slice__output,strides_slice__output[0],
         NULL,0,0,0,
         (const double*)data_slice__Rt,strides_slice__Rt[0], strides_slice__Rt[1] );
@@ -15043,7 +15043,7 @@ bool ___rt_from_Rt_withgrad__0__slice(
   ___rt_from_Rt_withgrad__cookie_t* cookie __attribute__((unused)))
 {
 
-    mrcal_rt_from_Rt_full(
+    drcal_rt_from_Rt_full(
         (double*)data_slice__output0,strides_slice__output0[0],
         (double*)data_slice__output1,strides_slice__output1[0], strides_slice__output1[1],strides_slice__output1[2],
         (const double*)data_slice__Rt,strides_slice__Rt[0], strides_slice__Rt[1] );
@@ -15826,7 +15826,7 @@ bool ___Rt_from_rt__0__slice(
   ___Rt_from_rt__cookie_t* cookie __attribute__((unused)))
 {
 
-    mrcal_Rt_from_rt_full(
+    drcal_Rt_from_rt_full(
         (double*)data_slice__output, strides_slice__output[0],strides_slice__output[1],
         NULL,0,0,0,
         (const double*)data_slice__rt, strides_slice__rt[0] );
@@ -16630,7 +16630,7 @@ bool ___Rt_from_rt_withgrad__0__slice(
   ___Rt_from_rt_withgrad__cookie_t* cookie __attribute__((unused)))
 {
 
-    mrcal_Rt_from_rt_full(
+    drcal_Rt_from_rt_full(
         (double*)data_slice__output0, strides_slice__output0[0],strides_slice__output0[1],
         (double*)data_slice__output1,strides_slice__output1[0], strides_slice__output1[1],strides_slice__output1[2],
         (const double*)data_slice__rt, strides_slice__rt[0] );
@@ -17413,7 +17413,7 @@ bool ___invert_Rt__0__slice(
   ___invert_Rt__cookie_t* cookie __attribute__((unused)))
 {
 
-    mrcal_invert_Rt_full( (double*)data_slice__output,
+    drcal_invert_Rt_full( (double*)data_slice__output,
                           strides_slice__output[0], strides_slice__output[1],
                           (const double*)data_slice__Rt,
                           strides_slice__Rt[0], strides_slice__Rt[1] );
@@ -18162,7 +18162,7 @@ bool ___invert_rt__0__slice(
   ___invert_rt__cookie_t* cookie __attribute__((unused)))
 {
 
-    mrcal_invert_rt_full( (double*)data_slice__output,
+    drcal_invert_rt_full( (double*)data_slice__output,
                           strides_slice__output[0],
                           NULL,0,0,
                           NULL,0,0,
@@ -18968,7 +18968,7 @@ bool ___invert_rt_withgrad__0__slice(
   ___invert_rt_withgrad__cookie_t* cookie __attribute__((unused)))
 {
 
-    mrcal_invert_rt_full( (double*)data_slice__output0,
+    drcal_invert_rt_full( (double*)data_slice__output0,
                           strides_slice__output0[0],
 
                           &item__output1(3,0),
@@ -19824,7 +19824,7 @@ bool ___compose_Rt__0__slice(
   ___compose_Rt__cookie_t* cookie __attribute__((unused)))
 {
 
-    mrcal_compose_Rt_full( (double*)data_slice__output,
+    drcal_compose_Rt_full( (double*)data_slice__output,
                            strides_slice__output[0], strides_slice__output[1],
                            (const double*)data_slice__Rt0,
                            strides_slice__Rt0[0], strides_slice__Rt0[1],
@@ -20644,7 +20644,7 @@ bool ___compose_r__0__slice(
   ___compose_r__cookie_t* cookie __attribute__((unused)))
 {
 
-    mrcal_compose_r_full( (double*)data_slice__output,
+    drcal_compose_r_full( (double*)data_slice__output,
                            strides_slice__output[0],
                            NULL,0,0,
                            NULL,0,0,
@@ -21576,7 +21576,7 @@ bool ___compose_r_withgrad__0__slice(
   ___compose_r_withgrad__cookie_t* cookie __attribute__((unused)))
 {
 
-    mrcal_compose_r_full( (double*)data_slice__output0,
+    drcal_compose_r_full( (double*)data_slice__output0,
                            strides_slice__output0[0],
 
                            // dr/dr0
@@ -22388,7 +22388,7 @@ bool __compose_r_tinyr0_gradientr0__0__slice(
   __compose_r_tinyr0_gradientr0__cookie_t* cookie __attribute__((unused)))
 {
 
-    mrcal_compose_r_tinyr0_gradientr0_full(
+    drcal_compose_r_tinyr0_gradientr0_full(
         // dr/dr0
         &item__output(0,0),
         strides_slice__output[0], strides_slice__output[1],
@@ -23140,7 +23140,7 @@ bool __compose_r_tinyr1_gradientr1__0__slice(
   __compose_r_tinyr1_gradientr1__cookie_t* cookie __attribute__((unused)))
 {
 
-    mrcal_compose_r_tinyr1_gradientr1_full(
+    drcal_compose_r_tinyr1_gradientr1_full(
         // dr/dr1
         &item__output(0,0),
         strides_slice__output[0], strides_slice__output[1],
@@ -23951,7 +23951,7 @@ bool ___compose_rt__0__slice(
   ___compose_rt__cookie_t* cookie __attribute__((unused)))
 {
 
-    mrcal_compose_rt_full( (double*)data_slice__output,
+    drcal_compose_rt_full( (double*)data_slice__output,
                            strides_slice__output[0],
                            NULL,0,0,
                            NULL,0,0,
@@ -24887,7 +24887,7 @@ bool ___compose_rt_withgrad__0__slice(
   ___compose_rt_withgrad__cookie_t* cookie __attribute__((unused)))
 {
 
-    mrcal_compose_rt_full( (double*)data_slice__output0,
+    drcal_compose_rt_full( (double*)data_slice__output0,
                            strides_slice__output0[0],
 
                            // dr/dr0
@@ -27363,7 +27363,7 @@ bool ___align_procrustes_vectors_R01_weights__0__slice(
 {
 
             bool result =
-            mrcal_align_procrustes_vectors_R01((double*)data_slice__output,
+            drcal_align_procrustes_vectors_R01((double*)data_slice__output,
                                                  dims_slice__v0[0],
                                                  (double*)data_slice__v0,
                                                  (double*)data_slice__v1,
@@ -28250,7 +28250,7 @@ bool ___align_procrustes_points_Rt01_weights__0__slice(
 {
 
             bool result =
-            mrcal_align_procrustes_points_Rt01((double*)data_slice__output,
+            drcal_align_procrustes_points_Rt01((double*)data_slice__output,
                                                  dims_slice__v0[0],
                                                  (double*)data_slice__v0,
                                                  (double*)data_slice__v1,
@@ -29082,7 +29082,7 @@ bool ___align_procrustes_vectors_R01_noweights__0__slice(
 {
 
             bool result =
-            mrcal_align_procrustes_vectors_R01((double*)data_slice__output,
+            drcal_align_procrustes_vectors_R01((double*)data_slice__output,
                                                  dims_slice__v0[0],
                                                  (double*)data_slice__v0,
                                                  (double*)data_slice__v1,
@@ -29907,7 +29907,7 @@ bool ___align_procrustes_points_Rt01_noweights__0__slice(
 {
 
             bool result =
-            mrcal_align_procrustes_points_Rt01((double*)data_slice__output,
+            drcal_align_procrustes_points_Rt01((double*)data_slice__output,
                                                  dims_slice__v0[0],
                                                  (double*)data_slice__v0,
                                                  (double*)data_slice__v1,
@@ -30676,7 +30676,7 @@ bool __R_aligned_to_vector__0__slice(
   __R_aligned_to_vector__cookie_t* cookie __attribute__((unused)))
 {
 
-    mrcal_R_aligned_to_vector((double*)data_slice__output,
+    drcal_R_aligned_to_vector((double*)data_slice__output,
                               (double*)data_slice__v);
     return true;
 
@@ -31308,7 +31308,7 @@ static PyMethodDef methods[] =
 
 PyMODINIT_FUNC initbindings_poseutils_npsp(void)
 {
-    Py_InitModule3("bindings_poseutils_npsp", methods, "Low-level routines to manipulate poses, transformations and points\n\nThis is the written-in-C Python extension module. Most of the time you want to\nuse the mrcal.poseutils wrapper module instead of this module directly. Any\nfunctions not prefixed with \"_\" are meant to be called directly, without the\nwrapper.\n\nAll functions are exported into the mrcal module. So you can call these via\nmrcal._poseutils.fff() or mrcal.fff(). The latter is preferred.\n\n");
+    Py_InitModule3("bindings_poseutils_npsp", methods, "Low-level routines to manipulate poses, transformations and points\n\nThis is the written-in-C Python extension module. Most of the time you want to\nuse the drcal.poseutils wrapper module instead of this module directly. Any\nfunctions not prefixed with \"_\" are meant to be called directly, without the\nwrapper.\n\nAll functions are exported into the drcal module. So you can call these via\ndrcal._poseutils.fff() or drcal.fff(). The latter is preferred.\n\n");
     import_array();
 }
 
@@ -31317,7 +31317,7 @@ PyMODINIT_FUNC initbindings_poseutils_npsp(void)
 static struct PyModuleDef module_def =
     {
      PyModuleDef_HEAD_INIT,
-     "bindings_poseutils_npsp", "Low-level routines to manipulate poses, transformations and points\n\nThis is the written-in-C Python extension module. Most of the time you want to\nuse the mrcal.poseutils wrapper module instead of this module directly. Any\nfunctions not prefixed with \"_\" are meant to be called directly, without the\nwrapper.\n\nAll functions are exported into the mrcal module. So you can call these via\nmrcal._poseutils.fff() or mrcal.fff(). The latter is preferred.\n\n",
+     "bindings_poseutils_npsp", "Low-level routines to manipulate poses, transformations and points\n\nThis is the written-in-C Python extension module. Most of the time you want to\nuse the drcal.poseutils wrapper module instead of this module directly. Any\nfunctions not prefixed with \"_\" are meant to be called directly, without the\nwrapper.\n\nAll functions are exported into the drcal module. So you can call these via\ndrcal._poseutils.fff() or drcal.fff(). The latter is preferred.\n\n",
      -1,
      methods
     };

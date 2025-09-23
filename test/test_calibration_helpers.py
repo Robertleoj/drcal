@@ -5,10 +5,10 @@ import copy
 import os
 import re
 
-# I import the LOCAL mrcal since that's what I'm testing
+# I import the LOCAL drcal since that's what I'm testing
 testdir = os.path.dirname(os.path.realpath(__file__))
 sys.path[:0] = (f"{testdir}/..",)
-import mrcal
+import drcal
 
 
 def sample_dqref(observations, pixel_uncertainty_stdev, make_outliers=False):
@@ -109,9 +109,9 @@ def grad__r_from_R(R):
     #
     # Note that I'm not computing any numerical gradients here. If R_from_r() is
     # right, then this should be right too
-    r = mrcal.r_from_R(R)
+    r = drcal.r_from_R(R)
 
-    _, dR_dr = mrcal.R_from_r(r, get_gradients=True)
+    _, dR_dr = drcal.R_from_r(r, get_gradients=True)
     dRflat_dr = nps.clump(dR_dr, n=2)
 
     Q, R = np.linalg.qr(dRflat_dr)
@@ -144,10 +144,10 @@ def calibration_baseline(
     moving_cameras=False,
     ref_frame0=False,
     # The logic to avoid oblique views was added in
-    #   https://github.com/dkogan/mrcal/commit/b54df5d3
+    #   https://github.com/dkogan/drcal/commit/b54df5d3
     #
     # We want to disable this if we're trying to compare
-    # results to mrcal 2.4, since this commit was made
+    # results to drcal 2.4, since this commit was made
     # after that
     avoid_oblique_views=True,
 ):
@@ -196,10 +196,10 @@ def calibration_baseline(
 
     if re.match("opencv", model):
         models_true_refcam0 = (
-            mrcal.cameramodel(f"{testdir}/data/cam0.opencv8.cameramodel"),
-            mrcal.cameramodel(f"{testdir}/data/cam0.opencv8.cameramodel"),
-            mrcal.cameramodel(f"{testdir}/data/cam1.opencv8.cameramodel"),
-            mrcal.cameramodel(f"{testdir}/data/cam1.opencv8.cameramodel"),
+            drcal.cameramodel(f"{testdir}/data/cam0.opencv8.cameramodel"),
+            drcal.cameramodel(f"{testdir}/data/cam0.opencv8.cameramodel"),
+            drcal.cameramodel(f"{testdir}/data/cam1.opencv8.cameramodel"),
+            drcal.cameramodel(f"{testdir}/data/cam1.opencv8.cameramodel"),
         )
 
         if model == "opencv4":
@@ -208,17 +208,17 @@ def calibration_baseline(
                 m.intrinsics(intrinsics=("LENSMODEL_OPENCV4", m.intrinsics()[1][:8]))
     elif model == "splined":
         models_true_refcam0 = (
-            mrcal.cameramodel(f"{testdir}/data/cam0.splined.cameramodel"),
-            mrcal.cameramodel(f"{testdir}/data/cam0.splined.cameramodel"),
-            mrcal.cameramodel(f"{testdir}/data/cam1.splined.cameramodel"),
-            mrcal.cameramodel(f"{testdir}/data/cam1.splined.cameramodel"),
+            drcal.cameramodel(f"{testdir}/data/cam0.splined.cameramodel"),
+            drcal.cameramodel(f"{testdir}/data/cam0.splined.cameramodel"),
+            drcal.cameramodel(f"{testdir}/data/cam1.splined.cameramodel"),
+            drcal.cameramodel(f"{testdir}/data/cam1.splined.cameramodel"),
         )
     else:
         raise Exception("Unknown lens being tested")
 
     models_true_refcam0 = models_true_refcam0[:Ncameras]
     lensmodel = models_true_refcam0[0].intrinsics()[0]
-    Nintrinsics = mrcal.lensmodel_num_params(lensmodel)
+    Nintrinsics = drcal.lensmodel_num_params(lensmodel)
 
     for i in range(Ncameras):
         models_true_refcam0[i].extrinsics_rt_fromref(extrinsics_rt_fromcam0_true[i])
@@ -238,7 +238,7 @@ def calibration_baseline(
         else:
             kwargs = dict()
 
-        return mrcal.synthesize_board_observations(
+        return drcal.synthesize_board_observations(
             models_true_refcam0,
             object_width_n=object_width_n,
             object_height_n=object_height_n,
@@ -306,7 +306,7 @@ def calibration_baseline(
         Nframes += 1
 
     # shape (Nframes, 6)
-    rt_cam0_board_true = mrcal.rt_from_Rt(Rt_cam0_board_true)
+    rt_cam0_board_true = drcal.rt_from_Rt(Rt_cam0_board_true)
 
     ############# I have perfect observations in q_true.
     # weight has shape (Nframes, Ncameras, Nh, Nw),
@@ -380,7 +380,7 @@ def calibration_baseline(
     )
 
     ###########################################################################
-    # p = mrcal.show_geometry(models_true_refcam0,
+    # p = drcal.show_geometry(models_true_refcam0,
     #                         frames          = rt_cam0_board_true,
     #                         object_width_n  = object_width_n,
     #                         object_height_n = object_height_n,
@@ -397,7 +397,7 @@ def calibration_baseline(
         calibration_boards_to_points(optimization_inputs_baseline)
 
     if optimize:
-        mrcal.optimize(**optimization_inputs_baseline)
+        drcal.optimize(**optimization_inputs_baseline)
 
     if not report_points:
         return optimization_inputs_baseline, models_true_refcam0, rt_cam0_board_true
@@ -445,7 +445,7 @@ def calibration_make_non_vanilla(optimization_inputs, *, moving_cameras, ref_fra
         #     0 0 2
         #     ... ]
         #
-        #   I want to have indices_frame = -1 here, but mrcal does not currently
+        #   I want to have indices_frame = -1 here, but drcal does not currently
         #   support this. Instead we set indices_frame = 0, actually store
         #   something into the frames_rt_toref array, and set do_optimize_frames
         #   = False
@@ -516,8 +516,8 @@ def calibration_make_non_vanilla(optimization_inputs, *, moving_cameras, ref_fra
             np.ascontiguousarray(nps.transpose(nps.cat(idxce + 1, idxci, idxf - 1)))
         )
 
-        rt_cam_cam0 = mrcal.compose_rt(
-            rt_cam0_board_true[1:, :], mrcal.invert_rt(rt_cam0_board_true[0, :])
+        rt_cam_cam0 = drcal.compose_rt(
+            rt_cam0_board_true[1:, :], drcal.invert_rt(rt_cam0_board_true[0, :])
         )
 
         optimization_inputs["extrinsics_rt_fromref"] = rt_cam_cam0
@@ -537,7 +537,7 @@ def calibration_make_non_vanilla(optimization_inputs, *, moving_cameras, ref_fra
         #      1 0 0
         #     ...   ]
         #
-        # mrcal cannot represent this today, so I don't check it. Today mrcal
+        # drcal cannot represent this today, so I don't check it. Today drcal
         # can represent NULL camera transforms (index_camextrinsics < 0), but
         # not NULL frame transforms. Above I could fake a NULL frame transform
         # by setting do_optimize_frames = False, but that only works if I want
@@ -552,7 +552,7 @@ def calibration_boards_to_points(optimization_inputs):
     # I break up the chessboard observations into discrete points
 
     rt_ref_board = optimization_inputs["frames_rt_toref"]
-    Rt_ref_board = mrcal.Rt_from_rt(rt_ref_board)
+    Rt_ref_board = drcal.Rt_from_rt(rt_ref_board)
     Nframes = len(rt_ref_board)
     indices_frame_camintrinsics_camextrinsics = optimization_inputs[
         "indices_frame_camintrinsics_camextrinsics"
@@ -591,7 +591,7 @@ def calibration_boards_to_points(optimization_inputs):
     )
 
     # shape (H,W,3)
-    pboard = mrcal.ref_calibration_object(
+    pboard = drcal.ref_calibration_object(
         object_width_n, object_height_n, object_spacing, calobject_warp=calobject_warp
     )
 
@@ -599,7 +599,7 @@ def calibration_boards_to_points(optimization_inputs):
     Rt_ref_board_frames = nps.dummy(Rt_ref_board, -3, -3)
 
     # shape (Nframes,H,W, 3)
-    pref = mrcal.transform_point_Rt(Rt_ref_board_frames, pboard)
+    pref = drcal.transform_point_Rt(Rt_ref_board_frames, pboard)
     # shape (Nframes*H*W, 3)
     pref = nps.clump(pref, n=3)
 
@@ -707,7 +707,7 @@ def calibration_sample(
 
     if function_optimize is None:
         b_sampled_unpacked = np.zeros(
-            (Nsamples, mrcal.num_states(**optimization_inputs_baseline)),
+            (Nsamples, drcal.num_states(**optimization_inputs_baseline)),
         )
     else:
         b_sampled_unpacked = None
@@ -751,10 +751,10 @@ def calibration_sample(
             q_noise_point = None
 
         if function_optimize is None:
-            b_sampled_unpacked[isample] = mrcal.optimize(**optimization_inputs)[
+            b_sampled_unpacked[isample] = drcal.optimize(**optimization_inputs)[
                 "b_packed"
             ]
-            mrcal.unpack_state(b_sampled_unpacked[isample], **optimization_inputs)
+            drcal.unpack_state(b_sampled_unpacked[isample], **optimization_inputs)
         else:
             function_optimize(optimization_inputs)
 

@@ -8,9 +8,9 @@ import os
 
 testdir = os.path.dirname(os.path.realpath(__file__))
 
-# I import the LOCAL mrcal since that's what I'm testing
+# I import the LOCAL drcal since that's what I'm testing
 sys.path[:0] = (f"{testdir}/..",)
-import mrcal
+import drcal
 import testutils
 
 
@@ -52,14 +52,14 @@ for im, what in (
     (im24, "24bpp bgr"),
 ):
     try:
-        mrcal.save_image(filename, im)
+        drcal.save_image(filename, im)
     except:
         testutils.confirm(False, msg=f"Error saving {what} image")
         continue
     testutils.confirm(True, msg=f"Success saving {what} image")
 
     try:
-        im_check = mrcal.load_image(filename)
+        im_check = drcal.load_image(filename)
     except:
         testutils.confirm(False, msg=f"Error loading {what} image")
         continue

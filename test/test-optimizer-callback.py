@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-r"""Tests the mrcal optimization callback function
+r"""Tests the drcal optimization callback function
 
 This is a regression test. It simply checks that the stored values are what's
 output. If anything changes, this test barfs. Any changes in the internals of
@@ -25,9 +25,9 @@ import os
 
 testdir = os.path.dirname(os.path.realpath(__file__))
 
-# I import the LOCAL mrcal since that's what I'm testing
+# I import the LOCAL drcal since that's what I'm testing
 sys.path[:0] = (f"{testdir}/..",)
-import mrcal
+import drcal
 import testutils
 
 from functools import reduce
@@ -41,7 +41,7 @@ def linspace_shaped(*shape):
 # I read the synthetic-data observations. These have 3 frames with 2 cameras
 # each. I want to make things uneven, so I make the first two frames have only 1
 # camera each
-observations, indices_frame_camera, paths = mrcal.compute_chessboard_corners(
+observations, indices_frame_camera, paths = drcal.compute_chessboard_corners(
     10,
     10,
     globs_per_camera=("frame*-cam0.xxx", "frame*-cam1.xxx"),
@@ -64,7 +64,7 @@ paths = [paths[_] for _ in i]
 
 # reference models
 models = [
-    mrcal.cameramodel(m)
+    drcal.cameramodel(m)
     for m in (
         f"{testdir}/data/cam0.opencv8.cameramodel",
         f"{testdir}/data/cam1.opencv8.cameramodel",
@@ -73,7 +73,7 @@ models = [
 
 lensmodel = models[0].intrinsics()[0]
 intrinsics_data = nps.cat(models[0].intrinsics()[1], models[1].intrinsics()[1])
-extrinsics_rt_fromref = mrcal.compose_rt(
+extrinsics_rt_fromref = drcal.compose_rt(
     models[1].extrinsics_rt_fromref(), models[0].extrinsics_rt_toref()
 )
 
@@ -177,22 +177,22 @@ for kwargs in all_test_kwargs:
         **kwargs,
     )
 
-    x, J = mrcal.optimizer_callback(**optimization_inputs)[1:3]
+    x, J = drcal.optimizer_callback(**optimization_inputs)[1:3]
     J = J.toarray()
 
     # let's make sure that pack and unpack work correctly
     J2 = J.copy()
-    mrcal.pack_state(J2, **optimization_inputs)
-    mrcal.unpack_state(J2, **optimization_inputs)
+    drcal.pack_state(J2, **optimization_inputs)
+    drcal.unpack_state(J2, **optimization_inputs)
     testutils.confirm_equal(J2, J, msg="unpack(pack(J)) = J")
     J2 = J.copy()
-    mrcal.unpack_state(J2, **optimization_inputs)
-    mrcal.pack_state(J2, **optimization_inputs)
+    drcal.unpack_state(J2, **optimization_inputs)
+    drcal.pack_state(J2, **optimization_inputs)
     testutils.confirm_equal(J2, J, msg="pack(unpack(J)) = J")
 
     # I compare full-state J so that I can change SCALE_... without breaking the
     # test
-    mrcal.pack_state(J, **optimization_inputs)
+    drcal.pack_state(J, **optimization_inputs)
 
     if store_current_output_as_reference:
         np.save(f"{testdir}/data/test-optimizer-callback-ref-x-{itest}.npy", x)

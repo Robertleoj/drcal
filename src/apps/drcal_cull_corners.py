@@ -2,11 +2,11 @@ r"""Filters a corners.vnl on stdin to cut out some points
 
 SYNOPSIS
 
-  $ < corners.vnl mrcal-cull-corners --cull-left-of 1000 > corners.culled.vnl
+  $ < corners.vnl drcal-cull-corners --cull-left-of 1000 > corners.culled.vnl
 
 This tool reads a set of corner detections on stdin, throws some of them out,
 and writes the result to stdout. This is useful for testing and evaluating the
-performance of the mrcal calibration tools.
+performance of the drcal calibration tools.
 
 The specific operation of this tool is defined on which --cull-... option is
 given. Exactly one is required:
@@ -38,7 +38,7 @@ The filtering is crude, and the tool might report chessboard observations with
 very few remaining points. You PROBABLY want to post-process the output to keep
 only observations with enough points. For instance:
 
-  mrcal-cull-corners ... > culled-raw.vnl
+  drcal-cull-corners ... > culled-raw.vnl
 
   vnl-join --vnl-sort - -j filename culled-raw.vnl \
      <(< culled-raw.vnl vnl-filter -p filename --has level |

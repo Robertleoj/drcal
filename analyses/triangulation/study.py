@@ -120,21 +120,21 @@ import gnuplotlib as gp
 import pickle
 import os.path
 
-# I import the LOCAL mrcal
+# I import the LOCAL drcal
 scriptdir = os.path.dirname(os.path.realpath(__file__))
 sys.path[:0] = (f"{scriptdir}/../..",)
-import mrcal
+import drcal
 
 ############ bias visualization
 #
 # I simulate pixel noise, and see what that does to the triangulation. Play with
 # the geometric details to get a sense of how these behave
 
-model0 = mrcal.cameramodel(
+model0 = drcal.cameramodel(
     intrinsics=("LENSMODEL_PINHOLE", np.array((1000.0, 1000.0, 500.0, 500.0))),
     imagersize=np.array((1000, 1000)),
 )
-model1 = mrcal.cameramodel(
+model1 = drcal.cameramodel(
     intrinsics=("LENSMODEL_PINHOLE", np.array((1100.0, 1100.0, 500.0, 500.0))),
     imagersize=np.array((1000, 1000)),
 )
@@ -142,12 +142,12 @@ model1 = mrcal.cameramodel(
 
 # square camera layout
 t01 = np.array((1.0, 0.1, -0.2))
-R01 = mrcal.R_from_r(np.array((0.001, -0.002, -0.003)))
+R01 = drcal.R_from_r(np.array((0.001, -0.002, -0.003)))
 Rt01 = nps.glue(R01, t01, axis=-2)
 
 p = np.array(args.observed_point)
 
-q0 = mrcal.project(p, *model0.intrinsics())
+q0 = drcal.project(p, *model0.intrinsics())
 
 sigma = 0.1
 
@@ -155,7 +155,7 @@ sigma = 0.1
 cache_file = "/tmp/triangulation-study-cache.pickle"
 if args.cache is None or args.cache == "write":
     v0local_noisy, v1local_noisy, v0_noisy, v1_noisy, _, _, _, _ = (
-        mrcal.synthetic_data._noisy_observation_vectors_for_triangulation(
+        drcal.synthetic_data._noisy_observation_vectors_for_triangulation(
             p,
             Rt01,
             model0.intrinsics(),
@@ -164,29 +164,29 @@ if args.cache is None or args.cache == "write":
             sigma=sigma,
         )
     )
-    p_sampled_geometric = mrcal.triangulate_geometric(v0_noisy, v1_noisy, t01)
-    p_sampled_lindstrom = mrcal.triangulate_lindstrom(
+    p_sampled_geometric = drcal.triangulate_geometric(v0_noisy, v1_noisy, t01)
+    p_sampled_lindstrom = drcal.triangulate_lindstrom(
         v0local_noisy, v1local_noisy, Rt01
     )
-    p_sampled_leecivera_l1 = mrcal.triangulate_leecivera_l1(v0_noisy, v1_noisy, t01)
-    p_sampled_leecivera_linf = mrcal.triangulate_leecivera_linf(v0_noisy, v1_noisy, t01)
-    p_sampled_leecivera_mid2 = mrcal.triangulate_leecivera_mid2(v0_noisy, v1_noisy, t01)
-    p_sampled_leecivera_wmid2 = mrcal.triangulate_leecivera_wmid2(
+    p_sampled_leecivera_l1 = drcal.triangulate_leecivera_l1(v0_noisy, v1_noisy, t01)
+    p_sampled_leecivera_linf = drcal.triangulate_leecivera_linf(v0_noisy, v1_noisy, t01)
+    p_sampled_leecivera_mid2 = drcal.triangulate_leecivera_mid2(v0_noisy, v1_noisy, t01)
+    p_sampled_leecivera_wmid2 = drcal.triangulate_leecivera_wmid2(
         v0_noisy, v1_noisy, t01
     )
 
-    q0_sampled_geometric = mrcal.project(p_sampled_geometric, *model0.intrinsics())
-    q0_sampled_lindstrom = mrcal.project(p_sampled_lindstrom, *model0.intrinsics())
-    q0_sampled_leecivera_l1 = mrcal.project(
+    q0_sampled_geometric = drcal.project(p_sampled_geometric, *model0.intrinsics())
+    q0_sampled_lindstrom = drcal.project(p_sampled_lindstrom, *model0.intrinsics())
+    q0_sampled_leecivera_l1 = drcal.project(
         p_sampled_leecivera_l1, *model0.intrinsics()
     )
-    q0_sampled_leecivera_linf = mrcal.project(
+    q0_sampled_leecivera_linf = drcal.project(
         p_sampled_leecivera_linf, *model0.intrinsics()
     )
-    q0_sampled_leecivera_mid2 = mrcal.project(
+    q0_sampled_leecivera_mid2 = drcal.project(
         p_sampled_leecivera_mid2, *model0.intrinsics()
     )
-    q0_sampled_leecivera_wmid2 = mrcal.project(
+    q0_sampled_leecivera_wmid2 = drcal.project(
         p_sampled_leecivera_wmid2, *model0.intrinsics()
     )
 
@@ -270,22 +270,22 @@ if args.ellipses:
     # Plot the reprojected pixels and the fitted ellipses
 
     data_tuples = [
-        *mrcal.utils._plot_args_points_and_covariance_ellipse(
+        *drcal.utils._plot_args_points_and_covariance_ellipse(
             q0_sampled_geometric, "geometric"
         ),
-        *mrcal.utils._plot_args_points_and_covariance_ellipse(
+        *drcal.utils._plot_args_points_and_covariance_ellipse(
             q0_sampled_lindstrom, "lindstrom"
         ),
-        *mrcal.utils._plot_args_points_and_covariance_ellipse(
+        *drcal.utils._plot_args_points_and_covariance_ellipse(
             q0_sampled_leecivera_l1, "lee-civera-l1"
         ),
-        *mrcal.utils._plot_args_points_and_covariance_ellipse(
+        *drcal.utils._plot_args_points_and_covariance_ellipse(
             q0_sampled_leecivera_linf, "lee-civera-linf"
         ),
-        *mrcal.utils._plot_args_points_and_covariance_ellipse(
+        *drcal.utils._plot_args_points_and_covariance_ellipse(
             q0_sampled_leecivera_mid2, "lee-civera-mid2"
         ),
-        *mrcal.utils._plot_args_points_and_covariance_ellipse(
+        *drcal.utils._plot_args_points_and_covariance_ellipse(
             q0_sampled_leecivera_wmid2, "lee-civera-wmid2"
         ),
     ]

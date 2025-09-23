@@ -12,7 +12,7 @@ r"""Displays the calibration-time geometry: the cameras and the observed objects
 
 SYNOPSIS
 
-  $ mrcal-show-geometry *.cameramodel
+  $ drcal-show-geometry *.cameramodel
   ... a plot pops up showing the camera arrangement
 
 This tool visualizes the relative geometry between several cameras and the
@@ -34,7 +34,7 @@ def parse_args():
         "--axis-scale",
         type=float,
         help="""Scale for the camera axes. By default a
-                        reasonable default is chosen (see mrcal.show_geometry()
+                        reasonable default is chosen (see drcal.show_geometry()
                         for the logic)""",
     )
     parser.add_argument(
@@ -151,12 +151,12 @@ if args.show_points and args.show_points_thiscamera:
 
 
 import gnuplotlib as gp
-import mrcal
+import drcal
 
 
 def openmodel(f):
     try:
-        return mrcal.cameramodel(f)
+        return drcal.cameramodel(f)
     except Exception as e:
         print(f"Couldn't load camera model '{f}': {e}", file=sys.stderr)
         sys.exit(1)
@@ -166,9 +166,9 @@ models = [openmodel(modelfilename) for modelfilename in args.models]
 
 cameras_Rt_plot_ref = None
 if args.transforms is not None:
-    import mrcal.cahvor
+    import drcal.cahvor
 
-    transforms = mrcal.cahvor.read_transforms(args.transforms)
+    transforms = drcal.cahvor.read_transforms(args.transforms)
 
     def get_pair(icam):
         f = args.models[icam]
@@ -211,7 +211,7 @@ elif args.show_points_thiscamera:
 else:
     show_points = False
 
-plot = mrcal.show_geometry(
+plot = drcal.show_geometry(
     models,
     cameranames=args.models,
     cameras_Rt_plot_ref=cameras_Rt_plot_ref,

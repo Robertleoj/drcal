@@ -7,14 +7,14 @@ import os
 
 testdir = os.path.dirname(os.path.realpath(__file__))
 
-# I import the LOCAL mrcal since that's what I'm testing
+# I import the LOCAL drcal since that's what I'm testing
 sys.path[:0] = (f"{testdir}/..",)
-import mrcal
+import drcal
 import testutils
 
 import cv2
 
-image = mrcal.load_image(
+image = drcal.load_image(
     f"{testdir}/data/figueroa-overpass-looking-S.0.downsampled.jpg",
     bits_per_pixel=8,
     channels=1,
@@ -39,9 +39,9 @@ q0 = np.array((294, 159), dtype=np.float32)
 # transformation, since it will be given the homography.
 #
 # shape (H,W,2)
-image1 = mrcal.transform_image(
+image1 = drcal.transform_image(
     image,
-    mrcal.apply_homography(
+    drcal.apply_homography(
         H01,
         nps.glue(
             *[
@@ -63,7 +63,7 @@ H10_shifted = H10.copy()
 H10_shifted[0, 2] += 10.2
 H10_shifted[1, 2] -= 20.4
 
-q1_matched, diagnostics = mrcal.match_feature(
+q1_matched, diagnostics = drcal.match_feature(
     image,
     image1,
     q0,
@@ -74,13 +74,13 @@ q1_matched, diagnostics = mrcal.match_feature(
 )
 testutils.confirm_equal(
     q1_matched,
-    mrcal.apply_homography(H10, q0),
+    drcal.apply_homography(H10, q0),
     worstcase=True,
     eps=0.1,
     msg="match_feature(method=TM_CCOEFF_NORMED) reports the correct pixel coordinate",
 )
 
-q1_matched, diagnostics = mrcal.match_feature(
+q1_matched, diagnostics = drcal.match_feature(
     image,
     image1,
     q0,
@@ -91,13 +91,13 @@ q1_matched, diagnostics = mrcal.match_feature(
 )
 testutils.confirm_equal(
     q1_matched,
-    mrcal.apply_homography(H10, q0),
+    drcal.apply_homography(H10, q0),
     worstcase=True,
     eps=0.1,
     msg="match_feature(method=TM_SQDIFF_NORMED) reports the correct pixel coordinate",
 )
 
-q1_matched, diagnostics = mrcal.match_feature(
+q1_matched, diagnostics = drcal.match_feature(
     image,
     image1,
     q0,
@@ -108,7 +108,7 @@ q1_matched, diagnostics = mrcal.match_feature(
 )
 testutils.confirm_equal(
     q1_matched,
-    mrcal.apply_homography(H10, q0),
+    drcal.apply_homography(H10, q0),
     worstcase=True,
     eps=0.1,
     msg="out-of-bounds search_radius works ok",
@@ -120,7 +120,7 @@ testutils.confirm_equal(
     msg="out-of-bounds search radius looks at the whole image",
 )
 
-q1_matched, diagnostics = mrcal.match_feature(
+q1_matched, diagnostics = drcal.match_feature(
     image * 0,
     image1,
     q0,
@@ -132,7 +132,7 @@ q1_matched, diagnostics = mrcal.match_feature(
 testutils.confirm_equal(q1_matched, None, msg="failing correlation returns None")
 
 try:
-    mrcal.match_feature(
+    drcal.match_feature(
         image * 0,
         image1,
         q0,

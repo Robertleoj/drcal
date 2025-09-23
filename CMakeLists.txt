@@ -61,8 +61,8 @@ set(NUMPY_INCLUDE_DIR "${Python3_NumPy_INCLUDE_DIRS}")
 Python3_add_library(
     bindings MODULE 
 
-    cpp_src/mrcal-pywrap.c
-    cpp_src/mrcal.c
+    cpp_src/drcal-pywrap.c
+    cpp_src/drcal.c
     cpp_src/uncertainty.c
     cpp_src/stereo.c
     cpp_src/traverse-sensor-links.c
@@ -80,7 +80,7 @@ Python3_add_library(
     bindings_npsp MODULE 
 
     cpp_src/bindings_npsp_generated.c
-    cpp_src/mrcal.c
+    cpp_src/drcal.c
     cpp_src/stereo.c
     cpp_src/cahvore.cc
     cpp_src/opencv.c
@@ -95,7 +95,7 @@ Python3_add_library(
     bindings_poseutils_npsp MODULE 
 
     cpp_src/bindings_poseutils_npsp_generated.c
-    cpp_src/mrcal.c
+    cpp_src/drcal.c
     cpp_src/stereo.c
     cpp_src/cahvore.cc
     cpp_src/opencv.c
@@ -110,7 +110,7 @@ Python3_add_library(
     bindings_triangulation_npsp MODULE 
 
     cpp_src/bindings_triangulation_npsp_generated.c
-    cpp_src/mrcal.c
+    cpp_src/drcal.c
     cpp_src/stereo.c
     cpp_src/cahvore.cc
     cpp_src/opencv.c

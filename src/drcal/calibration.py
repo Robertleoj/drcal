@@ -10,8 +10,8 @@
 
 """Helper routines for seeding and solving camera calibration problems
 
-All functions are exported into the mrcal module. So you can call these via
-mrcal.calibration.fff() or mrcal.fff(). The latter is preferred.
+All functions are exported into the drcal module. So you can call these via
+drcal.calibration.fff() or drcal.fff(). The latter is preferred.
 
 """
 
@@ -64,13 +64,13 @@ def compute_chessboard_corners(
 SYNOPSIS
 
     observations, indices_frame_camera, paths = \
-        mrcal.compute_chessboard_corners(10, 10,
+        drcal.compute_chessboard_corners(10, 10,
                                          globs_per_camera  = ('frame*-cam0.jpg','frame*-cam1.jpg'),
                                          corners_cache_vnl = "corners.vnl")
 
 The input to a calibration problem is a set of images of a calibration object
 from different angles and positions. This function ingests these images, and
-outputs the detected chessboard corner coordinates in a form usable by the mrcal
+outputs the detected chessboard corner coordinates in a form usable by the drcal
 optimization routines.
 
 The "corners_cache_vnl" argument specifies a file containing cached results of
@@ -202,7 +202,7 @@ This function returns a tuple (observations, indices_frame_camera, files_sorted)
 Note that this assumes we're solving a calibration problem (stationary cameras)
 observing a moving object, so this returns indices_frame_camera. It is the
 caller's job to convert this into indices_frame_camintrinsics_camextrinsics,
-which mrcal.optimize() expects
+which drcal.optimize() expects
 
     """
 
@@ -241,7 +241,7 @@ which mrcal.optimize() expects
             We process the images to compute the corner coordinates. Before we
             compute the calibration off these coordinates, we create the cache
             file and store this data there. Thus a subsequent identical
-            invocation of mrcal-calibrate-cameras will see this file as
+            invocation of drcal-calibrate-cameras will see this file as
             existing, and will automatically use the data it contains instead of
             recomputing the corner coordinates
 
@@ -686,12 +686,12 @@ SYNOPSIS
     ===>
     (123, 10,9, 3)
 
-    models = [mrcal.cameramodel(f) for f in ("cam0.cameramodel",
+    models = [drcal.cameramodel(f) for f in ("cam0.cameramodel",
                                              "cam1.cameramodel")]
 
     # Estimated poses of the calibration object from monocular observations
     Rt_camera_frame = \
-        mrcal.estimate_monocular_calobject_poses_Rt_tocam( indices_frame_camera,
+        drcal.estimate_monocular_calobject_poses_Rt_tocam( indices_frame_camera,
                                                            observations,
                                                            object_spacing,
                                                            models)
@@ -704,18 +704,18 @@ SYNOPSIS
     icam = indices_frame_camera[i_observation,1]
 
     # The calibration object in its reference coordinate system
-    calobject = mrcal.ref_calibration_object(object_width_n,
+    calobject = drcal.ref_calibration_object(object_width_n,
                                              object_height_n,
                                              object_spacing)
 
     # The estimated calibration object points in the observing camera coordinate
     # system
-    pcam = mrcal.transform_point_Rt( Rt_camera_frame[i_observation],
+    pcam = drcal.transform_point_Rt( Rt_camera_frame[i_observation],
                                      calobject )
 
     # The pixel observations we would see if the calibration object pose was
     # where it was estimated to be
-    q = mrcal.project(pcam, *models[icam].intrinsics())
+    q = drcal.project(pcam, *models[icam].intrinsics())
 
     # The reprojection error, comparing these hypothesis pixel observations from
     # what we actually observed. We estimated the calibration object pose from
@@ -726,7 +726,7 @@ SYNOPSIS
     ===>
     [something small]
 
-mrcal solves camera calibration problems by iteratively optimizing a nonlinear
+drcal solves camera calibration problems by iteratively optimizing a nonlinear
 least squares problem to bring the pixel observation predictions in line with
 actual pixel observations. This requires an initial "seed", an estimate of the
 solution. This function is a part of that computation. Since this is just an
@@ -762,7 +762,7 @@ ARGUMENTS
 
 - models_or_intrinsics: either
 
-  - a list of mrcal.cameramodel objects from which we use the intrinsics
+  - a list of drcal.cameramodel objects from which we use the intrinsics
   - a list of (lensmodel,intrinsics_data) tuples
 
   These are indexed by icam from indices_frame_camera
@@ -850,7 +850,7 @@ SYNOPSIS
     icam_intrinsics = 0
 
     Rt_camera_ref_estimate = \
-        mrcal.calibration._estimate_camera_pose_from_point_observations( \
+        drcal.calibration._estimate_camera_pose_from_point_observations( \
             indices_point_camintrinsics_camextrinsics,
             observations_point,
             ( (lensmodel, intrinsics_data[0]), ),
@@ -865,11 +865,11 @@ SYNOPSIS
 
     # The estimated calibration object points in the observing camera coordinate
     # system
-    pcam = mrcal.transform_point_Rt( Rt_camera_ref_estimate[0], points[i] )
+    pcam = drcal.transform_point_Rt( Rt_camera_ref_estimate[0], points[i] )
 
     # The pixel observations we would see if the calibration object pose was
     # where it was estimated to be
-    q = mrcal.project(pcam, lensmodel, intrinsics_data)
+    q = drcal.project(pcam, lensmodel, intrinsics_data)
 
     # The reprojection error, comparing these hypothesis pixel observations from
     # what we actually observed. We estimated the calibration object pose from
@@ -880,7 +880,7 @@ SYNOPSIS
     ===>
     [something small]
 
-mrcal solves camera calibration problems by iteratively optimizing a nonlinear
+drcal solves camera calibration problems by iteratively optimizing a nonlinear
 least squares problem to bring the pixel observation predictions in line with
 actual pixel observations. This requires an initial "seed", an estimate of the
 solution. This function is a part of that computation. Since this is just an
@@ -914,7 +914,7 @@ ARGUMENTS
 
 - models_or_intrinsics: either
 
-  - a list of mrcal.cameramodel objects from which we use the intrinsics
+  - a list of drcal.cameramodel objects from which we use the intrinsics
   - a list of (lensmodel,intrinsics_data) tuples
 
   These are indexed by indices_point_camintrinsics_camextrinsics[...,1]
@@ -1006,7 +1006,7 @@ def _estimate_camera_poses(  # shape (Nobservations,4,3)
 
     Note that this assumes we're solving a calibration problem (stationary
     cameras) observing a moving object, so uses indices_frame_camera, not
-    indices_frame_camintrinsics_camextrinsics, which mrcal.optimize() expects
+    indices_frame_camintrinsics_camextrinsics, which drcal.optimize() expects
     """
 
     Ncameras = np.max(indices_frame_camera[:, 1]) + 1
@@ -1280,7 +1280,7 @@ SYNOPSIS
     (123, 2)
 
     frames_rt_toref = \
-        mrcal.estimate_joint_frame_poses(calobject_Rt_camera_frame,
+        drcal.estimate_joint_frame_poses(calobject_Rt_camera_frame,
                                          extrinsics_Rt_fromref,
                                          indices_frame_camera,
                                          object_width_n, object_height_n,
@@ -1298,25 +1298,25 @@ SYNOPSIS
     iframe,icam = indices_frame_camera[i_observation, :]
 
     # The calibration object in its reference coordinate system
-    calobject = mrcal.ref_calibration_object(object_width_n,
+    calobject = drcal.ref_calibration_object(object_width_n,
                                              object_height_n,
                                              object_spacing)
 
     # The estimated calibration object points in the reference coordinate
     # system, for this one observation
-    pref = mrcal.transform_point_rt( frames_rt_toref[iframe],
+    pref = drcal.transform_point_rt( frames_rt_toref[iframe],
                                      calobject )
 
     # The estimated calibration object points in the camera coord system. Camera
     # 0 is at the reference
     if icam >= 1:
-        pcam = mrcal.transform_point_Rt( extrinsics_Rt_fromref[icam-1],
+        pcam = drcal.transform_point_Rt( extrinsics_Rt_fromref[icam-1],
                                          pref )
     else:
         pcam = pref
 
     # The pixel observations we would see if the pose estimates were correct
-    q = mrcal.project(pcam, *models[icam].intrinsics())
+    q = drcal.project(pcam, *models[icam].intrinsics())
 
     # The reprojection error, comparing these hypothesis pixel observations from
     # what we actually observed. This should be small
@@ -1326,7 +1326,7 @@ SYNOPSIS
     ===>
     [something small]
 
-mrcal solves camera calibration problems by iteratively optimizing a nonlinear
+drcal solves camera calibration problems by iteratively optimizing a nonlinear
 least squares problem to bring the pixel observation predictions in line with
 actual pixel observations. This requires an initial "seed", an initial estimate
 of the solution. This function is a part of that computation. Since this is just
@@ -1347,7 +1347,7 @@ camera 0. Thus the array of camera poses extrinsics_Rt_fromref holds Ncameras-1
 transformations: the first camera has an identity transformation, by definition.
 
 This function assumes we're observing a moving object from stationary cameras
-(i.e. a vanilla camera calibration problem). The mrcal solver is more general,
+(i.e. a vanilla camera calibration problem). The drcal solver is more general,
 and supports moving cameras, hence it uses a more general
 indices_frame_camintrinsics_camextrinsics array instead of the
 indices_frame_camera array used here.
@@ -1477,7 +1477,7 @@ SYNOPSIS
     intrinsics_data,       \
     extrinsics_rt_fromref, \
     frames_rt_toref =      \
-        mrcal.seed_stereographic(imagersizes          = imagersizes,
+        drcal.seed_stereographic(imagersizes          = imagersizes,
                                  focal_estimate       = 1500,
                                  indices_frame_camera = indices_frame_camera,
                                  observations         = observations,
@@ -1485,17 +1485,17 @@ SYNOPSIS
 
     ....
 
-    mrcal.optimize(intrinsics            = intrinsics_data,
+    drcal.optimize(intrinsics            = intrinsics_data,
                    extrinsics_rt_fromref = extrinsics_rt_fromref,
                    frames_rt_toref       = frames_rt_toref,
                    lensmodel             = 'LENSMODEL_STEREOGRAPHIC',
                    ...)
 
-mrcal solves camera calibration problems by iteratively optimizing a nonlinear
+drcal solves camera calibration problems by iteratively optimizing a nonlinear
 least squares problem to bring the pixel observation predictions in line with
 actual pixel observations. This requires an initial "seed", an initial estimate
 of the solution. This function computes a usable seed, and its results can be
-fed to mrcal.optimize(). The output of this function is just an initial estimate
+fed to drcal.optimize(). The output of this function is just an initial estimate
 that will be refined, so the results of this function do not need to be exact.
 
 This function assumes we have stereographic lenses, and the returned intrinsics
@@ -1511,12 +1511,12 @@ camera 0. Thus the array of camera poses extrinsics_rt_fromref holds Ncameras-1
 transformations: the first camera has an identity transformation, by definition.
 
 This function assumes we're observing a moving object from stationary cameras
-(i.e. a vanilla camera calibration problem). The mrcal solver is more general,
+(i.e. a vanilla camera calibration problem). The drcal solver is more general,
 and supports moving cameras, hence it uses a more general
 indices_frame_camintrinsics_camextrinsics array instead of the
 indices_frame_camera array used here.
 
-See test/test-basic-calibration.py and mrcal-calibrate-cameras for usage
+See test/test-basic-calibration.py and drcal-calibrate-cameras for usage
 examples.
 
 ARGUMENTS
@@ -1557,7 +1557,7 @@ We return a tuple:
 - intrinsics_data: an array of shape (Ncameras,4). Each slice contains the
   stereographic intrinsics for the given camera. These intrinsics are
   (focal_x,focal_y,centerpixel_x,centerpixel_y), and define
-  LENSMODEL_STEREOGRAPHIC model. mrcal refers to these 4 values as the
+  LENSMODEL_STEREOGRAPHIC model. drcal refers to these 4 values as the
   "intrinsics core". For models that have such a core (currently, ALL supported
   models), the core is the first 4 parameters of the intrinsics vector. So to
   calibrate some cameras, call seed_stereographic(), append to intrinsics_data
@@ -1633,7 +1633,7 @@ We return a tuple:
     # to their camera. I can move around the two sets of point clouds to try to
     # match them up, and this will give me an estimate of the relative pose of
     # the two cameras in respect to each other. I need to set up the
-    # correspondences, and mrcal.align_procrustes_points_Rt01() does the rest
+    # correspondences, and drcal.align_procrustes_points_Rt01() does the rest
     #
     # I get transformations that map points in camera-cami coord system to 0th
     # camera coord system. Rt have dimensions (N-1,4,3)
@@ -1680,11 +1680,11 @@ def _compute_valid_intrinsics_region(
 ):
     r"""Returns the valid-intrinsics region for the camera in the model
 
-    Internal function use by the mrcal-calibrate-cameras utility.
+    Internal function use by the drcal-calibrate-cameras utility.
 
     The model is expected to contain the optimization_inputs, which are used for all
     the work. The thresholds come from the --valid-intrinsics-region-parameters
-    argument to mrcal-calibrate-cameras
+    argument to drcal-calibrate-cameras
 
     This is a closed contour, in an (N,2) numpy array. None means "no
     valid-intrinsics region computed". An empty array of shape (0,2) means "the
@@ -1695,7 +1695,7 @@ def _compute_valid_intrinsics_region(
     for each bin separately. We can then clearly see areas of insufficient data
     (observation counts will be low). And we can clearly see lens-model-induced
     biases (non-zero mean) and we can see heteroscedasticity (uneven standard
-    deviation). The mrcal-calibrate-cameras tool uses these metrics to construct a
+    deviation). The drcal-calibrate-cameras tool uses these metrics to construct a
     valid-intrinsics region for the models it computes. This serves as a quick/dirty
     method of modeling projection reliability, which can be used even if projection
     uncertainty cannot be computed.

@@ -20,9 +20,9 @@ import os
 
 testdir = os.path.dirname(os.path.realpath(__file__))
 
-# I import the LOCAL mrcal since that's what I'm testing
+# I import the LOCAL drcal since that's what I'm testing
 sys.path[:0] = (f"{testdir}/..",)
-import mrcal
+import drcal
 import testutils
 import test_sfm_helpers
 
@@ -55,14 +55,14 @@ indices_point_camintrinsics_camextrinsics = nps.glue(
     axis=-1,
 )
 
-rt_ref_0_true = mrcal.invert_rt(rt_cam_ref_true[0])
+rt_ref_0_true = drcal.invert_rt(rt_cam_ref_true[0])
 
-rt10_true = mrcal.compose_rt(rt_cam_ref_true[1], rt_ref_0_true)
+rt10_true = drcal.compose_rt(rt_cam_ref_true[1], rt_ref_0_true)
 cam01_distance_true = nps.mag(rt10_true[3:])
 
-rt_cam_0_noisy = mrcal.compose_rt(rt_cam_ref_noisy, rt_ref_0_true)
+rt_cam_0_noisy = drcal.compose_rt(rt_cam_ref_noisy, rt_ref_0_true)
 
-p0_noisy = mrcal.transform_point_rt(mrcal.invert_rt(rt_ref_0_true), pref_noisy)
+p0_noisy = drcal.transform_point_rt(drcal.invert_rt(rt_ref_0_true), pref_noisy)
 
 # normalize distances
 rt_cam_0_noisy[:, 3:] /= cam01_distance_true
@@ -93,9 +93,9 @@ optimization_inputs = dict(
 )
 
 
-stats = mrcal.optimize(**optimization_inputs)
+stats = drcal.optimize(**optimization_inputs)
 
-pref_noisy_solved = mrcal.transform_point_rt(
+pref_noisy_solved = drcal.transform_point_rt(
     rt_ref_0_true, p0_noisy * cam01_distance_true
 )
 
@@ -106,7 +106,7 @@ pref_noisy_solved = mrcal.transform_point_rt(
 # discrete points, so markOutliers() ignores discrete points. If you want to
 # figure out how to do this right, start by re-enabling this code
 if add_outlier:
-    p, x, J, f = mrcal.optimizer_callback(**optimization_inputs)
+    p, x, J, f = drcal.optimizer_callback(**optimization_inputs)
 
     if 0:  # print measurements x
         import gnuplotlib as gp

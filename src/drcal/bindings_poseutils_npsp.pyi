@@ -2,12 +2,12 @@
 Low-level routines to manipulate poses, transformations and points
 
 This is the written-in-C Python extension module. Most of the time you want to
-use the mrcal.poseutils wrapper module instead of this module directly. Any
+use the drcal.poseutils wrapper module instead of this module directly. Any
 functions not prefixed with "_" are meant to be called directly, without the
 wrapper.
 
-All functions are exported into the mrcal module. So you can call these via
-mrcal._poseutils.fff() or mrcal.fff(). The latter is preferred.
+All functions are exported into the drcal module. So you can call these via
+drcal._poseutils.fff() or drcal.fff(). The latter is preferred.
 
 """
 from __future__ import annotations
@@ -23,8 +23,8 @@ def R_aligned_to_vector(*args, **kwargs):
         # plane, with p at the origin. R_plane_world p + t_plane_world = 0:
     
         Rt_plane_world = np.zeros((4,3), dtype=float)
-        Rt_plane_world[:3,:] = mrcal.R_aligned_to_vector(n)
-        Rt_plane_world[ 3,:] = -mrcal.rotate_point_R(Rt_plane_world[:3,:],p)
+        Rt_plane_world[:3,:] = drcal.R_aligned_to_vector(n)
+        Rt_plane_world[ 3,:] = -drcal.rotate_point_R(Rt_plane_world[:3,:],p)
     
     This rotation is not unique: adding any rotation around v still maps v to
     [0,0,1]. An arbitrary acceptable rotation is returned.
@@ -54,13 +54,13 @@ def R_from_quat(*args, **kwargs):
         ===>
         (4,)
     
-        R = mrcal.R_from_quat(quat)
+        R = drcal.R_from_quat(quat)
     
         print(R.shape)
         ===>
         (3,3)
     
-    This is mostly for compatibility with some old stuff. mrcal doesn't use
+    This is mostly for compatibility with some old stuff. drcal doesn't use
     quaternions anywhere. Test this thoroughly before using.
     
     This function supports broadcasting fully.
@@ -86,28 +86,28 @@ def _R_from_r(*args, **kwargs):
     """
     Compute a rotation matrix from a Rodrigues vector
     
-    This is an internal function. You probably want mrcal.R_from_r(). See the docs
+    This is an internal function. You probably want drcal.R_from_r(). See the docs
     for that function for details.
     """
 def _R_from_r_withgrad(*args, **kwargs):
     """
     Compute a rotation matrix from a Rodrigues vector
     
-    This is an internal function. You probably want mrcal.R_from_r(). See the docs
+    This is an internal function. You probably want drcal.R_from_r(). See the docs
     for that function for details.
     """
 def _Rt_from_rt(*args, **kwargs):
     """
     Compute an Rt transformation from a rt transformation
     
-    This is an internal function. You probably want mrcal.Rt_from_rt(). See the docs
+    This is an internal function. You probably want drcal.Rt_from_rt(). See the docs
     for that function for details.
     """
 def _Rt_from_rt_withgrad(*args, **kwargs):
     """
     Compute an Rt transformation from a rt transformation
     
-    This is an internal function. You probably want mrcal.Rt_from_rt(). See the docs
+    This is an internal function. You probably want drcal.Rt_from_rt(). See the docs
     for that function for details.
     """
 def _align_procrustes_points_Rt01_noweights(*args, **kwargs):
@@ -115,12 +115,12 @@ def _align_procrustes_points_Rt01_noweights(*args, **kwargs):
     Compute a rotation to align two sets of direction vectors or points
     
             This is the written-in-C Python extension module. Most of the time you want to
-            use the mrcal.poseutils wrapper module instead of this module directly. Any
+            use the drcal.poseutils wrapper module instead of this module directly. Any
             functions not prefixed with "_" are meant to be called directly, without the
             wrapper.
     
-            All functions are exported into the mrcal module. So you can call these via
-            mrcal._poseutils.fff() or mrcal.fff(). The latter is preferred.
+            All functions are exported into the drcal module. So you can call these via
+            drcal._poseutils.fff() or drcal.fff(). The latter is preferred.
     
                 
     """
@@ -129,12 +129,12 @@ def _align_procrustes_points_Rt01_weights(*args, **kwargs):
     Compute a rotation to align two sets of direction vectors or points
     
             This is the written-in-C Python extension module. Most of the time you want to
-            use the mrcal.poseutils wrapper module instead of this module directly. Any
+            use the drcal.poseutils wrapper module instead of this module directly. Any
             functions not prefixed with "_" are meant to be called directly, without the
             wrapper.
     
-            All functions are exported into the mrcal module. So you can call these via
-            mrcal._poseutils.fff() or mrcal.fff(). The latter is preferred.
+            All functions are exported into the drcal module. So you can call these via
+            drcal._poseutils.fff() or drcal.fff(). The latter is preferred.
     
                 
     """
@@ -143,12 +143,12 @@ def _align_procrustes_vectors_R01_noweights(*args, **kwargs):
     Compute a rotation to align two sets of direction vectors or points
     
             This is the written-in-C Python extension module. Most of the time you want to
-            use the mrcal.poseutils wrapper module instead of this module directly. Any
+            use the drcal.poseutils wrapper module instead of this module directly. Any
             functions not prefixed with "_" are meant to be called directly, without the
             wrapper.
     
-            All functions are exported into the mrcal module. So you can call these via
-            mrcal._poseutils.fff() or mrcal.fff(). The latter is preferred.
+            All functions are exported into the drcal module. So you can call these via
+            drcal._poseutils.fff() or drcal.fff(). The latter is preferred.
     
                 
     """
@@ -157,12 +157,12 @@ def _align_procrustes_vectors_R01_weights(*args, **kwargs):
     Compute a rotation to align two sets of direction vectors or points
     
             This is the written-in-C Python extension module. Most of the time you want to
-            use the mrcal.poseutils wrapper module instead of this module directly. Any
+            use the drcal.poseutils wrapper module instead of this module directly. Any
             functions not prefixed with "_" are meant to be called directly, without the
             wrapper.
     
-            All functions are exported into the mrcal module. So you can call these via
-            mrcal._poseutils.fff() or mrcal.fff(). The latter is preferred.
+            All functions are exported into the drcal module. So you can call these via
+            drcal._poseutils.fff() or drcal.fff(). The latter is preferred.
     
                 
     """
@@ -170,7 +170,7 @@ def _compose_Rt(*args, **kwargs):
     """
     Composes two Rt transformations
     
-    This is an internal function. You probably want mrcal.compose_Rt(). See the docs
+    This is an internal function. You probably want drcal.compose_Rt(). See the docs
     for that function for details. This internal function differs from compose_Rt():
     
     - It supports exactly two arguments, while compose_Rt() can compose N
@@ -180,7 +180,7 @@ def _compose_r(*args, **kwargs):
     """
     Compose two angle-axis rotations
     
-    This is an internal function. You probably want mrcal.compose_r(). See the docs
+    This is an internal function. You probably want drcal.compose_r(). See the docs
     for that function for details. This internal function differs from compose_r():
     
     - It supports exactly two arguments, while compose_r() can compose N rotations
@@ -191,7 +191,7 @@ def _compose_r_withgrad(*args, **kwargs):
     """
     Compose two angle-axis rotations; return (r,dr/dr0,dr/dr1)
     
-    This is an internal function. You probably want mrcal.compose_r(). See the docs
+    This is an internal function. You probably want drcal.compose_r(). See the docs
     for that function for details. This internal function differs from compose_r():
     
     - It supports exactly two arguments, while compose_r() can compose N rotations
@@ -203,7 +203,7 @@ def _compose_rt(*args, **kwargs):
     """
     Compose two rt transformations
     
-    This is an internal function. You probably want mrcal.compose_rt(). See the docs
+    This is an internal function. You probably want drcal.compose_rt(). See the docs
     for that function for details. This internal function differs from compose_rt():
     
     - It supports exactly two arguments, while compose_rt() can compose N
@@ -215,7 +215,7 @@ def _compose_rt_withgrad(*args, **kwargs):
     """
     Compose two rt transformations; return (rt,drt/drt0,drt/drt1)
     
-    This is an internal function. You probably want mrcal.compose_rt(). See the docs
+    This is an internal function. You probably want drcal.compose_rt(). See the docs
     for that function for details. This internal function differs from compose_rt():
     
     - It supports exactly two arguments, while compose_rt() can compose N
@@ -235,28 +235,28 @@ def _invert_R(*args, **kwargs):
     """
     Invert a rotation matrix
     
-    This is an internal function. You probably want mrcal.invert_R(). See the docs
+    This is an internal function. You probably want drcal.invert_R(). See the docs
     for that function for details.
     """
 def _invert_Rt(*args, **kwargs):
     """
     Invert an Rt transformation
     
-    This is an internal function. You probably want mrcal.invert_Rt(). See the docs
+    This is an internal function. You probably want drcal.invert_Rt(). See the docs
     for that function for details.
     """
 def _invert_rt(*args, **kwargs):
     """
     Invert an rt transformation
     
-    This is an internal function. You probably want mrcal.invert_rt(). See the docs
+    This is an internal function. You probably want drcal.invert_rt(). See the docs
     for that function for details.
     """
 def _invert_rt_withgrad(*args, **kwargs):
     """
     Invert an rt transformation
     
-    This is an internal function. You probably want mrcal.invert_rt(). See the docs
+    This is an internal function. You probably want drcal.invert_rt(). See the docs
     for that function for details.
     
     Note that the C library returns limited gradients:
@@ -273,21 +273,21 @@ def _r_from_R(*args, **kwargs):
     """
     Compute a Rodrigues vector from a rotation matrix
     
-    This is an internal function. You probably want mrcal.r_from_R(). See the docs
+    This is an internal function. You probably want drcal.r_from_R(). See the docs
     for that function for details.
     """
 def _r_from_R_withgrad(*args, **kwargs):
     """
     Compute a Rodrigues vector from a rotation matrix
     
-    This is an internal function. You probably want mrcal.r_from_R(). See the docs
+    This is an internal function. You probably want drcal.r_from_R(). See the docs
     for that function for details.
     """
 def _rotate_point_R(*args, **kwargs):
     """
     Rotate a point using a rotation matrix
     
-    This is an internal function. You probably want mrcal.rotate_point_R(). See the
+    This is an internal function. You probably want drcal.rotate_point_R(). See the
     docs for that function for details.
     
     """
@@ -295,63 +295,63 @@ def _rotate_point_R_withgrad(*args, **kwargs):
     """
     Rotate a point using a rotation matrix; report the result and gradients
     
-    This is an internal function. You probably want mrcal.rotate_point_R(). See the
+    This is an internal function. You probably want drcal.rotate_point_R(). See the
     docs for that function for details.
     """
 def _rotate_point_r(*args, **kwargs):
     """
     Rotate a point using a Rodrigues vector
     
-    This is an internal function. You probably want mrcal.rotate_point_r(). See the
+    This is an internal function. You probably want drcal.rotate_point_r(). See the
     docs for that function for details.
     """
 def _rotate_point_r_withgrad(*args, **kwargs):
     """
     Rotate a point using a Rodrigues vector; report the result and gradients
     
-    This is an internal function. You probably want mrcal.rotate_point_r(). See the
+    This is an internal function. You probably want drcal.rotate_point_r(). See the
     docs for that function for details.
     """
 def _rt_from_Rt(*args, **kwargs):
     """
     Compute an rt transformation from a Rt transformation
     
-    This is an internal function. You probably want mrcal.rt_from_Rt(). See the docs
+    This is an internal function. You probably want drcal.rt_from_Rt(). See the docs
     for that function for details.
     """
 def _rt_from_Rt_withgrad(*args, **kwargs):
     """
     Compute an rt transformation from a Rt transformation
     
-    This is an internal function. You probably want mrcal.rt_from_Rt(). See the docs
+    This is an internal function. You probably want drcal.rt_from_Rt(). See the docs
     for that function for details.
     """
 def _transform_point_Rt(*args, **kwargs):
     """
     Transform a point using an Rt transformation
     
-    This is an internal function. You probably want mrcal.transform_point_Rt(). See
+    This is an internal function. You probably want drcal.transform_point_Rt(). See
     the docs for that function for details.
     """
 def _transform_point_Rt_withgrad(*args, **kwargs):
     """
     Transform a point using an Rt transformation; report the result and gradients
     
-    This is an internal function. You probably want mrcal.transform_point_Rt(). See
+    This is an internal function. You probably want drcal.transform_point_Rt(). See
     the docs for that function for details.
     """
 def _transform_point_rt(*args, **kwargs):
     """
     Transform a point using an rt transformation
     
-    This is an internal function. You probably want mrcal.transform_point_rt(). See
+    This is an internal function. You probably want drcal.transform_point_rt(). See
     the docs for that function for details.
     """
 def _transform_point_rt_withgrad(*args, **kwargs):
     """
     Transform a point using an rt transformation; report the result and gradients
     
-    This is an internal function. You probably want mrcal.transform_point_rt(). See
+    This is an internal function. You probably want drcal.transform_point_rt(). See
     the docs for that function for details.
     """
 def compose_r_tinyr0_gradientr0(*args, **kwargs):
@@ -442,7 +442,7 @@ def identity_R(*args, **kwargs):
     
     SYNOPSIS
     
-        print( mrcal.identity_R() )
+        print( drcal.identity_R() )
         ===>
         [[1. 0. 0.]
          [0. 1. 0.]
@@ -458,7 +458,7 @@ def identity_Rt(*args, **kwargs):
     
     SYNOPSIS
     
-        print( mrcal.identity_Rt() )
+        print( drcal.identity_Rt() )
         ===>
         [[1. 0. 0.]
          [0. 1. 0.]
@@ -475,7 +475,7 @@ def identity_r(*args, **kwargs):
     
     SYNOPSIS
     
-        print( mrcal.identity_r() )
+        print( drcal.identity_r() )
         ===>
         [0. 0. 0.]
     
@@ -489,7 +489,7 @@ def identity_rt(*args, **kwargs):
     
     SYNOPSIS
     
-        print( mrcal.identity_rt() )
+        print( drcal.identity_rt() )
         ===>
         [0. 0. 0. 0. 0. 0.]
     
@@ -506,7 +506,7 @@ def skew_symmetric(*args, **kwargs):
         a = np.array(( 1.,  5.,  7.))
         b = np.array(( 3., -.1, -10.))
     
-        A = mrcal.skew_symmetric(a)
+        A = drcal.skew_symmetric(a)
     
         print( nps.inner(A,b) )
         ===>

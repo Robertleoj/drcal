@@ -12,7 +12,7 @@ r"""Visualize calibration residuals in an imager
 
 SYNOPSIS
 
-  $ mrcal-show-residuals --vectorfield left.cameramodel
+  $ drcal-show-residuals --vectorfield left.cameramodel
 
   ... a plot pops up showing the vector field of residuals for this camera
 
@@ -41,7 +41,7 @@ arguments. Exactly one of these mode options must be given:
                 areas of insufficient data (observation counts will be low). And
                 we can clearly see lens-model-induced biases (non-zero mean) and
                 we can see heteroscedasticity (uneven standard deviation). The
-                mrcal-calibrate-cameras tool uses these metrics to construct a
+                drcal-calibrate-cameras tool uses these metrics to construct a
                 valid-intrinsics region for the models it computes. This serves as
                 a quick/dirty method of modeling projection reliability, which can
                 be used even if projection uncertainty cannot be computed.
@@ -200,7 +200,7 @@ args = parse_args()
 # stuff, so that I can generate the manpages and README
 
 
-import mrcal
+import drcal
 
 
 plotkwargs_extra = {}
@@ -215,7 +215,7 @@ if args.extratitle is not None:
     plotkwargs_extra["extratitle"] = args.extratitle
 
 try:
-    model = mrcal.cameramodel(args.model)
+    model = drcal.cameramodel(args.model)
 except Exception as e:
     print(f"Couldn't load camera model '{args.model}': {e}", file=sys.stderr)
     sys.exit(1)
@@ -228,7 +228,7 @@ if optimization_inputs is None:
     )
     sys.exit(1)
 
-residuals = mrcal.optimizer_callback(**optimization_inputs)[1]
+residuals = drcal.optimizer_callback(**optimization_inputs)[1]
 
 if not args.hardcopy:
     plotkwargs_extra["wait"] = True
@@ -242,7 +242,7 @@ kwargs = dict(
 )
 
 if args.vectorfield:
-    mrcal.show_residuals_vectorfield(
+    drcal.show_residuals_vectorfield(
         model,
         vectorscale=args.vectorscale,
         valid_intrinsics_region=args.valid_intrinsics_region,
@@ -251,7 +251,7 @@ if args.vectorfield:
     )
 
 elif args.magnitudes:
-    mrcal.show_residuals_magnitudes(
+    drcal.show_residuals_magnitudes(
         model,
         valid_intrinsics_region=args.valid_intrinsics_region,
         cbmax=args.cbmax,
@@ -259,12 +259,12 @@ elif args.magnitudes:
     )
 
 elif args.directions:
-    mrcal.show_residuals_directions(
+    drcal.show_residuals_directions(
         model, valid_intrinsics_region=args.valid_intrinsics_region, **kwargs
     )
 
 elif args.histogram:
-    mrcal.show_residuals_histogram(
+    drcal.show_residuals_histogram(
         optimization_inputs,
         icam_intrinsics=model.icam_intrinsics() if args.histogram_this_camera else None,
         binwidth=args.binwidth,
@@ -272,7 +272,7 @@ elif args.histogram:
     )
 
 elif args.regional:
-    plotargs = mrcal.show_residuals_regional(
+    plotargs = drcal.show_residuals_regional(
         model,
         valid_intrinsics_region=args.valid_intrinsics_region,
         gridn_width=args.gridn[0],

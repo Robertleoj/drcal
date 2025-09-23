@@ -12,18 +12,18 @@ import os
 
 testdir = os.path.dirname(os.path.realpath(__file__))
 
-# I import the LOCAL mrcal since that's what I'm testing
+# I import the LOCAL drcal since that's what I'm testing
 sys.path[:0] = (f"{testdir}/..",)
-import mrcal
+import drcal
 import testutils
 
 
-model_opencv8 = mrcal.cameramodel(f"{testdir}/data/cam0.opencv8.cameramodel")
-model_splined = mrcal.cameramodel(f"{testdir}/data/cam0.splined.cameramodel")
+model_opencv8 = drcal.cameramodel(f"{testdir}/data/cam0.opencv8.cameramodel")
+model_splined = drcal.cameramodel(f"{testdir}/data/cam0.splined.cameramodel")
 gridn_width = 50
 
 ########## Compare the model to itself. I should get 0 diff and identity transform
-difflen, diff, q0, implied_Rt10 = mrcal.projection_diff(
+difflen, diff, q0, implied_Rt10 = drcal.projection_diff(
     (model_splined, model_splined),
     gridn_width=gridn_width,
     distance=None,
@@ -67,7 +67,7 @@ testutils.confirm_equal(
     msg="diff(model,model) at infinity should produce a translation of 0 m",
 )
 
-difflen, diff, q0, implied_Rt10 = mrcal.projection_diff(
+difflen, diff, q0, implied_Rt10 = drcal.projection_diff(
     (model_splined, model_splined),
     gridn_width=50,
     distance=3.0,
@@ -103,7 +103,7 @@ testutils.confirm_equal(
 ########## region poisons the solve unless we treat those measurements as
 ########## outliers. This is controlled by the f_scale parameter in
 ########## implied_Rt10__from_unprojections().
-difflen, diff, q0, implied_Rt10 = mrcal.projection_diff(
+difflen, diff, q0, implied_Rt10 = drcal.projection_diff(
     (model_opencv8, model_splined),
     gridn_width=gridn_width,
     distance=5,
@@ -117,7 +117,7 @@ testutils.confirm_equal(
     msg="Low-enough diff with high focus_radius",
 )
 
-difflen, diff, q0, implied_Rt10 = mrcal.projection_diff(
+difflen, diff, q0, implied_Rt10 = drcal.projection_diff(
     (model_opencv8, model_splined),
     gridn_width=gridn_width,
     distance=5,
@@ -138,12 +138,12 @@ testutils.confirm_equal(
 
 # I generate a model with a focal length shifted anisotropically. This sounds
 # weird, but is representative of the variation I see in real-life solves
-model_opencv8_shiftedz = mrcal.cameramodel(model_opencv8)
+model_opencv8_shiftedz = drcal.cameramodel(model_opencv8)
 lensmodel, intrinsics = model_opencv8_shiftedz.intrinsics()
 intrinsics[0] *= 1.0001
 intrinsics[1] *= 1.0002
 model_opencv8_shiftedz.intrinsics(intrinsics=(lensmodel, intrinsics))
-difflen, diff, q0, implied_Rt10 = mrcal.projection_diff(
+difflen, diff, q0, implied_Rt10 = drcal.projection_diff(
     (model_opencv8, model_opencv8_shiftedz),
     gridn_width=gridn_width,
     distance=50000,

@@ -12,15 +12,15 @@ import sqlite3
 import pyopengv
 import scipy.linalg
 
-# Need bleeding-edge mrcal. Using 2.5~6-1 right now
-import mrcal
+# Need bleeding-edge drcal. Using 2.5~6-1 right now
+import drcal
 
 
 np.set_printoptions(linewidth=800000)
 
 
 def imread(filename, decimation):
-    image = mrcal.load_image(filename, bits_per_pixel=8, channels=1)
+    image = drcal.load_image(filename, bits_per_pixel=8, channels=1)
     return image, image[::decimation, ::decimation]
 
 
@@ -66,7 +66,7 @@ def decompose_essential_matrix(E):
     I know that cross(t,t) = T * t = 0, so I can get t as an eigenvector of E
     corresponding to an eigenvalue of 0. If I have T then I need to solve E = R * T.
     This is the procrustes problem that I can solve with
-    mrcal.align_procrustes_vectors_R01()
+    drcal.align_procrustes_vectors_R01()
 
     """
     l, t = np.linalg.eig(E)
@@ -79,7 +79,7 @@ def decompose_essential_matrix(E):
 
     # The "true" t is k*t for some unknown constant k
     # And the "true" T is k*T for some unknown constant k
-    T = mrcal.skew_symmetric(t)
+    T = drcal.skew_symmetric(t)
 
     # E = k*R*T -> EtE = k^2 TtT
     ksq = nps.matmult(nps.transpose(E), E) / nps.matmult(nps.transpose(T), T)
@@ -97,7 +97,7 @@ def decompose_essential_matrix(E):
     # report both versions
     Rt = np.empty((2, 4, 3), dtype=float)
 
-    Rt[0, :3, :] = mrcal.align_procrustes_vectors_R01(
+    Rt[0, :3, :] = drcal.align_procrustes_vectors_R01(
         nps.transpose(E), nps.transpose(T)
     )
     Rt[0, 3, :] = t
@@ -107,7 +107,7 @@ def decompose_essential_matrix(E):
     t *= -1.0
     T *= -1.0
 
-    Rt[1, :3, :] = mrcal.align_procrustes_vectors_R01(
+    Rt[1, :3, :] = drcal.align_procrustes_vectors_R01(
         nps.transpose(E), nps.transpose(T)
     )
     Rt[1, 3, :] = t
@@ -133,7 +133,7 @@ def seed_rt10_pair_from_far_subset(q0, q1, mask_far):
 
     I use the geometric triangulation expression derived here:
 
-      https://github.com/dkogan/mrcal/blob/8be76fc28278f8396c0d3b07dcaada2928f1aae0/triangulation.cc#L112
+      https://github.com/dkogan/drcal/blob/8be76fc28278f8396c0d3b07dcaada2928f1aae0/triangulation.cc#L112
 
     I assume that I'm triangulating normalized v0,v1 both expressed in cam-0
     coordinates. And I have a t01 translation that I call "t" from here on. This is
@@ -282,13 +282,13 @@ def seed_rt10_pair_from_far_subset(q0, q1, mask_far):
 
     # shape (N,3)
     # These are in their LOCAL coord system
-    v0 = mrcal.unproject(q0, *model.intrinsics(), normalize=True)
-    v1 = mrcal.unproject(q1, *model.intrinsics(), normalize=True)
+    v0 = drcal.unproject(q0, *model.intrinsics(), normalize=True)
+    v1 = drcal.unproject(q1, *model.intrinsics(), normalize=True)
 
-    R01 = mrcal.align_procrustes_vectors_R01(v0[mask_far], v1[mask_far])
+    R01 = drcal.align_procrustes_vectors_R01(v0[mask_far], v1[mask_far])
 
     # can try to do outlier rejection here:
-    #   co = nps.inner(v0[mask_far], mrcal.rotate_point_R(R01, v1[mask_far]))
+    #   co = nps.inner(v0[mask_far], drcal.rotate_point_R(R01, v1[mask_far]))
     #   gp.plot(co)
 
     # Keep all all non-far points initially
@@ -299,7 +299,7 @@ def seed_rt10_pair_from_far_subset(q0, q1, mask_far):
 
     # shape (N,3)
     v0_cam0coords = v0
-    v1_cam0coords = mrcal.rotate_point_R(R01, v1)
+    v1_cam0coords = drcal.rotate_point_R(R01, v1)
     # shape (N,)
     c = nps.inner(v0_cam0coords[mask_keep_near], v1_cam0coords[mask_keep_near])
 
@@ -310,8 +310,8 @@ def seed_rt10_pair_from_far_subset(q0, q1, mask_far):
     # Can try to do outlier rejection here. At t=0 all points should be
     # convergent or all should be divergent. Any non-consensus points are
     # outliers
-    #   p = mrcal.triangulate_geometric(v0[~mask_far],
-    #                                   mrcal.rotate_point_R(R01, v1[~mask_far]),
+    #   p = drcal.triangulate_geometric(v0[~mask_far],
+    #                                   drcal.rotate_point_R(R01, v1[~mask_far]),
     #                                   np.zeros((3,)))
     #   mask_divergent = nps.norm2(p) == 0
     def compute_t(v0_cam0coords, v1_cam0coords):
@@ -334,7 +334,7 @@ def seed_rt10_pair_from_far_subset(q0, q1, mask_far):
         # shape (3,3)
         M = np.sum(nps.matmult(nps.transpose(B), A, B), axis=0)
 
-        l, v = mrcal.sorted_eig(M)
+        l, v = drcal.sorted_eig(M)
 
         # The answer is the eigenvector corresponding to the biggest eigenvalue
         t01 = v[:, 2]
@@ -398,8 +398,8 @@ def seed_rt10_pair_from_far_subset(q0, q1, mask_far):
         i_iteration += 1
 
     Rt01 = nps.glue(R01, t01, axis=-2)
-    Rt10 = mrcal.invert_Rt(Rt01)
-    rt10 = mrcal.rt_from_Rt(Rt10)
+    Rt10 = drcal.invert_Rt(Rt01)
+    rt10 = drcal.rt_from_Rt(Rt10)
     return rt10, (mask_keep_near + mask_far)
 
 
@@ -409,21 +409,21 @@ def pairwise_solve_kneip(v0, v1):
         v0,
         v1,
         # seed
-        mrcal.identity_R(),
+        drcal.identity_R(),
     )
 
     # opengv should do this too, but its Python bindings are lacking. I
     # recompute the t myself for now
 
     # shape (N,3)
-    c = np.cross(v0, mrcal.rotate_point_R(Rt01[:3, :], v1))
-    l, v = mrcal.sorted_eig(np.sum(nps.outer(c, c), axis=0))
+    c = np.cross(v0, drcal.rotate_point_R(Rt01[:3, :], v1))
+    l, v = drcal.sorted_eig(np.sum(nps.outer(c, c), axis=0))
     # t is the eigenvector corresponding to the smallest eigenvalue
     Rt01[3, :] = v[:, 0]
 
     # Almost done. I want either t or -t. The wrong one will produce
     # mostly triangulations behind me
-    p_t = mrcal.triangulate_geometric(v0, v1, v_are_local=True, Rt01=Rt01)
+    p_t = drcal.triangulate_geometric(v0, v1, v_are_local=True, Rt01=Rt01)
     mask_divergent_t = nps.norm2(p_t) == 0
     N_divergent_t = np.count_nonzero(mask_divergent_t)
 
@@ -432,7 +432,7 @@ def pairwise_solve_kneip(v0, v1):
             (1, 1, 1, -1),
         )
     )
-    p_negt = mrcal.triangulate_leecivera_mid2(v0, v1, v_are_local=True, Rt01=Rt01_negt)
+    p_negt = drcal.triangulate_leecivera_mid2(v0, v1, v_are_local=True, Rt01=Rt01_negt)
     mask_divergent_negt = nps.norm2(p_negt) == 0
     N_divergent_negt = np.count_nonzero(mask_divergent_negt)
 
@@ -476,8 +476,8 @@ def seed_rt10_pair_kneip_eigensolver(q0, q1):
 
     # shape (N,3)
     # These are in their LOCAL coord system
-    v0 = mrcal.unproject(q0, *model.intrinsics(), normalize=True)
-    v1 = mrcal.unproject(q1, *model.intrinsics(), normalize=True)
+    v0 = drcal.unproject(q0, *model.intrinsics(), normalize=True)
+    v1 = drcal.unproject(q1, *model.intrinsics(), normalize=True)
 
     # Keep all all non-far points initially
     mask_inliers = np.ones((q0.shape[0],), dtype=bool)
@@ -496,8 +496,8 @@ def seed_rt10_pair_kneip_eigensolver(q0, q1):
         mask_inliers[np.nonzero(mask_inliers)[0][mask_outlier]] = False
         i_iteration += 1
 
-    Rt10 = mrcal.invert_Rt(Rt01)
-    rt10 = mrcal.rt_from_Rt(Rt10)
+    Rt10 = drcal.invert_Rt(Rt01)
+    rt10 = drcal.rt_from_Rt(Rt10)
     return rt10, mask_inliers
 
 
@@ -521,11 +521,11 @@ def seed_rt10_pair(i0, q0, q1):
     else:
         # Reading Shehryar's poses
         if i0 < 0:
-            return mrcal.identity_rt(), None
+            return drcal.identity_rt(), None
         return rt_cam_camprev__from_data_file[i0], None
 
 
-def optimizer_callback_triangulated_no_mrcal(  # shape (Nframes,6)
+def optimizer_callback_triangulated_no_drcal(  # shape (Nframes,6)
     # this is ALL the poses, including for camera0
     rt_ned_cam,
     *,
@@ -546,7 +546,7 @@ def optimizer_callback_triangulated_no_mrcal(  # shape (Nframes,6)
     # Fill the off-diagonal entries
     for i in range(Nframes - 1):
         for j in range(i + 1, Nframes):
-            rtij, drtij_drti, drtij_drtj = mrcal.compose_rt(
+            rtij, drtij_drti, drtij_drtj = drcal.compose_rt(
                 rt_ned_cam[i], rt_ned_cam[j], inverted0=True, get_gradients=True
             )
 
@@ -568,14 +568,14 @@ def optimizer_callback_triangulated_no_mrcal(  # shape (Nframes,6)
             vj = v_all[j, ...][..., mask_valid, :]
 
             # vj in the coord system of camera i
-            vj, dvj_drij, _ = mrcal.rotate_point_r(rtij[:3], vj, get_gradients=True)
+            vj, dvj_drij, _ = drcal.rotate_point_r(rtij[:3], vj, get_gradients=True)
 
             # shape (Nfeatures_valid,)
-            e, de_dvj, de_dtij = mrcal.triangulated_error(
+            e, de_dvj, de_dtij = drcal.triangulated_error(
                 vi, vj, v_are_local=False, t01=rtij[3:], get_gradients=True
             )
 
-            # p = mrcal.triangulate_leecivera_mid2( vi, vj,
+            # p = drcal.triangulate_leecivera_mid2( vi, vj,
             #                                       v_are_local   = False,
             #                                       t01           = rtij[3:])
             # print(p[:10])
@@ -665,7 +665,7 @@ def optimizer_callback_triangulated_no_mrcal(  # shape (Nframes,6)
                 Jtx[j - 1, 3:] += nps.matmult(e, de_dtj)
 
 
-def solve_triangulated_no_mrcal(q_all, rt_ned_cam, *, debug=False):
+def solve_triangulated_no_drcal(q_all, rt_ned_cam, *, debug=False):
     r"""I want a least-squares solve using implicit triangulation. I have a
     measurement vector x containing pairwise reprojection errors from each pair
     of cameras. The x01 contain all errors from observations common to cameras 0
@@ -687,7 +687,7 @@ def solve_triangulated_no_mrcal(q_all, rt_ned_cam, *, debug=False):
     """
 
     # shape (Nframes,Nfeatures,3)
-    v_all = mrcal.unproject(q_all, *model.intrinsics())
+    v_all = drcal.unproject(q_all, *model.intrinsics())
 
     # frame0 is the reference
     Nframes_optimized = Nframes - 1
@@ -699,7 +699,7 @@ def solve_triangulated_no_mrcal(q_all, rt_ned_cam, *, debug=False):
     x0 = []
     J = None if not debug else []
 
-    optimizer_callback_triangulated_no_mrcal(
+    optimizer_callback_triangulated_no_drcal(
         rt_ned_cam, q_all=q_all, v_all=v_all, JtJ=JtJ, Jtx=Jtx, x=x0, J=J
     )
 
@@ -740,7 +740,7 @@ def solve_triangulated_no_mrcal(q_all, rt_ned_cam, *, debug=False):
     )
 
     x1 = []
-    optimizer_callback_triangulated_no_mrcal(
+    optimizer_callback_triangulated_no_drcal(
         rt_ned_cam + drt_ned_cam, q_all=q_all, v_all=v_all, x=x1
     )
 
@@ -832,7 +832,7 @@ def feature_matching__colmap(
         # shape (Npoints, Nimages=2, Nxy=2)
         q = nps.xchg(q, 0, 1)
 
-        # Convert colmap pixels to mrcal pixels. Colmap has the image origin at
+        # Convert colmap pixels to drcal pixels. Colmap has the image origin at
         # the top-left corner of the image, NOT at the center of the top-left
         # pixel:
         #
@@ -972,7 +972,7 @@ def feature_matching__colmap(
     observations = observations_pool[:Nobservations]
 
     # I resort the observations to cluster them by points, as (currently; for
-    # now?) required by mrcal. I want a stable sort to preserve the camera
+    # now?) required by drcal. I want a stable sort to preserve the camera
     # sorting order within each point. This isn't strictly required, but makes
     # it easier to think about
     iobservations = np.argsort(
@@ -1257,7 +1257,7 @@ def mark_outliers(indices_point_camintrinsics_camextrinsics, observations, rt_ca
     ipoint_current = -1
     iobservation0 = -1
 
-    vlocal = mrcal.unproject(observations[:, :2], *model.intrinsics(), normalize=True)
+    vlocal = drcal.unproject(observations[:, :2], *model.intrinsics(), normalize=True)
 
     cos_half_theta_threshold = np.cos(1.0 * np.pi / 180.0 / 2.0)
 
@@ -1279,17 +1279,17 @@ def mark_outliers(indices_point_camintrinsics_camextrinsics, observations, rt_ca
             if icame_prev >= 0:
                 rt0r = rt_cam_ref[icame_prev]
             else:
-                rt0r = mrcal.identity_rt()
+                rt0r = drcal.identity_rt()
             if icame >= 0:
-                rt01 = mrcal.compose_rt(rt0r, mrcal.invert_rt(rt_cam_ref[icame]))
+                rt01 = drcal.compose_rt(rt0r, drcal.invert_rt(rt_cam_ref[icame]))
             else:
                 rt01 = rt0r
 
             v0 = vlocal[iobservation0]
-            v1 = mrcal.rotate_point_r(rt01[:3], vlocal[iobservation1])
+            v1 = drcal.rotate_point_r(rt01[:3], vlocal[iobservation1])
             t01 = rt01[3:]
 
-            p = mrcal.triangulate_leecivera_mid2(v0, v1, t01)
+            p = drcal.triangulate_leecivera_mid2(v0, v1, t01)
             if (
                 nps.norm2(p) == 0
                 or nps.inner(p, v0) / nps.mag(p) < cos_half_theta_threshold
@@ -1334,7 +1334,7 @@ def solve(indices_point_camintrinsics_camextrinsics, observations, Nimages):
             q1_infinity = np.array((1379, 548), dtype=float)
 
         observations_fixed = nps.glue(q0_infinity, q1_infinity, axis=-2)
-        p_infinity = 10000 * mrcal.unproject(
+        p_infinity = 10000 * drcal.unproject(
             q0_infinity, *model.intrinsics(), normalize=True
         )
         indices_point_camintrinsics_camextrinsics_fixed = np.array(
@@ -1381,7 +1381,7 @@ def solve(indices_point_camintrinsics_camextrinsics, observations, Nimages):
     rt_cam_ref = np.zeros(rt_cam_camprev.shape, dtype=float)
     rt_cam_ref[0] = rt_cam_camprev[0]
     for i in range(1, len(rt_cam_camprev)):
-        rt_cam_ref[i] = mrcal.compose_rt(rt_cam_camprev[i], rt_cam_ref[i - 1])
+        rt_cam_ref[i] = drcal.compose_rt(rt_cam_camprev[i], rt_cam_ref[i - 1])
 
     optimization_inputs = dict(
         intrinsics=nps.atleast_dims(model.intrinsics()[1], -2),
@@ -1432,7 +1432,7 @@ def solve(indices_point_camintrinsics_camextrinsics, observations, Nimages):
         optimization_inputs["extrinsics_rt_fromref"],
     )
 
-    stats = mrcal.optimize(**optimization_inputs)
+    stats = drcal.optimize(**optimization_inputs)
 
     write_models(
         "/tmp/xxxxx-solve-cam{}.cameramodel",
@@ -1508,7 +1508,7 @@ end_header
         rt_cam_ref = nps.glue(
             np.zeros((6,)), optimization_inputs["extrinsics_rt_fromref"], axis=-2
         )
-        t_ref_cam = mrcal.invert_rt(rt_cam_ref)[:, 3:]
+        t_ref_cam = drcal.invert_rt(rt_cam_ref)[:, 3:]
         write_points(
             f,
             t_ref_cam,
@@ -1532,21 +1532,21 @@ end_header
             )
 
             if i0 < 0:
-                rt_0r = mrcal.identity_rt()
-                rt_01 = mrcal.invert_rt(
+                rt_0r = drcal.identity_rt()
+                rt_01 = drcal.invert_rt(
                     optimization_inputs["extrinsics_rt_fromref"][i1]
                 )
             else:
                 rt_0r = optimization_inputs["extrinsics_rt_fromref"][i0]
                 rt_1r = optimization_inputs["extrinsics_rt_fromref"][i1]
 
-                rt_01 = mrcal.compose_rt(rt_0r, mrcal.invert_rt(rt_1r))
+                rt_01 = drcal.compose_rt(rt_0r, drcal.invert_rt(rt_1r))
 
-            v0 = mrcal.unproject(q0, *model.intrinsics())
-            v1 = mrcal.unproject(q1, *model.intrinsics())
+            v0 = drcal.unproject(q0, *model.intrinsics())
+            v1 = drcal.unproject(q1, *model.intrinsics())
 
-            plocal0 = mrcal.triangulate_leecivera_mid2(
-                v0, v1, v_are_local=True, Rt01=mrcal.Rt_from_rt(rt_01)
+            plocal0 = drcal.triangulate_leecivera_mid2(
+                v0, v1, v_are_local=True, Rt01=drcal.Rt_from_rt(rt_01)
             )
 
             r = nps.mag(plocal0)
@@ -1570,7 +1570,7 @@ end_header
             #         cbmax     = 0.1)
             # print(f"Wrote '{filename_overlaid_points}'")
 
-            image = mrcal.load_image(
+            image = drcal.load_image(
                 image_filename[i0 + 1], bits_per_pixel=24, channels=3
             )
 
@@ -1587,8 +1587,8 @@ end_header
             bgr = image[i[:, 1], i[:, 0]]
             Npoints_pointcloud += write_points(
                 f,
-                mrcal.transform_point_rt(
-                    mrcal.invert_rt(rt_0r), plocal0[index_good_triangulation]
+                drcal.transform_point_rt(
+                    drcal.invert_rt(rt_0r), plocal0[index_good_triangulation]
                 ),
                 bgr,
             )
@@ -1619,11 +1619,11 @@ def write_model(filename, model):
 
 
 def write_models(filename_format, model_baseline, rt_cam_ref):
-    model0 = mrcal.cameramodel(model_baseline)
+    model0 = drcal.cameramodel(model_baseline)
     model0.extrinsics_rt_fromref(np.zeros((6,), dtype=float))
     write_model(filename_format.format(0), model0)
     for i in range(1, len(rt_cam_ref) + 1):
-        model1 = mrcal.cameramodel(model_baseline)
+        model1 = drcal.cameramodel(model_baseline)
         model1.extrinsics_rt_fromref(rt_cam_ref[i - 1])
         write_model(filename_format.format(i), model1)
 
@@ -1654,7 +1654,7 @@ if __name__ == "__main__":
 
         # quat_xyzw      = t1_t2_p_qxyzw['quat_xyzw']
         # quat           = quat_xyzw[...,(3,0,1,2)]
-        # r              = mrcal.r_from_R( mrcal.R_from_quat(quat) )
+        # r              = drcal.r_from_R( drcal.R_from_quat(quat) )
         # rt_ref_veh_all = nps.glue(r,
         #                           t1_t2_p_qxyzw['p'],
         #                           axis = -1)
@@ -1668,7 +1668,7 @@ if __name__ == "__main__":
         )
         quat_xyzw = t_dt_p_qxyzw[:, 5:]
         quat = quat_xyzw[..., (3, 0, 1, 2)]
-        r = mrcal.r_from_R(mrcal.R_from_quat(quat))
+        r = drcal.r_from_R(drcal.R_from_quat(quat))
         rt_cam0_cam1_all = nps.glue(r, t_dt_p_qxyzw[:, 2:5], axis=-1)
 
         # Row i in the pose file has
@@ -1697,7 +1697,7 @@ if __name__ == "__main__":
         # The first image doesn't have a camprev. Throw it away
         rt_camprev_cam__from_data_file = rt_camprev_cam__from_data_file[1:]
 
-        rt_cam_camprev__from_data_file = mrcal.invert_rt(rt_camprev_cam__from_data_file)
+        rt_cam_camprev__from_data_file = drcal.invert_rt(rt_camprev_cam__from_data_file)
 
         image_dir = "/mnt/nvm/xxxxx-xxxxx-ranch/images-last10"
         outdir = "/tmp"
@@ -1710,7 +1710,7 @@ if __name__ == "__main__":
             f"{image_dir}/{os.path.basename(f.decode())}" for f in image_filename
         ]
 
-    model = mrcal.cameramodel(model_filename)
+    model = drcal.cameramodel(model_filename)
     W, H = model.imagersize()
 
     Nimages = 6

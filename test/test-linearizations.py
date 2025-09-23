@@ -4,7 +4,7 @@ r"""Linearization test
 
 Make sure the linearization assumptions used in the uncertainty computations
 hold. The expressions are derived in the docstring for
-mrcal.projection_uncertainty()
+drcal.projection_uncertainty()
 
 """
 
@@ -15,9 +15,9 @@ import os
 
 testdir = os.path.dirname(os.path.realpath(__file__))
 
-# I import the LOCAL mrcal since that's what I'm testing
+# I import the LOCAL drcal since that's what I'm testing
 sys.path[:0] = (f"{testdir}/..",)
-import mrcal
+import drcal
 import copy
 import testutils
 
@@ -29,10 +29,10 @@ np.random.seed(0)
 ############# Set up my world, and compute all the perfect positions, pixel
 ############# observations of everything
 models_ref = (
-    mrcal.cameramodel(f"{testdir}/data/cam0.opencv8.cameramodel"),
-    mrcal.cameramodel(f"{testdir}/data/cam0.opencv8.cameramodel"),
-    mrcal.cameramodel(f"{testdir}/data/cam1.opencv8.cameramodel"),
-    mrcal.cameramodel(f"{testdir}/data/cam1.opencv8.cameramodel"),
+    drcal.cameramodel(f"{testdir}/data/cam0.opencv8.cameramodel"),
+    drcal.cameramodel(f"{testdir}/data/cam0.opencv8.cameramodel"),
+    drcal.cameramodel(f"{testdir}/data/cam1.opencv8.cameramodel"),
+    drcal.cameramodel(f"{testdir}/data/cam1.opencv8.cameramodel"),
 )
 
 imagersizes = nps.cat(*[m.imagersize() for m in models_ref])
@@ -42,7 +42,7 @@ lensmodel = models_ref[0].intrinsics()[0]
 lensmodel = "LENSMODEL_OPENCV4"
 for m in models_ref:
     m.intrinsics(intrinsics=(lensmodel, m.intrinsics()[1][:8]))
-Nintrinsics = mrcal.lensmodel_num_params(lensmodel)
+Nintrinsics = drcal.lensmodel_num_params(lensmodel)
 
 Ncameras = len(models_ref)
 Ncameras_extrinsics = Ncameras - 1
@@ -62,7 +62,7 @@ calobject_warp_ref = np.array((0.002, -0.005))
 
 # shapes (Nframes, Ncameras, Nh, Nw, 2),
 #        (Nframes, 4,3)
-q_ref, Rt_ref_board_ref = mrcal.synthesize_board_observations(
+q_ref, Rt_ref_board_ref = drcal.synthesize_board_observations(
     models_ref,
     object_width_n=object_width_n,
     object_height_n=object_height_n,
@@ -98,7 +98,7 @@ intrinsics_ref = nps.cat(*[m.intrinsics()[1] for m in models_ref])
 extrinsics_ref = nps.cat(*[m.extrinsics_rt_fromref() for m in models_ref[1:]])
 if extrinsics_ref.size == 0:
     extrinsics_ref = np.zeros((0, 6), dtype=float)
-frames_ref = mrcal.rt_from_Rt(Rt_ref_board_ref)
+frames_ref = drcal.rt_from_Rt(Rt_ref_board_ref)
 
 
 # Dense observations. All the cameras see all the boards
@@ -141,19 +141,19 @@ baseline = dict(
     do_apply_regularization=True,
 )
 
-mrcal.optimize(**baseline, do_apply_outlier_rejection=False)
+drcal.optimize(**baseline, do_apply_outlier_rejection=False)
 
 
 # Done setting up. I'll be looking at tiny motions off the baseline
 Nframes = len(frames_ref)
 Ncameras = len(intrinsics_ref)
 lensmodel = baseline["lensmodel"]
-Nintrinsics = mrcal.lensmodel_num_params(lensmodel)
+Nintrinsics = drcal.lensmodel_num_params(lensmodel)
 
-Nmeasurements_boards = mrcal.num_measurements_boards(**baseline)
-Nmeasurements_regularization = mrcal.num_measurements_regularization(**baseline)
+Nmeasurements_boards = drcal.num_measurements_boards(**baseline)
+Nmeasurements_regularization = drcal.num_measurements_regularization(**baseline)
 
-b0, x0, J0 = mrcal.optimizer_callback(no_factorization=True, **baseline)[:3]
+b0, x0, J0 = drcal.optimizer_callback(no_factorization=True, **baseline)[:3]
 J0 = J0.toarray()
 
 
@@ -163,9 +163,9 @@ J0 = J0.toarray()
 optimization_inputs = copy.deepcopy(baseline)
 db_packed = np.random.randn(len(b0)) * 1e-9
 
-mrcal.ingest_packed_state(b0 + db_packed, **optimization_inputs)
+drcal.ingest_packed_state(b0 + db_packed, **optimization_inputs)
 
-x1 = mrcal.optimizer_callback(
+x1 = drcal.optimizer_callback(
     no_factorization=True, no_jacobian=True, **optimization_inputs
 )[1]
 
@@ -191,7 +191,7 @@ if 0:
         ),
         _with="lines",
         legend=np.arange(2),
-        _set=mrcal.plotoptions_measurement_boundaries(**optimization_inputs),
+        _set=drcal.plotoptions_measurement_boundaries(**optimization_inputs),
         wait=1,
     )
 
@@ -208,7 +208,7 @@ testutils.confirm_equal(
 
 # At the optimum dE/db = 0 -> xtJ = 0
 xtJ0 = nps.inner(nps.transpose(J0), x0)
-mrcal.pack_state(xtJ0, **optimization_inputs)
+drcal.pack_state(xtJ0, **optimization_inputs)
 testutils.confirm_equal(
     xtJ0, 0, eps=1.5e-2, worstcase=True, msg="dE/db = 0 at the optimum: original"
 )
@@ -222,8 +222,8 @@ dqref, observations_perturbed = sample_dqref(
 optimization_inputs = copy.deepcopy(baseline)
 optimization_inputs["observations_board"] = observations_perturbed
 
-mrcal.optimize(**optimization_inputs, do_apply_outlier_rejection=False)
-b1, x1, J1 = mrcal.optimizer_callback(no_factorization=True, **optimization_inputs)[:3]
+drcal.optimize(**optimization_inputs, do_apply_outlier_rejection=False)
+b1, x1, J1 = drcal.optimizer_callback(no_factorization=True, **optimization_inputs)[:3]
 J1 = J1.toarray()
 
 dx_observed = x1 - x0
@@ -233,7 +233,7 @@ w[w < 0] = 0  # outliers have weight=0
 w = np.ravel(nps.mv(nps.cat(w, w), 0, -1))  # each weight controls x,y
 
 xtJ1 = nps.inner(nps.transpose(J1), x1)
-mrcal.pack_state(xtJ0, **optimization_inputs)
+drcal.pack_state(xtJ0, **optimization_inputs)
 testutils.confirm_equal(
     xtJ1, 0, eps=1e-2, worstcase=True, msg="dE/db = 0 at the optimum: perturbed"
 )
@@ -271,9 +271,9 @@ M = (
 )
 db_predicted = nps.matmult(dqref.ravel(), nps.transpose(M)).ravel()
 
-istate0_frames = mrcal.state_index_frames(0, **baseline)
-istate0_calobject_warp = mrcal.state_index_calobject_warp(**baseline)
-istate0_extrinsics = mrcal.state_index_extrinsics(0, **baseline)
+istate0_frames = drcal.state_index_frames(0, **baseline)
+istate0_calobject_warp = drcal.state_index_calobject_warp(**baseline)
+istate0_extrinsics = drcal.state_index_extrinsics(0, **baseline)
 if istate0_extrinsics is None:
     istate0_extrinsics = istate0_frames
 
@@ -288,7 +288,7 @@ if 0:
 
     plot_db = gp.gnuplotlib(
         title="db predicted,observed",
-        _set=mrcal.plotoptions_state_boundaries(**optimization_inputs),
+        _set=drcal.plotoptions_state_boundaries(**optimization_inputs),
     )
     plot_db.plot(
         (

@@ -15,9 +15,9 @@ import os
 
 testdir = os.path.dirname(os.path.realpath(__file__))
 
-# I import the LOCAL mrcal since that's what I'm testing
+# I import the LOCAL drcal since that's what I'm testing
 sys.path[:0] = (f"{testdir}/..",)
-import mrcal
+import drcal
 import testutils
 
 from test_calibration_helpers import sample_dqref
@@ -29,10 +29,10 @@ np.random.seed(0)
 ############# Set up my world, and compute all the perfect positions, pixel
 ############# observations of everything
 models_ref = (
-    mrcal.cameramodel(f"{testdir}/data/cam0.opencv8.cameramodel"),
-    mrcal.cameramodel(f"{testdir}/data/cam0.opencv8.cameramodel"),
-    mrcal.cameramodel(f"{testdir}/data/cam1.opencv8.cameramodel"),
-    mrcal.cameramodel(f"{testdir}/data/cam1.opencv8.cameramodel"),
+    drcal.cameramodel(f"{testdir}/data/cam0.opencv8.cameramodel"),
+    drcal.cameramodel(f"{testdir}/data/cam0.opencv8.cameramodel"),
+    drcal.cameramodel(f"{testdir}/data/cam1.opencv8.cameramodel"),
+    drcal.cameramodel(f"{testdir}/data/cam1.opencv8.cameramodel"),
 )
 
 imagersizes = nps.cat(*[m.imagersize() for m in models_ref])
@@ -42,7 +42,7 @@ lensmodel = models_ref[0].intrinsics()[0]
 lensmodel = "LENSMODEL_OPENCV4"
 for m in models_ref:
     m.intrinsics(intrinsics=(lensmodel, m.intrinsics()[1][:8]))
-Nintrinsics = mrcal.lensmodel_num_params(lensmodel)
+Nintrinsics = drcal.lensmodel_num_params(lensmodel)
 
 Ncameras = len(models_ref)
 Nframes = 50
@@ -61,7 +61,7 @@ calobject_warp_ref = np.array((0.002, -0.005))
 
 # shapes (Nframes, Ncameras, Nh, Nw, 2),
 #        (Nframes, 4,3)
-q_ref, Rt_ref_board_ref = mrcal.synthesize_board_observations(
+q_ref, Rt_ref_board_ref = drcal.synthesize_board_observations(
     models_ref,
     object_width_n=object_width_n,
     object_height_n=object_height_n,
@@ -80,7 +80,7 @@ q_ref, Rt_ref_board_ref = mrcal.synthesize_board_observations(
     ),
     Nframes=Nframes,
 )
-frames_ref = mrcal.rt_from_Rt(Rt_ref_board_ref)
+frames_ref = drcal.rt_from_Rt(Rt_ref_board_ref)
 
 ############# I have perfect observations in q_ref. I corrupt them by noise
 # weight has shape (Nframes, Ncameras, Nh, Nw),
@@ -131,7 +131,7 @@ indices_frame_camintrinsics_camextrinsics = nps.glue(
 )
 
 
-intrinsics_data, extrinsics_rt_fromref, frames_rt_toref = mrcal.seed_stereographic(
+intrinsics_data, extrinsics_rt_fromref, frames_rt_toref = drcal.seed_stereographic(
     imagersizes=imagersizes,
     focal_estimate=1500,
     indices_frame_camera=indices_frame_camera,
@@ -168,61 +168,61 @@ optimization_inputs["do_optimize_intrinsics_distortions"] = False
 optimization_inputs["do_optimize_extrinsics"] = True
 optimization_inputs["do_optimize_frames"] = True
 optimization_inputs["do_optimize_calobject_warp"] = False
-mrcal.optimize(**optimization_inputs, do_apply_outlier_rejection=True)
+drcal.optimize(**optimization_inputs, do_apply_outlier_rejection=True)
 
 optimization_inputs["do_optimize_intrinsics_core"] = True
 optimization_inputs["do_optimize_intrinsics_distortions"] = False
 optimization_inputs["do_optimize_extrinsics"] = True
 optimization_inputs["do_optimize_frames"] = True
 optimization_inputs["do_optimize_calobject_warp"] = False
-mrcal.optimize(**optimization_inputs, do_apply_outlier_rejection=True)
+drcal.optimize(**optimization_inputs, do_apply_outlier_rejection=True)
 
 testutils.confirm_equal(
-    mrcal.num_states(**optimization_inputs),
+    drcal.num_states(**optimization_inputs),
     4 * Ncameras + 6 * (Ncameras - 1) + 6 * Nframes,
     msg="num_states()",
 )
 testutils.confirm_equal(
-    mrcal.num_states_intrinsics(**optimization_inputs),
+    drcal.num_states_intrinsics(**optimization_inputs),
     4 * Ncameras,
     msg="num_states_intrinsics()",
 )
 testutils.confirm_equal(
-    mrcal.num_intrinsics_optimization_params(**optimization_inputs),
+    drcal.num_intrinsics_optimization_params(**optimization_inputs),
     4,
     msg="num_intrinsics_optimization_params()",
 )
 testutils.confirm_equal(
-    mrcal.num_states_extrinsics(**optimization_inputs),
+    drcal.num_states_extrinsics(**optimization_inputs),
     6 * (Ncameras - 1),
     msg="num_states_extrinsics()",
 )
 testutils.confirm_equal(
-    mrcal.num_states_frames(**optimization_inputs),
+    drcal.num_states_frames(**optimization_inputs),
     6 * Nframes,
     msg="num_states_frames()",
 )
 testutils.confirm_equal(
-    mrcal.num_states_points(**optimization_inputs), 0, msg="num_states_points()"
+    drcal.num_states_points(**optimization_inputs), 0, msg="num_states_points()"
 )
 testutils.confirm_equal(
-    mrcal.num_states_calobject_warp(**optimization_inputs),
+    drcal.num_states_calobject_warp(**optimization_inputs),
     0,
     msg="num_states_calobject_warp()",
 )
 
 testutils.confirm_equal(
-    mrcal.num_measurements_boards(**optimization_inputs),
+    drcal.num_measurements_boards(**optimization_inputs),
     object_width_n * object_height_n * 2 * Nframes * Ncameras,
     msg="num_measurements_boards()",
 )
 testutils.confirm_equal(
-    mrcal.num_measurements_points(**optimization_inputs),
+    drcal.num_measurements_points(**optimization_inputs),
     0,
     msg="num_measurements_points()",
 )
 testutils.confirm_equal(
-    mrcal.num_measurements_regularization(**optimization_inputs),
+    drcal.num_measurements_regularization(**optimization_inputs),
     Ncameras * 2,
     msg="num_measurements_regularization()",
 )
@@ -235,39 +235,39 @@ optimization_inputs["do_optimize_frames"] = True
 optimization_inputs["do_optimize_calobject_warp"] = True
 
 optimization_inputs["calobject_warp"] = np.array((0.001, 0.001))
-stats = mrcal.optimize(**optimization_inputs, do_apply_outlier_rejection=True)
+stats = drcal.optimize(**optimization_inputs, do_apply_outlier_rejection=True)
 
 rmserr = stats["rms_reproj_error__pixels"]
 
 
 testutils.confirm_equal(
-    mrcal.state_index_intrinsics(2, **optimization_inputs),
+    drcal.state_index_intrinsics(2, **optimization_inputs),
     8 * 2,
     msg="state_index_intrinsics()",
 )
 testutils.confirm_equal(
-    mrcal.state_index_extrinsics(2, **optimization_inputs),
+    drcal.state_index_extrinsics(2, **optimization_inputs),
     8 * Ncameras + 6 * 2,
     msg="state_index_extrinsics()",
 )
 testutils.confirm_equal(
-    mrcal.state_index_frames(2, **optimization_inputs),
+    drcal.state_index_frames(2, **optimization_inputs),
     8 * Ncameras + 6 * (Ncameras - 1) + 6 * 2,
     msg="state_index_frames()",
 )
 testutils.confirm_equal(
-    mrcal.state_index_calobject_warp(**optimization_inputs),
+    drcal.state_index_calobject_warp(**optimization_inputs),
     8 * Ncameras + 6 * (Ncameras - 1) + 6 * Nframes,
     msg="state_index_calobject_warp()",
 )
 
 testutils.confirm_equal(
-    mrcal.measurement_index_boards(2, **optimization_inputs),
+    drcal.measurement_index_boards(2, **optimization_inputs),
     object_width_n * object_height_n * 2 * 2,
     msg="measurement_index_boards()",
 )
 testutils.confirm_equal(
-    mrcal.measurement_index_regularization(**optimization_inputs),
+    drcal.measurement_index_regularization(**optimization_inputs),
     object_width_n * object_height_n * 2 * Nframes * Ncameras,
     msg="measurement_index_regularization()",
 )
@@ -275,7 +275,7 @@ testutils.confirm_equal(
 
 ############# Calibration computed. Now I see how well I did
 models_solved = [
-    mrcal.cameramodel(optimization_inputs=optimization_inputs, icam_intrinsics=i)
+    drcal.cameramodel(optimization_inputs=optimization_inputs, icam_intrinsics=i)
     for i in range(Ncameras)
 ]
 
@@ -294,7 +294,7 @@ testutils.confirm_equal(
 )
 
 testutils.confirm_equal(
-    np.std(mrcal.residuals_board(optimization_inputs, x=stats["x"])),
+    np.std(drcal.residuals_board(optimization_inputs, x=stats["x"])),
     pixel_uncertainty_stdev,
     eps=pixel_uncertainty_stdev * 0.1,
     msg="Residual have the expected distribution",
@@ -307,7 +307,7 @@ testutils.confirm_equal(
 # transformations, AND since camera0 is fixed at the identity transformation, I
 # can simply look at each extrinsics transformation.
 for icam in range(1, len(models_ref)):
-    Rt_extrinsics_err = mrcal.compose_Rt(
+    Rt_extrinsics_err = drcal.compose_Rt(
         models_solved[icam].extrinsics_Rt_fromref(),
         models_ref[icam].extrinsics_Rt_toref(),
     )
@@ -326,9 +326,9 @@ for icam in range(1, len(models_ref)):
         msg=f"Recovered extrinsic rotation for camera {icam}",
     )
 
-Rt_frame_err = mrcal.compose_Rt(
-    mrcal.Rt_from_rt(optimization_inputs["frames_rt_toref"]),
-    mrcal.invert_Rt(Rt_ref_board_ref),
+Rt_frame_err = drcal.compose_Rt(
+    drcal.Rt_from_rt(optimization_inputs["frames_rt_toref"]),
+    drcal.invert_Rt(Rt_ref_board_ref),
 )
 
 testutils.confirm_equal(
@@ -358,7 +358,7 @@ def projection_diff(models_ref, max_dist_from_center):
 
     # v  shape (...,Ncameras,Nheight,Nwidth,...)
     # q0 shape (...,         Nheight,Nwidth,...)
-    v, q0 = mrcal.sample_imager_unproject(
+    v, q0 = drcal.sample_imager_unproject(
         Nw, None, *imagersizes[0], lensmodels, intrinsics_data, normalize=True
     )
 
@@ -370,12 +370,12 @@ def projection_diff(models_ref, max_dist_from_center):
     if focus_radius < 0:
         focus_radius = min(W, H) / 6.0
 
-    implied_Rt10 = mrcal.implied_Rt10__from_unprojections(
+    implied_Rt10 = drcal.implied_Rt10__from_unprojections(
         q0, v[0, ...], v[1, ...], focus_center=focus_center, focus_radius=focus_radius
     )
 
-    q1 = mrcal.project(
-        mrcal.transform_point_Rt(implied_Rt10, v[0, ...]),
+    q1 = drcal.project(
+        drcal.transform_point_Rt(implied_Rt10, v[0, ...]),
         lensmodels[1],
         intrinsics_data[1],
     )
@@ -386,7 +386,7 @@ def projection_diff(models_ref, max_dist_from_center):
     diff[nps.norm2(q0 - center) > max_dist_from_center * max_dist_from_center] = 0
     # gp.plot(diff,
     #         ascii = True,
-    #         using = mrcal.imagergrid_using(imagersizes[0], Nw),
+    #         using = drcal.imagergrid_using(imagersizes[0], Nw),
     #         square=1, _with='image', tuplesize=3, hardcopy='/tmp/yes.gp', cbmax=3)
 
     return diff
@@ -416,16 +416,16 @@ for icam in range(len(models_ref)):
 if True:
     optimization_inputs_perfect = copy.deepcopy(optimization_inputs)
 
-    mrcal.make_perfect_observations(
+    drcal.make_perfect_observations(
         optimization_inputs_perfect, observed_pixel_uncertainty=0
     )
-    x = mrcal.optimizer_callback(
+    x = drcal.optimizer_callback(
         **optimization_inputs_perfect, no_jacobian=True, no_factorization=True
     )[1]
 
-    Nmeas = mrcal.num_measurements_boards(**optimization_inputs_perfect)
+    Nmeas = drcal.num_measurements_boards(**optimization_inputs_perfect)
     if Nmeas > 0:
-        i_meas0 = mrcal.measurement_index_boards(0, **optimization_inputs_perfect)
+        i_meas0 = drcal.measurement_index_boards(0, **optimization_inputs_perfect)
         testutils.confirm_equal(
             x[i_meas0 : i_meas0 + Nmeas],
             0,

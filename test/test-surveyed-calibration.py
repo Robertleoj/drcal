@@ -123,9 +123,9 @@ import numpysane as nps
 
 testdir = os.path.dirname(os.path.realpath(__file__))
 
-# I import the LOCAL mrcal since that's what I'm testing
+# I import the LOCAL drcal since that's what I'm testing
 sys.path[:0] = (f"{testdir}/..",)
-import mrcal
+import drcal
 import testutils
 
 from test_calibration_helpers import sample_dqref, calibration_sample
@@ -196,14 +196,14 @@ np.random.seed(args.seed_rng)
 
 ############# Set up my world, and compute all the perfect positions, pixel
 ############# observations of everything
-model_true = mrcal.cameramodel(f"{testdir}/data/cam0.opencv8.cameramodel")
+model_true = drcal.cameramodel(f"{testdir}/data/cam0.opencv8.cameramodel")
 imagersize_true = model_true.imagersize()
 W, H = imagersize_true
 
 # I have opencv8 model_true, but I truncate to opencv4 to keep this simple and
 # fast
 lensmodel = "LENSMODEL_OPENCV4"
-Nintrinsics = mrcal.lensmodel_num_params(lensmodel)
+Nintrinsics = drcal.lensmodel_num_params(lensmodel)
 intrinsics_data_true = model_true.intrinsics()[1][:Nintrinsics]
 intrinsics_data_true[:2] *= focal_length_scale_from_true
 model_true.intrinsics(
@@ -230,7 +230,7 @@ board_center = np.array(
         0,
     )
 )
-rt_boardcentered_board_true = mrcal.identity_rt()
+rt_boardcentered_board_true = drcal.identity_rt()
 rt_boardcentered_board_true[3:] = -board_center
 
 
@@ -252,7 +252,7 @@ q_center = nps.mv(
     0,
     -1,
 )
-v_center = mrcal.unproject(
+v_center = drcal.unproject(
     np.ascontiguousarray(q_center), *model_true.intrinsics(), normalize=True
 )
 
@@ -266,7 +266,7 @@ if args.range_board_center is not None:
     )
 
 # shape (NboardgridY,NboardgridX,6)
-rt_cam_board_true = mrcal.compose_rt(
+rt_cam_board_true = drcal.compose_rt(
     rt_cam_boardcentered_true, rt_boardcentered_board_true
 )
 rt_cam_board_true[..., :3] += (
@@ -281,8 +281,8 @@ rt_cam_board_true[..., 3:] += (
 rt_cam_board_true = nps.clump(rt_cam_board_true, n=2)
 
 
-rt_ref_board_true = mrcal.compose_rt(
-    mrcal.invert_rt(rt_cam_ref_true), rt_cam_board_true
+rt_ref_board_true = drcal.compose_rt(
+    drcal.invert_rt(rt_cam_ref_true), rt_cam_board_true
 )
 
 # We assume that the chessboard poses rt_ref_board_true, rt_cam_board_true were
@@ -291,19 +291,19 @@ rt_ref_board_true = mrcal.compose_rt(
 
 
 # shape (Nh,Nw,3)
-cal_object = mrcal.ref_calibration_object(
+cal_object = drcal.ref_calibration_object(
     object_width_n, object_height_n, object_spacing
 )
 # shape (Nframes,Nh,Nw,3)
-pcam_calobjects = mrcal.transform_point_rt(
+pcam_calobjects = drcal.transform_point_rt(
     nps.mv(rt_cam_board_true, -2, -4), cal_object
 )
 
 # shape (N,3)
 pcam_true = nps.clump(pcam_calobjects, n=3)
-pref_true = mrcal.transform_point_rt(mrcal.invert_rt(rt_cam_ref_true), pcam_true)
+pref_true = drcal.transform_point_rt(drcal.invert_rt(rt_cam_ref_true), pcam_true)
 # shape (N,2)
-q_true = mrcal.project(pcam_true, lensmodel, intrinsics_data_true)
+q_true = drcal.project(pcam_true, lensmodel, intrinsics_data_true)
 
 Npoints = q_true.shape[0]
 
@@ -374,7 +374,7 @@ if False:
     observations_point_center = np.array(observations_point[:Npoints])
     observations_point_center[~i, 2] = -1.0
     Rt_camera_ref_estimate = (
-        mrcal.calibration._estimate_camera_pose_from_point_observations(
+        drcal.calibration._estimate_camera_pose_from_point_observations(
             indices_point_camintrinsics_camextrinsics[:Npoints, :],
             observations_point_center,
             (intrinsics_core_estimate,),
@@ -383,7 +383,7 @@ if False:
         )
     )
 
-    rt_camera_ref_estimate = mrcal.rt_from_Rt(Rt_camera_ref_estimate)
+    rt_camera_ref_estimate = drcal.rt_from_Rt(Rt_camera_ref_estimate)
 
     intrinsics_data = np.zeros((1, Nintrinsics), dtype=float)
     intrinsics_data[:, :4] = intrinsics_core_estimate[1]
@@ -402,7 +402,7 @@ else:
 if args.make_documentation_plots is not None:
 
     def makeplot(**plotoptions):
-        mrcal.show_geometry(
+        drcal.show_geometry(
             (rt_camera_ref_estimate,),
             points=pref_true,  # known. fixed. perfect.
             show_points=True,
@@ -468,19 +468,19 @@ optimization_inputs_baseline = dict(
     do_optimize_frames=False,
 )
 
-Nstate = mrcal.num_states(**optimization_inputs_baseline)
+Nstate = drcal.num_states(**optimization_inputs_baseline)
 
 
 def optimize(optimization_inputs):
     optimization_inputs["do_optimize_intrinsics_core"] = False
     optimization_inputs["do_optimize_intrinsics_distortions"] = False
     optimization_inputs["do_optimize_extrinsics"] = True
-    mrcal.optimize(**optimization_inputs)
+    drcal.optimize(**optimization_inputs)
 
     optimization_inputs["do_optimize_intrinsics_core"] = True
     optimization_inputs["do_optimize_intrinsics_distortions"] = True
     optimization_inputs["do_optimize_extrinsics"] = True
-    mrcal.optimize(**optimization_inputs)
+    drcal.optimize(**optimization_inputs)
 
 
 # Take one solve sample
@@ -493,46 +493,46 @@ optimize(optimization_inputs)
 # Grab the measurements. measurements_point() reports ONLY the point
 # reprojection errors: no board observations, no regularization. Also, no
 # outliers
-rmserr_point = np.std(mrcal.measurements_point(optimization_inputs).ravel())
+rmserr_point = np.std(drcal.measurements_point(optimization_inputs).ravel())
 
 ############# Calibration computed. Now I see how well I did
-model_solved = mrcal.cameramodel(
+model_solved = drcal.cameramodel(
     optimization_inputs=optimization_inputs, icam_intrinsics=0
 )
 
-Rt_extrinsics_err = mrcal.compose_Rt(
+Rt_extrinsics_err = drcal.compose_Rt(
     model_solved.extrinsics_Rt_fromref(), model_true.extrinsics_Rt_toref()
 )
 
-v_query_cam = mrcal.unproject(q_query, *model_solved.intrinsics(), normalize=True)
+v_query_cam = drcal.unproject(q_query, *model_solved.intrinsics(), normalize=True)
 if args.distance is not None:
     p_query_cam = v_query_cam * args.distance
 else:
     p_query_cam = v_query_cam * 1e5  # large distance
-p_query_ref = mrcal.transform_point_Rt(model_solved.extrinsics_Rt_toref(), p_query_cam)
+p_query_ref = drcal.transform_point_Rt(model_solved.extrinsics_Rt_toref(), p_query_cam)
 
 
 def get_variances():
     icam = 0
-    i_state = mrcal.state_index_extrinsics(icam, **optimization_inputs)
-    rt_extrinsics_err, drt_extrinsics_err_drtsolved, _ = mrcal.compose_rt(
+    i_state = drcal.state_index_extrinsics(icam, **optimization_inputs)
+    rt_extrinsics_err, drt_extrinsics_err_drtsolved, _ = drcal.compose_rt(
         model_solved.extrinsics_rt_fromref(),
         model_solved.extrinsics_rt_toref(),
         get_gradients=True,
     )
     derrz_db = np.zeros((1, Nstate), dtype=float)
     derrz_db[..., i_state : i_state + 6] = drt_extrinsics_err_drtsolved[5:, :]
-    Var_errz = mrcal.model_analysis._propagate_calibration_uncertainty(
+    Var_errz = drcal.model_analysis._propagate_calibration_uncertainty(
         "covariance", dF_db=derrz_db, optimization_inputs=optimization_inputs
     )
     Var_errz = Var_errz[0, 0]
 
     if args.distance is not None:
-        Var_q = mrcal.projection_uncertainty(
+        Var_q = drcal.projection_uncertainty(
             p_query_cam, model_solved, atinfinity=False, what="covariance"
         )
     else:
-        Var_q = mrcal.projection_uncertainty(
+        Var_q = drcal.projection_uncertainty(
             v_query_cam, model_solved, atinfinity=True, what="covariance"
         )
 
@@ -553,61 +553,61 @@ if args.only_report_uncertainty:
 # verify problem layout
 testutils.confirm_equal(Nstate, Nintrinsics + 6, msg="num_states()")
 testutils.confirm_equal(
-    mrcal.num_states_intrinsics(**optimization_inputs),
+    drcal.num_states_intrinsics(**optimization_inputs),
     Nintrinsics,
     msg="num_states_intrinsics()",
 )
 testutils.confirm_equal(
-    mrcal.num_intrinsics_optimization_params(**optimization_inputs),
+    drcal.num_intrinsics_optimization_params(**optimization_inputs),
     Nintrinsics,
     msg="num_intrinsics_optimization_params()",
 )
 testutils.confirm_equal(
-    mrcal.num_states_extrinsics(**optimization_inputs), 6, msg="num_states_extrinsics()"
+    drcal.num_states_extrinsics(**optimization_inputs), 6, msg="num_states_extrinsics()"
 )
 testutils.confirm_equal(
-    mrcal.num_states_frames(**optimization_inputs), 0, msg="num_states_frames()"
+    drcal.num_states_frames(**optimization_inputs), 0, msg="num_states_frames()"
 )
 testutils.confirm_equal(
-    mrcal.num_states_points(**optimization_inputs), 0, msg="num_states_points()"
+    drcal.num_states_points(**optimization_inputs), 0, msg="num_states_points()"
 )
 testutils.confirm_equal(
-    mrcal.num_states_calobject_warp(**optimization_inputs),
+    drcal.num_states_calobject_warp(**optimization_inputs),
     0,
     msg="num_states_calobject_warp()",
 )
 testutils.confirm_equal(
-    mrcal.num_measurements_boards(**optimization_inputs),
+    drcal.num_measurements_boards(**optimization_inputs),
     0,
     msg="num_measurements_boards()",
 )
 testutils.confirm_equal(
-    mrcal.num_measurements_points(**optimization_inputs),
+    drcal.num_measurements_points(**optimization_inputs),
     Npoints * args.oversample * 2,
     msg="num_measurements_points()",
 )
 testutils.confirm_equal(
-    mrcal.num_measurements_regularization(**optimization_inputs),
+    drcal.num_measurements_regularization(**optimization_inputs),
     6,
     msg="num_measurements_regularization()",
 )
 testutils.confirm_equal(
-    mrcal.state_index_intrinsics(0, **optimization_inputs),
+    drcal.state_index_intrinsics(0, **optimization_inputs),
     0,
     msg="state_index_intrinsics()",
 )
 testutils.confirm_equal(
-    mrcal.state_index_extrinsics(0, **optimization_inputs),
+    drcal.state_index_extrinsics(0, **optimization_inputs),
     8,
     msg="state_index_extrinsics()",
 )
 testutils.confirm_equal(
-    mrcal.measurement_index_points(2, **optimization_inputs),
+    drcal.measurement_index_points(2, **optimization_inputs),
     2 * 2,
     msg="measurement_index_points()",
 )
 testutils.confirm_equal(
-    mrcal.measurement_index_regularization(**optimization_inputs),
+    drcal.measurement_index_regularization(**optimization_inputs),
     2 * args.oversample * Npoints,
     msg="measurement_index_regularization()",
 )
@@ -658,7 +658,7 @@ def projection_diff(models, max_dist_from_center):
 
     # v  shape (...,Ncameras,Nheight,Nwidth,...)
     # q0 shape (...,         Nheight,Nwidth,...)
-    v, q0 = mrcal.sample_imager_unproject(
+    v, q0 = drcal.sample_imager_unproject(
         Nw, None, *imagersizes[0], lensmodels, intrinsics_data, normalize=True
     )
 
@@ -669,12 +669,12 @@ def projection_diff(models, max_dist_from_center):
     if focus_radius < 0:
         focus_radius = min(W, H) / 6.0
 
-    implied_Rt10 = mrcal.implied_Rt10__from_unprojections(
+    implied_Rt10 = drcal.implied_Rt10__from_unprojections(
         q0, v[0, ...], v[1, ...], focus_center=focus_center, focus_radius=focus_radius
     )
 
-    q1 = mrcal.project(
-        mrcal.transform_point_Rt(implied_Rt10, v[0, ...]),
+    q1 = drcal.project(
+        drcal.transform_point_Rt(implied_Rt10, v[0, ...]),
         lensmodels[1],
         intrinsics_data[1],
     )
@@ -690,7 +690,7 @@ def projection_diff(models, max_dist_from_center):
         gp.plot(
             diff,
             ascii=True,
-            using=mrcal.imagergrid_using(imagersizes[0], Nw),
+            using=drcal.imagergrid_using(imagersizes[0], Nw),
             square=1,
             _with="image",
             tuplesize=3,
@@ -710,16 +710,16 @@ testutils.confirm_equal(diff, 0, worstcase=True, eps=6.0, msg="Recovered intrins
 if True:
     optimization_inputs_perfect = copy.deepcopy(optimization_inputs)
 
-    mrcal.make_perfect_observations(
+    drcal.make_perfect_observations(
         optimization_inputs_perfect, observed_pixel_uncertainty=0
     )
-    x = mrcal.optimizer_callback(
+    x = drcal.optimizer_callback(
         **optimization_inputs_perfect, no_jacobian=True, no_factorization=True
     )[1]
 
-    Nmeas = mrcal.num_measurements_points(**optimization_inputs_perfect)
+    Nmeas = drcal.num_measurements_points(**optimization_inputs_perfect)
     if Nmeas > 0:
-        i_meas0 = mrcal.measurement_index_points(0, **optimization_inputs_perfect)
+        i_meas0 = drcal.measurement_index_points(0, **optimization_inputs_perfect)
         testutils.confirm_equal(
             x[i_meas0 : i_meas0 + Nmeas],
             0,
@@ -766,7 +766,7 @@ Var_errz, Var_q = get_variances()
 
 ####### check errz
 if 1:
-    rt_extrinsics_sampled_err = mrcal.compose_rt(
+    rt_extrinsics_sampled_err = drcal.compose_rt(
         rt_cam_ref_sampled_mounted, model_solved.extrinsics_rt_toref()
     )
 
@@ -787,15 +787,15 @@ if 1:
     if args.make_documentation_plots is not None:
         errz_sampled = rt_extrinsics_sampled_err[..., 0, 5]
         binwidth = 0.01
-        equation_observed = mrcal.fitted_gaussian_equation(
+        equation_observed = drcal.fitted_gaussian_equation(
             x=errz_sampled, binwidth=binwidth, legend="Observed in simulation"
         )
-        equation_predicted = mrcal.fitted_gaussian_equation(
+        equation_predicted = drcal.fitted_gaussian_equation(
             mean=np.mean(errz_sampled),
             sigma=np.sqrt(Var_errz),
             N=len(errz_sampled),
             binwidth=binwidth,
-            legend="Predicted by mrcal",
+            legend="Predicted by drcal",
         )
 
         def makeplot(**plotoptions):
@@ -827,17 +827,17 @@ if 1:
 if 1:
     if 1:
         # Code check. Computing this directly should mimic the
-        # mrcal.projection_uncertainty() result exactly since it should be 100% the
+        # drcal.projection_uncertainty() result exactly since it should be 100% the
         # same computation.
         #
         # EXCEPT when looking at infinity. The projection_uncertainty() path
         # uses atinfinity=True, so it ignores translations completely. THIS path
         # uses a high distance, so the result will be close, but not identical.
         # I use a sloppier bound in that case
-        p, dp_drt_cam_ref, _ = mrcal.transform_point_rt(
+        p, dp_drt_cam_ref, _ = drcal.transform_point_rt(
             model_solved.extrinsics_rt_fromref(), p_query_ref, get_gradients=True
         )
-        q, dq_dp, dq_di = mrcal.project(
+        q, dq_dp, dq_di = drcal.project(
             p,
             model_solved.intrinsics()[0],
             model_solved.intrinsics()[1],
@@ -848,12 +848,12 @@ if 1:
         dq_db = np.zeros((2, Nstate), dtype=float)
 
         icam = 0
-        i_state = mrcal.state_index_extrinsics(icam, **optimization_inputs)
+        i_state = drcal.state_index_extrinsics(icam, **optimization_inputs)
         dq_db[..., i_state : i_state + 6] = dq_drt_cam_ref
-        i_state = mrcal.state_index_intrinsics(icam, **optimization_inputs)
+        i_state = drcal.state_index_intrinsics(icam, **optimization_inputs)
         dq_db[..., i_state : i_state + Nintrinsics] = dq_di
 
-        Var_q2 = mrcal.model_analysis._propagate_calibration_uncertainty(
+        Var_q2 = drcal.model_analysis._propagate_calibration_uncertainty(
             "covariance", dF_db=dq_db, optimization_inputs=optimization_inputs
         )
         testutils.confirm_equal(
@@ -865,10 +865,10 @@ if 1:
             msg="projection_uncertainty() should do the same thing s caling _propagate_calibration_uncertainty() directly",
         )
 
-    p_query_cam_sampled = mrcal.transform_point_rt(
+    p_query_cam_sampled = drcal.transform_point_rt(
         rt_cam_ref_sampled_mounted[:, 0, :], p_query_ref
     )
-    q_query_sampled = mrcal.project(
+    q_query_sampled = drcal.project(
         p_query_cam_sampled, model_solved.intrinsics()[0], intrinsics_sampled[:, 0, :]
     )
 
@@ -883,8 +883,8 @@ if 1:
         axis=0,
     )
 
-    worst_direction_stdev_observed = mrcal.worst_direction_stdev(Var_q_observed)
-    worst_direction_stdev_predicted = mrcal.worst_direction_stdev(Var_q)
+    worst_direction_stdev_observed = drcal.worst_direction_stdev(Var_q_observed)
+    worst_direction_stdev_predicted = drcal.worst_direction_stdev(Var_q)
 
     testutils.confirm_equal(
         nps.mag(q_query_sampled_mean - q_query),
@@ -919,11 +919,11 @@ if 1:
 
         def makeplot(**plotoptions):
             gp.plot(
-                *mrcal.utils._plot_args_points_and_covariance_ellipse(
+                *drcal.utils._plot_args_points_and_covariance_ellipse(
                     q_query_sampled, "Observed in simulation"
                 ),
-                mrcal.utils._plot_arg_covariance_ellipse(
-                    np.mean(q_query_sampled, axis=0), Var_q, "Predicted by mrcal"
+                drcal.utils._plot_arg_covariance_ellipse(
+                    np.mean(q_query_sampled, axis=0), Var_q, "Predicted by drcal"
                 ),
                 square=1,
                 xlabel="x (pixels)",

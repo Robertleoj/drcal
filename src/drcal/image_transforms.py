@@ -1,7 +1,7 @@
 """Routines for transformation of images
 
-All functions are exported into the mrcal module. So you can call these via
-mrcal.image_transforms.fff() or mrcal.fff(). The latter is preferred.
+All functions are exported into the drcal module. So you can call these via
+drcal.image_transforms.fff() or drcal.fff(). The latter is preferred.
 
 """
 
@@ -26,23 +26,23 @@ def scale_focal__best_pinhole_fit(model, fit):
 
 SYNOPSIS
 
-    model = mrcal.cameramodel('from.cameramodel')
+    model = drcal.cameramodel('from.cameramodel')
 
     lensmodel,intrinsics_data = model.intrinsics()
 
-    scale_focal = mrcal.scale_focal__best_pinhole_fit(model,
+    scale_focal = drcal.scale_focal__best_pinhole_fit(model,
                                                       'centers-horizontal')
 
     intrinsics_data[:2] *= scale_focal
 
     model_pinhole = \
-        mrcal.cameramodel(intrinsics = ('LENSMODEL_PINHOLE',
+        drcal.cameramodel(intrinsics = ('LENSMODEL_PINHOLE',
                                         intrinsics_data[:4]),
                           imagersize = model.imagersize(),
                           extrinsics_rt_fromref = model.extrinsics_rt_fromref() )
 
 Many algorithms work with images assumed to have been captured with a pinhole
-camera, even though real-world lenses never fit a pinhole model. mrcal provides
+camera, even though real-world lenses never fit a pinhole model. drcal provides
 several functions to remap images captured with non-pinhole lenses into images
 of the same scene as if they were observed by a pinhole lens. When doing this,
 we're free to choose all of the parameters of this pinhole lens model, and this
@@ -67,7 +67,7 @@ the worst one at the edge. The set of points I look at are specified in the
 
 ARGUMENTS
 
-- model: a mrcal.cameramodel object for the input lens model
+- model: a drcal.cameramodel object for the input lens model
 
 - fit: which pixel coordinates in the input image must project into the output
   pinhole-projected image. The 'fit' argument must be one of
@@ -171,19 +171,19 @@ def pinhole_model_for_reprojection(
 
     SYNOPSIS
 
-        model_orig = mrcal.cameramodel("xxx.cameramodel")
-        image_orig = mrcal.load_image("image.jpg")
+        model_orig = drcal.cameramodel("xxx.cameramodel")
+        image_orig = drcal.load_image("image.jpg")
 
-        model_pinhole = mrcal.pinhole_model_for_reprojection(model_orig,
+        model_pinhole = drcal.pinhole_model_for_reprojection(model_orig,
                                                              fit = "corners")
 
-        mapxy = mrcal.image_transformation_map(model_orig, model_pinhole,
+        mapxy = drcal.image_transformation_map(model_orig, model_pinhole,
                                                intrinsics_only = True)
 
-        image_undistorted = mrcal.transform_image(image_orig, mapxy)
+        image_undistorted = drcal.transform_image(image_orig, mapxy)
 
     Many algorithms work with images assumed to have been captured with a pinhole
-    camera, even though real-world lenses never fit a pinhole model. mrcal provides
+    camera, even though real-world lenses never fit a pinhole model. drcal provides
     several functions to remap images captured with non-pinhole lenses into images
     of the same scene as if they were observed by a pinhole lens. When doing this,
     we're free to choose all of the parameters of this pinhole lens model. THIS
@@ -192,7 +192,7 @@ def pinhole_model_for_reprojection(
 
     ARGUMENTS
 
-    - model_from: the mrcal.cameramodel object used to build the pinhole model. We
+    - model_from: the drcal.cameramodel object used to build the pinhole model. We
       use the intrinsics as the baseline, and we copy the extrinsics to the
       resulting pinhole model.
 
@@ -213,7 +213,7 @@ def pinhole_model_for_reprojection(
 
     RETURNED VALUE
 
-    A mrcal.cameramodel object with lensmodel = LENSMODEL_PINHOLE corresponding to
+    A drcal.cameramodel object with lensmodel = LENSMODEL_PINHOLE corresponding to
     the input model.
 
     """
@@ -305,16 +305,16 @@ def image_transformation_map(
 
 SYNOPSIS
 
-    model_orig = mrcal.cameramodel("xxx.cameramodel")
-    image_orig = mrcal.load_image("image.jpg")
+    model_orig = drcal.cameramodel("xxx.cameramodel")
+    image_orig = drcal.load_image("image.jpg")
 
-    model_pinhole = mrcal.pinhole_model_for_reprojection(model_orig,
+    model_pinhole = drcal.pinhole_model_for_reprojection(model_orig,
                                                          fit = "corners")
 
-    mapxy = mrcal.image_transformation_map(model_orig, model_pinhole,
+    mapxy = drcal.image_transformation_map(model_orig, model_pinhole,
                                            intrinsics_only = True)
 
-    image_undistorted = mrcal.transform_image(image_orig, mapxy)
+    image_undistorted = drcal.transform_image(image_orig, mapxy)
 
     # image_undistorted is now a pinhole-reprojected version of image_orig
 
@@ -324,7 +324,7 @@ Returns the transformation that describes a mapping
 - to pixel coordinates of an image of the same scene observed by model_from
 
 This transformation can then be applied to a whole image by calling
-mrcal.transform_image().
+drcal.transform_image().
 
 This function returns a transformation map in an (Nheight,Nwidth,2) array. The
 image made by model_to will have shape (Nheight,Nwidth). Each pixel (x,y) in
@@ -375,11 +375,11 @@ This function has several modes of operation:
 
 ARGUMENTS
 
-- model_from: the mrcal.cameramodel object describing the camera used to capture
+- model_from: the drcal.cameramodel object describing the camera used to capture
   the input image. We always use the intrinsics. if not intrinsics_only: we use
   the extrinsics also
 
-- model_to: the mrcal.cameramodel object describing the camera that would have
+- model_to: the drcal.cameramodel object describing the camera that would have
   captured the image we're producing. We always use the intrinsics. if not
   intrinsics_only: we use the extrinsics also
 
@@ -416,8 +416,8 @@ RETURNED VALUE
 
 A numpy array of shape (Nheight,Nwidth,2) where Nheight and Nwidth represent the
 imager dimensions of model_to. This array contains 32-bit floats, as required by
-cv2.remap() (the function providing the internals of mrcal.transform_image()).
-This array can be passed to mrcal.transform_image()
+cv2.remap() (the function providing the internals of drcal.transform_image()).
+This array can be passed to drcal.transform_image()
 
     """
 
@@ -553,23 +553,23 @@ def transform_image(
 
     SYNOPSIS
 
-        model_orig = mrcal.cameramodel("xxx.cameramodel")
-        image_orig = mrcal.load_image("image.jpg")
+        model_orig = drcal.cameramodel("xxx.cameramodel")
+        image_orig = drcal.load_image("image.jpg")
 
-        model_pinhole = mrcal.pinhole_model_for_reprojection(model_orig,
+        model_pinhole = drcal.pinhole_model_for_reprojection(model_orig,
                                                              fit = "corners")
 
-        mapxy = mrcal.image_transformation_map(model_orig, model_pinhole,
+        mapxy = drcal.image_transformation_map(model_orig, model_pinhole,
                                                intrinsics_only = True)
 
-        image_undistorted = mrcal.transform_image(image_orig, mapxy)
+        image_undistorted = drcal.transform_image(image_orig, mapxy)
 
         # image_undistorted is now a pinhole-reprojected version of image_orig
 
     Given an array of pixel mappings this function can be used to transform one
     image to another. If we want to convert a scene image observed by one camera
     model to the image of the same scene using a different model, we can produce a
-    suitable transformation map with mrcal.image_transformation_map(). An example of
+    suitable transformation map with drcal.image_transformation_map(). An example of
     this common usage appears above in the synopsis.
 
     At this time this function is a thin wrapper around cv2.remap()
@@ -590,12 +590,12 @@ def transform_image(
 
     - borderMode: optional constant defining out-of-bounds behavior. Defaults to
       cv2.BORDER_TRANSPARENT, and is passed directly to cv2.remap(). Please see the
-      docs for that function for details. This option may disappear if mrcal stops
+      docs for that function for details. This option may disappear if drcal stops
       relying on opencv
 
     - interpolation: optional constant defining pixel interpolation behavior.
       Defaults to cv2.INTER_LINEAR, and is passed directly to cv2.remap(). Please
-      see the docs for that function for details. This option may disappear if mrcal
+      see the docs for that function for details. This option may disappear if drcal
       stops relying on opencv
 
     RETURNED VALUE

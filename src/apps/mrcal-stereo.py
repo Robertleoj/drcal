@@ -12,7 +12,7 @@ r"""Stereo processing
 
 SYNOPSIS
 
-  $ mrcal-stereo                        \
+  $ drcal-stereo                        \
      --az-fov-deg               90      \
      --el-fov-deg               70      \
      --pixels-per-deg           -0.5    \
@@ -39,7 +39,7 @@ SYNOPSIS
 
 
   ### To "manually" stereo-rectify a pair of images
-  $ mrcal-stereo          \
+  $ drcal-stereo          \
       --az-fov-deg 80     \
       --el-fov-deg 50     \
       --outdir /tmp       \
@@ -48,29 +48,29 @@ SYNOPSIS
   Wrote '/tmp/rectified0.cameramodel'
   Wrote '/tmp/rectified1.cameramodel'
 
-  $ mrcal-reproject-image         \
+  $ drcal-reproject-image         \
       --outdir /tmp               \
       /tmp/left.cameramodel       \
       /tmp/rectified0.cameramodel \
       left.jpg
   Wrote /tmp/left-reprojected.jpg
 
-  $ mrcal-reproject-image          \
+  $ drcal-reproject-image          \
       --outdir /tmp                \
       /tmp/right.cameramodel       \
       /tmp/rectified1.cameramodel  \
       right.jpg
   Wrote /tmp/right-reprojected.jpg
 
-  $ mrcal-stereo                       \
+  $ drcal-stereo                       \
       --already-rectified              \
       --outdir /tmp                    \
       /tmp/rectified[01].cameramodel   \
       /tmp/left-reprojected.jpg        \
       /tmp/right-reprojected.jpg
 
-  # This is the same as using mrcal-stereo to do all the work:
-  $ mrcal-stereo          \
+  # This is the same as using drcal-stereo to do all the work:
+  $ drcal-stereo          \
       --az-fov-deg 80     \
       --el-fov-deg 50     \
       --outdir /tmp       \
@@ -83,7 +83,7 @@ Given a pair of calibrated cameras and pairs of images captured by these
 cameras, this tool runs the whole stereo processing sequence to produce
 disparity and range images and a point cloud array.
 
-mrcal functions are used to construct the rectified system. Currently only the
+drcal functions are used to construct the rectified system. Currently only the
 OpenCV SGBM routine is available to perform stereo matching, but more options
 will be made available with time.
 
@@ -317,7 +317,7 @@ def parse_args():
         type=float,
         help="""Used if --viz geometry. Scale for the camera
                         axes. By default a reasonable default is chosen (see
-                        mrcal.show_geometry() for the logic)""",
+                        drcal.show_geometry() for the logic)""",
     )
     parser.add_argument(
         "--title",
@@ -607,11 +607,11 @@ args = parse_args()
 import numpy as np
 import numpysane as nps
 import glob
-import mrcal
+import drcal
 
 
 if args.stereo_matcher == "ELAS":
-    if not hasattr(mrcal, "stereo_matching_libelas"):
+    if not hasattr(drcal, "stereo_matching_libelas"):
         print(
             "ERROR: the ELAS stereo matcher isn't available. libelas must be installed, and enabled at compile-time with USE_LIBELAS=1. Pass '--stereo-matcher SGBM' instead",
             file=sys.stderr,
@@ -658,7 +658,7 @@ if args.tag is not None:
 
 def openmodel(f):
     try:
-        return mrcal.cameramodel(f)
+        return drcal.cameramodel(f)
     except Exception as e:
         print(f"Couldn't load camera model '{f}': {e}", file=sys.stderr)
         sys.exit(1)
@@ -667,7 +667,7 @@ def openmodel(f):
 models = [openmodel(modelfilename) for modelfilename in args.models]
 
 if not args.already_rectified:
-    models_rectified = mrcal.rectified_system(
+    models_rectified = drcal.rectified_system(
         models,
         az_fov_deg=args.az_fov_deg,
         el_fov_deg=args.el_fov_deg,
@@ -679,12 +679,12 @@ if not args.already_rectified:
     )
 else:
     models_rectified = models
-    mrcal.stereo._validate_models_rectified(models_rectified)
+    drcal.stereo._validate_models_rectified(models_rectified)
 
-Rt_cam0_rect0 = mrcal.compose_Rt(
+Rt_cam0_rect0 = drcal.compose_Rt(
     models[0].extrinsics_Rt_fromref(), models_rectified[0].extrinsics_Rt_toref()
 )
-Rt_cam1_rect1 = mrcal.compose_Rt(
+Rt_cam1_rect1 = drcal.compose_Rt(
     models[1].extrinsics_Rt_fromref(), models_rectified[1].extrinsics_Rt_toref()
 )
 
@@ -702,7 +702,7 @@ if args.viz == "geometry":
     if args.title is not None:
         plot_options["title"] = args.title
 
-    data_tuples, plot_options = mrcal.show_geometry(
+    data_tuples, plot_options = drcal.show_geometry(
         list(models) + list(models_rectified),
         cameranames=("camera0", "camera1", "camera0-rectified", "camera1-rectified"),
         show_calobjects=False,
@@ -728,15 +728,15 @@ if args.viz == "geometry":
     )
 
     # shape (Nloop,3): unit vectors in cam-local coords
-    v = mrcal.unproject(
+    v = drcal.unproject(
         np.ascontiguousarray(qloop), *model.intrinsics(), normalize=True
     )
 
     # Scale the vectors to a nice-looking length. This is intended to work with
-    # the defaults to mrcal.show_geometry(). That function sets the right,down
+    # the defaults to drcal.show_geometry(). That function sets the right,down
     # axis lengths to baseline/3. Here I default to a bit less: baseline/4
     baseline = nps.mag(
-        mrcal.compose_Rt(
+        drcal.compose_Rt(
             models_rectified[1].extrinsics_Rt_fromref(),
             models_rectified[0].extrinsics_Rt_toref(),
         )[3, :]
@@ -744,7 +744,7 @@ if args.viz == "geometry":
     v *= baseline / 4
 
     # shape (Nloop,3): ref-coord system points
-    p = mrcal.transform_point_Rt(model.extrinsics_Rt_toref(), v)
+    p = drcal.transform_point_Rt(model.extrinsics_Rt_toref(), v)
 
     # shape (Nloop,2,3). Nloop-length different lines with 2 points in each one
     p = nps.xchg(nps.cat(p, p), -2, -3)
@@ -824,14 +824,14 @@ def write_output_all(
             args.tag,
             args.outdir,
             args.force or force_override,
-            lambda filename: mrcal.save_image(filename, images_rectified[0]),
+            lambda filename: drcal.save_image(filename, images_rectified[0]),
             image_filenames_base[0] + "-rectified.png",
         )
         write_output_one(
             args.tag,
             args.outdir,
             args.force or force_override,
-            lambda filename: mrcal.save_image(filename, images_rectified[1]),
+            lambda filename: drcal.save_image(filename, images_rectified[1]),
             image_filenames_base[1] + "-rectified.png",
         )
 
@@ -839,21 +839,21 @@ def write_output_all(
         args.tag,
         args.outdir,
         args.force or force_override,
-        lambda filename: mrcal.save_image(filename, disparity_colored),
+        lambda filename: drcal.save_image(filename, disparity_colored),
         image_filenames_base[0] + "-disparity.png",
     )
     write_output_one(
         args.tag,
         args.outdir,
         args.force or force_override,
-        lambda filename: mrcal.save_image(filename, disparity.astype(np.uint16)),
+        lambda filename: drcal.save_image(filename, disparity.astype(np.uint16)),
         image_filenames_base[0] + f"-disparity-uint16-scale{disparity_scale}.png",
     )
     write_output_one(
         args.tag,
         args.outdir,
         args.force or force_override,
-        lambda filename: mrcal.save_image(filename, ranges_colored),
+        lambda filename: drcal.save_image(filename, ranges_colored),
         image_filenames_base[0] + "-range.png",
     )
 
@@ -861,7 +861,7 @@ def write_output_all(
         return
 
     # generate and output the point cloud, in the cam0 coord system
-    p_rect0 = mrcal.stereo_unproject(
+    p_rect0 = drcal.stereo_unproject(
         disparity=None, models_rectified=models_rectified, ranges=ranges
     )
 
@@ -870,7 +870,7 @@ def write_output_all(
 
     # Point cloud in ref coordinates
     # shape (H,W,3)
-    p_ref = mrcal.transform_point_Rt(Rt_ref_rect0, p_rect0)
+    p_ref = drcal.transform_point_Rt(Rt_ref_rect0, p_rect0)
 
     # shape (N,3)
     p_ref = nps.clump(p_ref, n=2)
@@ -878,8 +878,8 @@ def write_output_all(
     # I set each point color to the nearest-pixel color in the original
     # image. I only report those points that are in-bounds (they SHOULD
     # be, but I make sure)
-    q_cam0 = mrcal.project(
-        mrcal.transform_point_Rt(Rt_cam0_ref, p_ref), *models[0].intrinsics()
+    q_cam0 = drcal.project(
+        drcal.transform_point_Rt(Rt_cam0_ref, p_ref), *models[0].intrinsics()
     )
 
     # Without this sometimes q_cam0 can get nan, and this throws ugly warnings
@@ -907,7 +907,7 @@ def write_output_all(
         # I have a grayscale image, but the user asked for it for the
         # purposes of stereo. I reload without asking for grayscale. If
         # the image was a color one, that would be useful here.
-        image0 = mrcal.load_image(image_filenames[0])
+        image0 = drcal.load_image(image_filenames[0])
 
     # shape (N,)  if grayscale or
     #       (N,3) if bgr color
@@ -917,7 +917,7 @@ def write_output_all(
         args.tag,
         args.outdir,
         args.force or force_override,
-        lambda filename: mrcal.write_point_cloud_as_ply(
+        lambda filename: drcal.write_point_cloud_as_ply(
             filename, p_ref, color=color, binary=True
         ),
         image_filenames_base[0] + "-points.ply",
@@ -944,7 +944,7 @@ if len(args.images) == 0:
 
 
 if not args.already_rectified:
-    rectification_maps = mrcal.rectification_maps(models, models_rectified)
+    rectification_maps = drcal.rectification_maps(models, models_rectified)
 
 
 image_filenames_all = [sorted(glob.glob(os.path.expanduser(g))) for g in args.images]
@@ -1061,7 +1061,7 @@ def process(i_image):
         f"Processing {os.path.split(image_filenames[0])[1]} and {os.path.split(image_filenames[1])[1]}"
     )
 
-    images = [mrcal.load_image(f, **kwargs_load_image) for f in image_filenames]
+    images = [drcal.load_image(f, **kwargs_load_image) for f in image_filenames]
 
     # This doesn't really matter: I don't use the input imagersize. But a
     # mismatch suggests the user probably messed up, and it would save them time
@@ -1098,11 +1098,11 @@ def process(i_image):
 
     if args.valid_intrinsics_region:
         for i in range(2):
-            mrcal.annotate_image__valid_intrinsics_region(images[i], models[i])
+            drcal.annotate_image__valid_intrinsics_region(images[i], models[i])
 
     if not args.already_rectified:
         images_rectified = [
-            mrcal.transform_image(images[i], rectification_maps[i]) for i in range(2)
+            drcal.transform_image(images[i], rectification_maps[i]) for i in range(2)
         ]
     else:
         images_rectified = images
@@ -1126,7 +1126,7 @@ def process(i_image):
             disparity = stereo_sgbm.compute(*images_rectified)
 
     elif args.stereo_matcher == "ELAS":
-        disparities = mrcal.stereo_matching_libelas(
+        disparities = drcal.stereo_matching_libelas(
             *images_rectified, disparity_min=disparity_min, disparity_max=disparity_max
         )
 
@@ -1137,20 +1137,20 @@ def process(i_image):
     else:
         raise ("This is a bug")
 
-    disparity_colored = mrcal.apply_color_map(
+    disparity_colored = drcal.apply_color_map(
         disparity,
         a_min=disparity_min * disparity_scale,
         a_max=disparity_max * disparity_scale,
     )
 
     # invalid or missing ranges are returned as range=0
-    ranges = mrcal.stereo_range(
+    ranges = drcal.stereo_range(
         disparity,
         models_rectified,
         disparity_scale=disparity_scale,
         disparity_min=disparity_min,
     )
-    ranges_colored = mrcal.apply_color_map(
+    ranges_colored = drcal.apply_color_map(
         ranges,
         a_min=args.range_image_limits[0],
         a_max=args.range_image_limits[1],
@@ -1388,14 +1388,14 @@ def gui_stereo(
                 widget_result.set_cross_at(q0_rectified)
 
                 delta = 1e-3
-                _range = mrcal.stereo_range(
+                _range = drcal.stereo_range(
                     d,
                     models_rectified,
                     disparity_scale=disparity_scale,
                     disparity_min=disparity_min,
                     qrect0=q0_rectified,
                 )
-                _range_d = mrcal.stereo_range(
+                _range_d = drcal.stereo_range(
                     d + delta * disparity_scale,
                     models_rectified,
                     disparity_scale=disparity_scale,
@@ -1404,7 +1404,7 @@ def gui_stereo(
                 )
                 drange_ddisparity = np.abs(_range_d - _range) / delta
 
-                # mrcal-triangulate tool: guts into a function. Call those
+                # drcal-triangulate tool: guts into a function. Call those
                 # guts here, and display them in the window
                 set_status(
                     f"Disparity: {d / disparity_scale:.2f}pixels\n"
@@ -1414,25 +1414,25 @@ def gui_stereo(
 
                 if 0:
                     p0_rectified = (
-                        mrcal.unproject(
+                        drcal.unproject(
                             q0_rectified,
                             *models_rectified[0].intrinsics(),
                             normalize=True,
                         )
                         * _range
                     )
-                    p0 = mrcal.transform_point_Rt(Rt_cam0_rect0, p0_rectified)
-                    p1 = mrcal.transform_point_Rt(
-                        mrcal.compose_Rt(
+                    p0 = drcal.transform_point_Rt(Rt_cam0_rect0, p0_rectified)
+                    p1 = drcal.transform_point_Rt(
+                        drcal.compose_Rt(
                             models[1].extrinsics_Rt_fromref(),
                             models[0].extrinsics_Rt_toref(),
                         ),
                         p0,
                     )
 
-                    q0 = mrcal.project(p0, *models[0].intrinsics())
+                    q0 = drcal.project(p0, *models[0].intrinsics())
 
-                    pt = mrcal.triangulate(
+                    pt = drcal.triangulate(
                         nps.cat(q0, q1), models, stabilize_coords=True
                     )
                     print(f"range = {_range:.2f}, {nps.mag(pt):.2f}")
@@ -1469,17 +1469,17 @@ def gui_stereo(
                     pass
 
                 if q_rect is not None:
-                    q_input0 = mrcal.project(
-                        mrcal.transform_point_Rt(
+                    q_input0 = drcal.project(
+                        drcal.transform_point_Rt(
                             Rt_cam0_rect0,
-                            mrcal.unproject(q_rect, *models_rectified[0].intrinsics()),
+                            drcal.unproject(q_rect, *models_rectified[0].intrinsics()),
                         ),
                         *models[0].intrinsics(),
                     )
-                    q_input1 = mrcal.project(
-                        mrcal.transform_point_Rt(
+                    q_input1 = drcal.project(
+                        drcal.transform_point_Rt(
                             Rt_cam1_rect1,
-                            mrcal.unproject(q_rect, *models_rectified[1].intrinsics()),
+                            drcal.unproject(q_rect, *models_rectified[1].intrinsics()),
                         ),
                         *models[1].intrinsics(),
                     )
@@ -1518,7 +1518,7 @@ def gui_stereo(
 
             return super().handle(event)
 
-    window = Fl_Window(800, 600, "mrcal-stereo")
+    window = Fl_Window(800, 600, "drcal-stereo")
     widget_image0 = Fl_Gl_Image_Widget_Derived(0, 0, 400, 300)
     widget_image1 = Fl_Gl_Image_Widget_Derived(0, 300, 400, 300)
     widget_result = Fl_Gl_Image_Widget_Derived(400, 0, 400, 300)
@@ -1561,7 +1561,7 @@ if Nimages == 1 or args.jobs <= 1:
 import multiprocessing
 import signal
 
-# I do the same thing in mrcal-reproject-image. Please consolidate
+# I do the same thing in drcal-reproject-image. Please consolidate
 #
 # weird business to handle weird signal handling in multiprocessing. I want
 # things like the user hitting C-c to work properly. So I ignore SIGINT for the

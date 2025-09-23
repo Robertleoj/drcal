@@ -23,7 +23,7 @@ def ref_calibration_object(
         import gnuplotlib as gp
         import numpysane as nps
 
-        obj = mrcal.ref_calibration_object( 10,6, 0.1 )
+        obj = drcal.ref_calibration_object( 10,6, 0.1 )
 
         print(obj.shape)
         ===> (6, 10, 3)
@@ -63,7 +63,7 @@ def ref_calibration_object(
 
     Returns the geometry of a calibration object in its own reference coordinate
     system in a (H,W,3) array. Only a grid-of-points calibration object is
-    supported, possibly with some deformation (i.e. what the internal mrcal solver
+    supported, possibly with some deformation (i.e. what the internal drcal solver
     supports). Each row of the output is an (x,y,z) point. The origin is at the
     corner of the grid, so ref_calibration_object(...)[0,0,:] is np.array((0,0,0)).
     The grid spans x and y, with z representing the depth: z=0 for a flat
@@ -103,8 +103,8 @@ def ref_calibration_object(
     all of (H,W,object_spacing) must be given. Thus it's possible to call this
     function like this:
 
-        model = mrcal.cameramodel('calibration.cameramodel')
-        obj = mrcal.ref_calibration_object(optimization_inputs =
+        model = drcal.cameramodel('calibration.cameramodel')
+        obj = drcal.ref_calibration_object(optimization_inputs =
                                            optimization_inputs)
 
     ARGUMENTS
@@ -125,7 +125,7 @@ def ref_calibration_object(
       axes. Extended array can be given for broadcasting
 
     - optimization_inputs: the input from a calibrated model. Usually the output of
-      mrcal.cameramodel.optimization_inputs() call. If given,
+      drcal.cameramodel.optimization_inputs() call. If given,
       (H,W,object_spacing,calobject_warp) are all read from these inputs, and must
       not be given separately.
 

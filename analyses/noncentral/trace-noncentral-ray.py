@@ -18,17 +18,17 @@ import numpy as np
 import numpysane as nps
 import gnuplotlib as gp
 import re
-import mrcal
+import drcal
 
 model_filename = sys.argv[1]
 qref = np.array((100, 100), dtype=float)
 
 
-model = mrcal.cameramodel(model_filename)
+model = drcal.cameramodel(model_filename)
 
 lensmodel, intrinsics_data = model.intrinsics()
 
-if not mrcal.lensmodel_metadata_and_config(lensmodel)["noncentral"]:
+if not drcal.lensmodel_metadata_and_config(lensmodel)["noncentral"]:
     print("The given model isn't noncentral. Nothing to do", file=sys.stderr)
     sys.exit(1)
 
@@ -40,7 +40,7 @@ if not re.match("^LENSMODEL_CAHVORE_", lensmodel):
 intrinsics_data_centralized = intrinsics_data.copy()
 intrinsics_data_centralized[-3:] = 0
 
-v_at_infinity = mrcal.unproject(
+v_at_infinity = drcal.unproject(
     qref, lensmodel, intrinsics_data_centralized, normalize=True
 )
 
@@ -64,8 +64,8 @@ if 0:
 
     d = 0.2
     p = v_at_infinity * d
-    q = mrcal.project(p, lensmodel, intrinsics_data)
-    vc = mrcal.unproject(q, lensmodel, intrinsics_data_centralized, normalize=True)
+    q = drcal.project(p, lensmodel, intrinsics_data)
+    vc = drcal.unproject(q, lensmodel, intrinsics_data_centralized, normalize=True)
 
     k01 = p[:2] / vc[:2]
     dz = p[2] - k01 * vc[2]
@@ -83,7 +83,7 @@ d = np.linspace(0.01, 10.0, Ndistances)
 p = nps.dummy(d, -1) * v_at_infinity
 
 # shape (Ndistances, 2)
-q = mrcal.project(p, *model.intrinsics())
+q = drcal.project(p, *model.intrinsics())
 
 # shape (Ndistances,)
 qshift = nps.mag(q - qref)

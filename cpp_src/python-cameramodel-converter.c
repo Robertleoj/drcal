@@ -1,11 +1,11 @@
-// mrcal_cameramodel_converter is a "converter" function that can be used with
+// drcal_cameramodel_converter is a "converter" function that can be used with
 // "O&" conversions in PyArg_ParseTupleAndKeywords() calls. Can interpret either
-// path strings or mrcal.cameramodel objects as mrcal_cameramodel_t structures
+// path strings or drcal.cameramodel objects as drcal_cameramodel_t structures
 //
-// This isn't a part of the mrcal Python wrapping, but helps other python
-// wrapping programs work with mrcal_cameramodel_t. I link this into
-// libmrcal.so, but libmrcal.so does NOT link with libpython. 99% of the usage
-// of libmrcal.so will not use this, so it should work without libpython. People
+// This isn't a part of the drcal Python wrapping, but helps other python
+// wrapping programs work with drcal_cameramodel_t. I link this into
+// libdrcal.so, but libdrcal.so does NOT link with libpython. 99% of the usage
+// of libdrcal.so will not use this, so it should work without libpython. People
 // using this function will be doing so as part of
 // PyArg_ParseTupleAndKeywords(), so they will be linking to libpython anyway.
 // Thus I weaken all the references to libpython; this is done in the Makefile,
@@ -16,7 +16,7 @@
 #include <Python.h>
 #include <numpy/arrayobject.h>
 
-#include "mrcal.h"
+#include "drcal.h"
 
 #include "python-wrapping-utilities.h"
 
@@ -29,9 +29,9 @@
         goto done;                   \
     } while (0)
 
-int mrcal_cameramodel_converter(
+int drcal_cameramodel_converter(
     PyObject* py_model,
-    mrcal_cameramodel_t** model
+    drcal_cameramodel_t** model
 ) {
     // Define the PyArray_API. See here:
     //   https://numpy.org/doc/stable/reference/c-api/array.html#c.import_array
@@ -57,10 +57,10 @@ int mrcal_cameramodel_converter(
                 "this string out of it"
             );
         }
-        *model = mrcal_read_cameramodel_file(filename);
+        *model = drcal_read_cameramodel_file(filename);
         if (*model == NULL) {
             BARF_AND_GOTO_DONE(
-                "Couldn't read mrcal_cameramodel_t from '%s'",
+                "Couldn't read drcal_cameramodel_t from '%s'",
                 filename
             );
         }
@@ -93,14 +93,14 @@ int mrcal_cameramodel_converter(
         }
         CHECK_LAYOUT3(intrinsics, NPY_DOUBLE, {-1});
         int Nparams = PyArray_SIZE((PyArrayObject*)intrinsics);
-        *model = malloc(sizeof(mrcal_cameramodel_t) + Nparams * sizeof(double));
+        *model = malloc(sizeof(drcal_cameramodel_t) + Nparams * sizeof(double));
         if (NULL == *model) {
             BARF_AND_GOTO_DONE(
                 "Couldn't allocate cameramodel with %d intrinsics",
                 Nparams
             );
         }
-        if (!mrcal_lensmodel_from_name(&((*model)->lensmodel), lensmodel)) {
+        if (!drcal_lensmodel_from_name(&((*model)->lensmodel), lensmodel)) {
             BARF_AND_GOTO_DONE(
                 "Couldn't parsse lensmodel from '%s'",
                 lensmodel

@@ -9,9 +9,9 @@ import os
 
 testdir = os.path.dirname(os.path.realpath(__file__))
 
-# I import the LOCAL mrcal since that's what I'm testing
+# I import the LOCAL drcal since that's what I'm testing
 sys.path[:0] = (f"{testdir}/..",)
-import mrcal
+import drcal
 import testutils
 
 from scipy.sparse import csr_matrix
@@ -35,7 +35,7 @@ testutils.confirm_equal(
 
 bt = np.array(((1.0, 5.0, 3.0), (2.0, -2.0, -8)))
 
-F = mrcal.CHOLMOD_factorization(Jsparse)
+F = drcal.CHOLMOD_factorization(Jsparse)
 xt = F.solve_xt_JtJ_bt(bt)
 
 JtJ = nps.matmult(nps.transpose(Jdense), Jdense)

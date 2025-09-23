@@ -9,9 +9,9 @@ import os
 
 testdir = os.path.dirname(os.path.realpath(__file__))
 
-# I import the LOCAL mrcal since that's what I'm testing
+# I import the LOCAL drcal since that's what I'm testing
 sys.path[:0] = (f"{testdir}/..",)
-import mrcal
+import drcal
 import testutils
 import io
 
@@ -82,7 +82,7 @@ paths_ref = (
 )
 
 try:
-    observations, indices_frame_camera, paths = mrcal.compute_chessboard_corners(
+    observations, indices_frame_camera, paths = drcal.compute_chessboard_corners(
         W=2,
         H=3,
         globs_per_camera=("frame*-cam1.jpg", "frame*-cam2.jpg"),
@@ -173,7 +173,7 @@ paths_ref = (
 )
 
 try:
-    observations, indices_frame_camera, paths = mrcal.compute_chessboard_corners(
+    observations, indices_frame_camera, paths = drcal.compute_chessboard_corners(
         W=2,
         H=3,
         globs_per_camera=("frame*-cam1.jpg", "frame*-cam2.jpg"),
@@ -263,7 +263,7 @@ paths_ref = (
 )
 
 try:
-    observations, indices_frame_camera, paths = mrcal.compute_chessboard_corners(
+    observations, indices_frame_camera, paths = drcal.compute_chessboard_corners(
         W=2,
         H=3,
         globs_per_camera=("frame*-cam1.jpg", "frame*-cam2.jpg"),
@@ -360,7 +360,7 @@ paths_ref = (
 )
 
 try:
-    observations, indices_frame_camera, paths = mrcal.compute_chessboard_corners(
+    observations, indices_frame_camera, paths = drcal.compute_chessboard_corners(
         W=2,
         H=3,
         globs_per_camera=("frame*-cam1.jpg", "frame*-cam2.jpg"),

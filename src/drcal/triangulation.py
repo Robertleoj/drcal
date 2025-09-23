@@ -2,8 +2,8 @@
 
 Various ways to convert two rays in 3D into a 3D point those rays represent
 
-All functions are exported into the mrcal module. So you can call these via
-mrcal.triangulation.fff() or mrcal.fff(). The latter is preferred.
+All functions are exported into the drcal module. So you can call these via
+drcal.triangulation.fff() or drcal.fff(). The latter is preferred.
 
 """
 
@@ -89,13 +89,13 @@ def triangulate_geometric(
 
 SYNOPSIS
 
-    models = ( mrcal.cameramodel('cam0.cameramodel'),
-               mrcal.cameramodel('cam1.cameramodel') )
+    models = ( drcal.cameramodel('cam0.cameramodel'),
+               drcal.cameramodel('cam1.cameramodel') )
 
-    images = (mrcal.load_image('image0.jpg', bits_per_pixel=8, channels=1),
-              mrcal.load_image('image1.jpg', bits_per_pixel=8, channels=1))
+    images = (drcal.load_image('image0.jpg', bits_per_pixel=8, channels=1),
+              drcal.load_image('image1.jpg', bits_per_pixel=8, channels=1))
 
-    Rt01 = mrcal.compose_Rt( models[0].extrinsics_Rt_fromref(),
+    Rt01 = drcal.compose_Rt( models[0].extrinsics_Rt_fromref(),
                              models[1].extrinsics_Rt_toref() )
 
     # pixel observation in camera0
@@ -103,7 +103,7 @@ SYNOPSIS
 
     # corresponding pixel observation in camera1
     q1, _ = \
-        mrcal.match_feature( *images,
+        drcal.match_feature( *images,
                              q0            = q0,
                              template_size = (17,17),
                              method        = cv2.TM_CCORR_NORMED,
@@ -111,17 +111,17 @@ SYNOPSIS
                              H10           = H10, # homography mapping q0 to q1
                            )
 
-    v0 = mrcal.unproject(q0, *models[0].intrinsics())
-    v1 = mrcal.unproject(q1, *models[1].intrinsics())
+    v0 = drcal.unproject(q0, *models[0].intrinsics())
+    v1 = drcal.unproject(q1, *models[1].intrinsics())
 
     # Estimated 3D position in camera-0 coordinates of the feature observed in
     # the two cameras
-    p = mrcal.triangulate_geometric( v0, v1,
+    p = drcal.triangulate_geometric( v0, v1,
                                      Rt01        = Rt01,
                                      v_are_local = True )
 
 This is the lower-level triangulation routine. For a richer function that can be
-used to propagate uncertainties, see mrcal.triangulate()
+used to propagate uncertainties, see drcal.triangulate()
 
 This function implements a very simple closest-approach-in-3D routine. It finds
 the point on each ray that's nearest to the other ray, and returns the mean of
@@ -228,13 +228,13 @@ def triangulate_leecivera_l1(
 
 SYNOPSIS
 
-    models = ( mrcal.cameramodel('cam0.cameramodel'),
-               mrcal.cameramodel('cam1.cameramodel') )
+    models = ( drcal.cameramodel('cam0.cameramodel'),
+               drcal.cameramodel('cam1.cameramodel') )
 
-    images = (mrcal.load_image('image0.jpg', bits_per_pixel=8, channels=1),
-              mrcal.load_image('image1.jpg', bits_per_pixel=8, channels=1))
+    images = (drcal.load_image('image0.jpg', bits_per_pixel=8, channels=1),
+              drcal.load_image('image1.jpg', bits_per_pixel=8, channels=1))
 
-    Rt01 = mrcal.compose_Rt( models[0].extrinsics_Rt_fromref(),
+    Rt01 = drcal.compose_Rt( models[0].extrinsics_Rt_fromref(),
                              models[1].extrinsics_Rt_toref() )
 
     # pixel observation in camera0
@@ -242,7 +242,7 @@ SYNOPSIS
 
     # corresponding pixel observation in camera1
     q1, _ = \
-        mrcal.match_feature( *images,
+        drcal.match_feature( *images,
                              q0            = q0,
                              template_size = (17,17),
                              method        = cv2.TM_CCORR_NORMED,
@@ -250,17 +250,17 @@ SYNOPSIS
                              H10           = H10, # homography mapping q0 to q1
                            )
 
-    v0 = mrcal.unproject(q0, *models[0].intrinsics())
-    v1 = mrcal.unproject(q1, *models[1].intrinsics())
+    v0 = drcal.unproject(q0, *models[0].intrinsics())
+    v1 = drcal.unproject(q1, *models[1].intrinsics())
 
     # Estimated 3D position in camera-0 coordinates of the feature observed in
     # the two cameras
-    p = mrcal.triangulate_leecivera_l1( v0, v1,
+    p = drcal.triangulate_leecivera_l1( v0, v1,
                                         Rt01        = Rt01,
                                         v_are_local = True )
 
 This is the lower-level triangulation routine. For a richer function that can be
-used to propagate uncertainties, see mrcal.triangulate()
+used to propagate uncertainties, see drcal.triangulate()
 
 This function implements a triangulation routine minimizing the L1 norm of
 angular errors. This is described in
@@ -372,13 +372,13 @@ def triangulate_leecivera_linf(
 
 SYNOPSIS
 
-    models = ( mrcal.cameramodel('cam0.cameramodel'),
-               mrcal.cameramodel('cam1.cameramodel') )
+    models = ( drcal.cameramodel('cam0.cameramodel'),
+               drcal.cameramodel('cam1.cameramodel') )
 
-    images = (mrcal.load_image('image0.jpg', bits_per_pixel=8, channels=1),
-              mrcal.load_image('image1.jpg', bits_per_pixel=8, channels=1))
+    images = (drcal.load_image('image0.jpg', bits_per_pixel=8, channels=1),
+              drcal.load_image('image1.jpg', bits_per_pixel=8, channels=1))
 
-    Rt01 = mrcal.compose_Rt( models[0].extrinsics_Rt_fromref(),
+    Rt01 = drcal.compose_Rt( models[0].extrinsics_Rt_fromref(),
                              models[1].extrinsics_Rt_toref() )
 
     # pixel observation in camera0
@@ -386,7 +386,7 @@ SYNOPSIS
 
     # corresponding pixel observation in camera1
     q1, _ = \
-        mrcal.match_feature( *images,
+        drcal.match_feature( *images,
                              q0            = q0,
                              template_size = (17,17),
                              method        = cv2.TM_CCORR_NORMED,
@@ -394,17 +394,17 @@ SYNOPSIS
                              H10           = H10, # homography mapping q0 to q1
                            )
 
-    v0 = mrcal.unproject(q0, *models[0].intrinsics())
-    v1 = mrcal.unproject(q1, *models[1].intrinsics())
+    v0 = drcal.unproject(q0, *models[0].intrinsics())
+    v1 = drcal.unproject(q1, *models[1].intrinsics())
 
     # Estimated 3D position in camera-0 coordinates of the feature observed in
     # the two cameras
-    p = mrcal.triangulate_leecivera_linf( v0, v1,
+    p = drcal.triangulate_leecivera_linf( v0, v1,
                                           Rt01        = Rt01,
                                           v_are_local = True )
 
 This is the lower-level triangulation routine. For a richer function that can be
-used to propagate uncertainties, see mrcal.triangulate()
+used to propagate uncertainties, see drcal.triangulate()
 
 This function implements a triangulation routine minimizing the infinity norm of
 angular errors (it minimizes the larger of the two angle errors). This is
@@ -517,13 +517,13 @@ def triangulate_leecivera_mid2(
 
 SYNOPSIS
 
-    models = ( mrcal.cameramodel('cam0.cameramodel'),
-               mrcal.cameramodel('cam1.cameramodel') )
+    models = ( drcal.cameramodel('cam0.cameramodel'),
+               drcal.cameramodel('cam1.cameramodel') )
 
-    images = (mrcal.load_image('image0.jpg', bits_per_pixel=8, channels=1),
-              mrcal.load_image('image1.jpg', bits_per_pixel=8, channels=1))
+    images = (drcal.load_image('image0.jpg', bits_per_pixel=8, channels=1),
+              drcal.load_image('image1.jpg', bits_per_pixel=8, channels=1))
 
-    Rt01 = mrcal.compose_Rt( models[0].extrinsics_Rt_fromref(),
+    Rt01 = drcal.compose_Rt( models[0].extrinsics_Rt_fromref(),
                              models[1].extrinsics_Rt_toref() )
 
     # pixel observation in camera0
@@ -531,7 +531,7 @@ SYNOPSIS
 
     # corresponding pixel observation in camera1
     q1, _ = \
-        mrcal.match_feature( *images,
+        drcal.match_feature( *images,
                              q0            = q0,
                              template_size = (17,17),
                              method        = cv2.TM_CCORR_NORMED,
@@ -539,17 +539,17 @@ SYNOPSIS
                              H10           = H10, # homography mapping q0 to q1
                            )
 
-    v0 = mrcal.unproject(q0, *models[0].intrinsics())
-    v1 = mrcal.unproject(q1, *models[1].intrinsics())
+    v0 = drcal.unproject(q0, *models[0].intrinsics())
+    v1 = drcal.unproject(q1, *models[1].intrinsics())
 
     # Estimated 3D position in camera-0 coordinates of the feature observed in
     # the two cameras
-    p = mrcal.triangulate_leecivera_mid2( v0, v1,
+    p = drcal.triangulate_leecivera_mid2( v0, v1,
                                           Rt01        = Rt01,
                                           v_are_local = True )
 
 This is the lower-level triangulation routine. For a richer function that can be
-used to propagate uncertainties, see mrcal.triangulate()
+used to propagate uncertainties, see drcal.triangulate()
 
 This function implements the "Mid2" triangulation routine in
 
@@ -657,13 +657,13 @@ def triangulate_leecivera_wmid2(
 
 SYNOPSIS
 
-    models = ( mrcal.cameramodel('cam0.cameramodel'),
-               mrcal.cameramodel('cam1.cameramodel') )
+    models = ( drcal.cameramodel('cam0.cameramodel'),
+               drcal.cameramodel('cam1.cameramodel') )
 
-    images = (mrcal.load_image('image0.jpg', bits_per_pixel=8, channels=1),
-              mrcal.load_image('image1.jpg', bits_per_pixel=8, channels=1))
+    images = (drcal.load_image('image0.jpg', bits_per_pixel=8, channels=1),
+              drcal.load_image('image1.jpg', bits_per_pixel=8, channels=1))
 
-    Rt01 = mrcal.compose_Rt( models[0].extrinsics_Rt_fromref(),
+    Rt01 = drcal.compose_Rt( models[0].extrinsics_Rt_fromref(),
                              models[1].extrinsics_Rt_toref() )
 
     # pixel observation in camera0
@@ -671,7 +671,7 @@ SYNOPSIS
 
     # corresponding pixel observation in camera1
     q1, _ = \
-        mrcal.match_feature( *images,
+        drcal.match_feature( *images,
                              q0            = q0,
                              template_size = (17,17),
                              method        = cv2.TM_CCORR_NORMED,
@@ -679,17 +679,17 @@ SYNOPSIS
                              H10           = H10, # homography mapping q0 to q1
                            )
 
-    v0 = mrcal.unproject(q0, *models[0].intrinsics())
-    v1 = mrcal.unproject(q1, *models[1].intrinsics())
+    v0 = drcal.unproject(q0, *models[0].intrinsics())
+    v1 = drcal.unproject(q1, *models[1].intrinsics())
 
     # Estimated 3D position in camera-0 coordinates of the feature observed in
     # the two cameras
-    p = mrcal.triangulate_leecivera_wmid2( v0, v1,
+    p = drcal.triangulate_leecivera_wmid2( v0, v1,
                                            Rt01        = Rt01,
                                            v_are_local = True )
 
 This is the lower-level triangulation routine. For a richer function that can be
-used to propagate uncertainties, see mrcal.triangulate()
+used to propagate uncertainties, see drcal.triangulate()
 
 This function implements the "wMid2" triangulation routine in
 
@@ -804,13 +804,13 @@ def triangulate_lindstrom(
 
 SYNOPSIS
 
-    models = ( mrcal.cameramodel('cam0.cameramodel'),
-               mrcal.cameramodel('cam1.cameramodel') )
+    models = ( drcal.cameramodel('cam0.cameramodel'),
+               drcal.cameramodel('cam1.cameramodel') )
 
-    images = (mrcal.load_image('image0.jpg', bits_per_pixel=8, channels=1),
-              mrcal.load_image('image1.jpg', bits_per_pixel=8, channels=1))
+    images = (drcal.load_image('image0.jpg', bits_per_pixel=8, channels=1),
+              drcal.load_image('image1.jpg', bits_per_pixel=8, channels=1))
 
-    Rt01 = mrcal.compose_Rt( models[0].extrinsics_Rt_fromref(),
+    Rt01 = drcal.compose_Rt( models[0].extrinsics_Rt_fromref(),
                              models[1].extrinsics_Rt_toref() )
 
     # pixel observation in camera0
@@ -818,7 +818,7 @@ SYNOPSIS
 
     # corresponding pixel observation in camera1
     q1, _ = \
-        mrcal.match_feature( *images,
+        drcal.match_feature( *images,
                              q0            = q0,
                              template_size = (17,17),
                              method        = cv2.TM_CCORR_NORMED,
@@ -827,15 +827,15 @@ SYNOPSIS
                            )
 
     # observation vectors in the LOCAL coordinate system of the two cameras
-    v0 = mrcal.unproject(q0, *models[0].intrinsics())
-    v1 = mrcal.unproject(q1, *models[1].intrinsics())
+    v0 = drcal.unproject(q0, *models[0].intrinsics())
+    v1 = drcal.unproject(q1, *models[1].intrinsics())
 
     # Estimated 3D position in camera-0 coordinates of the feature observed in
     # the two cameras
-    p = mrcal.triangulate_lindstrom( v0, v1, Rt01 = Rt01 )
+    p = drcal.triangulate_lindstrom( v0, v1, Rt01 = Rt01 )
 
 This is the lower-level triangulation routine. For a richer function that can be
-used to propagate uncertainties, see mrcal.triangulate()
+used to propagate uncertainties, see drcal.triangulate()
 
 This function implements a triangulation routine minimizing the 2-norm of
 reprojection errors, ASSUMING a pinhole projection. This is described in
@@ -952,13 +952,13 @@ def triangulated_error(
 
 SYNOPSIS
 
-    models = ( mrcal.cameramodel('cam0.cameramodel'),
-               mrcal.cameramodel('cam1.cameramodel') )
+    models = ( drcal.cameramodel('cam0.cameramodel'),
+               drcal.cameramodel('cam1.cameramodel') )
 
     images = (cv2.imread('image0.jpg', cv2.IMREAD_GRAYSCALE),
               cv2.imread('image1.jpg', cv2.IMREAD_GRAYSCALE))
 
-    Rt01 = mrcal.compose_Rt( models[0].extrinsics_Rt_fromref(),
+    Rt01 = drcal.compose_Rt( models[0].extrinsics_Rt_fromref(),
                              models[1].extrinsics_Rt_toref() )
 
     # pixel observation in camera0
@@ -966,7 +966,7 @@ SYNOPSIS
 
     # corresponding pixel observation in camera1
     q1, _ = \
-        mrcal.match_feature( *images,
+        drcal.match_feature( *images,
                              template_size = (17,17),
                              method        = cv2.TM_CCORR_NORMED,
                              search_radius = 20,
@@ -974,12 +974,12 @@ SYNOPSIS
                              H10           = H10, # homography mapping q0 to q1
                            )
 
-    v0 = mrcal.unproject(q0, *models[0].intrinsics())
-    v1 = mrcal.unproject(q1, *models[1].intrinsics())
+    v0 = drcal.unproject(q0, *models[0].intrinsics())
+    v1 = drcal.unproject(q1, *models[1].intrinsics())
 
     # Estimated 3D position in camera-0 coordinates of the feature observed in
     # the two cameras
-    err = mrcal.triangulated_error( v0, v1,
+    err = drcal.triangulated_error( v0, v1,
                                     Rt01        = Rt01,
                                     v_are_local = True )
 
@@ -1081,7 +1081,7 @@ if get_gradients: we return a tuple:
 def _compute_Var_q_triangulation(sigma, stdev_cross_camera_correlation):
     r"""Compute triangulation variance due to observation noise
 
-    This is an internal piece of mrcal.triangulate(). It's available separately for
+    This is an internal piece of drcal.triangulate(). It's available separately for
     the benefit of the test
 
     """
@@ -1117,7 +1117,7 @@ def _compute_Var_q_triangulation(sigma, stdev_cross_camera_correlation):
 def _triangulate_grad_simple(q, models, out, method=triangulate_leecivera_mid2):
     r"""Compute a single triangulation, reporting a single gradient
 
-    This is an internal piece of mrcal.triangulate(). It's available separately for
+    This is an internal piece of drcal.triangulate(). It's available separately for
     the benefit of the test
 
     """
@@ -1177,7 +1177,7 @@ def _triangulation_uncertainty_internal(
 ):
     r"""Compute most of the triangulation uncertainty logic
 
-    This is an internal piece of mrcal.triangulate(). It's available separately to
+    This is an internal piece of drcal.triangulate(). It's available separately to
     allow the test suite to validate some of the internals.
 
     if optimization_inputs is None and q_observation_stdev is None:
@@ -1625,7 +1625,7 @@ SYNOPSIS
     Var_p_calibration,  \
     Var_p_observation,  \
     Var_p_joint =       \
-        mrcal.triangulate( nps.cat(q0, q),
+        drcal.triangulate( nps.cat(q0, q),
                            (model0, model1),
                            q_calibration_stdev             = q_calibration_stdev,
                            q_observation_stdev             = q_observation_stdev,
@@ -1637,7 +1637,7 @@ SYNOPSIS
 DESCRIPTION
 
 This is the interface to the triangulation computations described in
-https://mrcal.secretsauce.net/triangulation.html
+https://drcal.secretsauce.net/triangulation.html
 
 Let's say two cameras observe a point p in space. The pixel observations of this
 point in the two cameras are q0 and q1 respectively. If the two cameras are
@@ -1706,7 +1706,7 @@ stabilize_coords=True to return Var(p) in the physical camera housing coords.
 The underlying method is exactly the same as how this is done with projection
 uncertainty:
 
-  https://mrcal.secretsauce.net/uncertainty.html#propagating-through-projection
+  https://drcal.secretsauce.net/uncertainty.html#propagating-through-projection
 
 In the usual case, the translation component of this extra transformation is
 negligible, but the rotation (even a small one) produces lateral uncertainty
@@ -1726,7 +1726,7 @@ ARGUMENTS
   describes a pixel observation from each of the two cameras
 
 - models: iterable of shape (..., 2). Complex shapes may be represented in a
-  numpy array of dtype=np.object. Each row is two mrcal.cameramodel objects
+  numpy array of dtype=np.object. Each row is two drcal.cameramodel objects
   describing the left and right cameras
 
 - q_calibration_stdev: optional value describing the calibration-time noise. If
@@ -1747,8 +1747,8 @@ ARGUMENTS
   0 = "independent", 1 = "100% correlated". The default is 0
 
 - method: optional value selecting the triangulation method. This is one of the
-  mrcal.triangulate_... functions. If omitted, we select
-  mrcal.triangulate_leecivera_mid2. At this time, mrcal.triangulate_lindstrom is
+  drcal.triangulate_... functions. If omitted, we select
+  drcal.triangulate_leecivera_mid2. At this time, drcal.triangulate_lindstrom is
   usable only if we do not propagate any uncertainties
 
 - stabilize_coords: optional boolean, defaulting to True. We always return the

@@ -15,9 +15,9 @@ import os
 
 testdir = os.path.dirname(os.path.realpath(__file__))
 
-# I import the LOCAL mrcal since that's what I'm testing
+# I import the LOCAL drcal since that's what I'm testing
 sys.path[:0] = (f"{testdir}/..",)
-import mrcal
+import drcal
 import testutils
 
 import pickle
@@ -26,7 +26,7 @@ import pickle
 # Load the data. These are written by the disabled-by-default code at the end of
 # estimate_monocular_calobject_poses_Rt_tocam()
 test_cases = (
-    # ./mrcal-calibrate-cameras                                                       \
+    # ./drcal-calibrate-cameras                                                       \
     #   --corners-cache newfish-from-mike-email-extreme-fisheys/VuzeXR/calibration1/fishcorners.vnl \
     #   --lensmodel LENSMODEL_OPENCV8 \
     #   --focal 500 \
@@ -35,7 +35,7 @@ test_cases = (
     #   --observed-pixel-uncertainty 2                                                \
     #   'HET_0315_L*.jpg' 'HET_0315_R*.jpg'
     "solvepnp-ultrawide-focal-too-long",
-    # ./mrcal-calibrate-cameras                               \
+    # ./drcal-calibrate-cameras                               \
     # --corners-cache doc/out/external/2022-11-05--dtla-overpass--samyang--alpha7/2-f22-infinity/corners.vnl \
     # --lensmodel LENSMODEL_OPENCV8                           \
     # --focal 1900                                            \
@@ -51,7 +51,7 @@ for t in test_cases:
     with open(filename, "rb") as f:
         args = pickle.load(f)
         testutils.confirm_does_not_raise(
-            lambda: mrcal.estimate_monocular_calobject_poses_Rt_tocam(*args), msg=t
+            lambda: drcal.estimate_monocular_calobject_poses_Rt_tocam(*args), msg=t
         )
 
 testutils.finish()

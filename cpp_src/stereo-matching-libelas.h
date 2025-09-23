@@ -8,7 +8,7 @@
 
 #pragma once
 
-void mrcal_stereo_matching_libelas(  // output
+void drcal_stereo_matching_libelas(  // output
     float* disparity0,
     float* disparity1,
 

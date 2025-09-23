@@ -13,7 +13,7 @@
 // The individual elements can be accessed via .x and .y OR the vector can be
 // accessed as an .xy[] array:
 //
-//   mrcal_point2_t p = f();
+//   drcal_point2_t p = f();
 //
 // Now p.x and p.xy[0] refer to the same value.
 typedef union {
@@ -22,14 +22,14 @@ typedef union {
     };
 
     double xy[2];
-} mrcal_point2_t;
+} drcal_point2_t;
 
 // A 3D point or vector
 //
 // The individual elements can be accessed via .x and .y and .z OR the vector
 // can be accessed as an .xyz[] array:
 //
-//   mrcal_point3_t p = f();
+//   drcal_point3_t p = f();
 //
 // Now p.x and p.xy[0] refer to the same value.
 typedef union {
@@ -37,98 +37,98 @@ typedef union {
         double x, y, z;
     };
     double xyz[3];
-} mrcal_point3_t;
+} drcal_point3_t;
 
 // Unconstrained 6DOF pose containing a Rodrigues rotation and a translation
 typedef struct {
-    mrcal_point3_t r, t;
-} mrcal_pose_t;
+    drcal_point3_t r, t;
+} drcal_pose_t;
 
 //////////// Easy convenience stuff
 ////// point2
-__attribute__((unused)) static double mrcal_point2_inner(
-    const mrcal_point2_t a,
-    const mrcal_point2_t b
+__attribute__((unused)) static double drcal_point2_inner(
+    const drcal_point2_t a,
+    const drcal_point2_t b
 ) {
     return a.x * b.x + a.y * b.y;
 }
-__attribute__((unused)) static double mrcal_point2_norm2(
-    const mrcal_point2_t a
+__attribute__((unused)) static double drcal_point2_norm2(
+    const drcal_point2_t a
 ) {
-    return mrcal_point2_inner(a, a);
+    return drcal_point2_inner(a, a);
 }
-#define mrcal_point2_mag(a) \
+#define drcal_point2_mag(a) \
     sqrt(norm2(a))  // macro to not require #include <math.h>
 
-__attribute__((unused)) static mrcal_point2_t mrcal_point2_add(
-    const mrcal_point2_t a,
-    const mrcal_point2_t b
+__attribute__((unused)) static drcal_point2_t drcal_point2_add(
+    const drcal_point2_t a,
+    const drcal_point2_t b
 ) {
-    return (mrcal_point2_t){.x = a.x + b.x, .y = a.y + b.y};
+    return (drcal_point2_t){.x = a.x + b.x, .y = a.y + b.y};
 }
-__attribute__((unused)) static mrcal_point2_t mrcal_point2_sub(
-    const mrcal_point2_t a,
-    const mrcal_point2_t b
+__attribute__((unused)) static drcal_point2_t drcal_point2_sub(
+    const drcal_point2_t a,
+    const drcal_point2_t b
 ) {
-    return (mrcal_point2_t){.x = a.x - b.x, .y = a.y - b.y};
+    return (drcal_point2_t){.x = a.x - b.x, .y = a.y - b.y};
 }
-__attribute__((unused)) static mrcal_point2_t mrcal_point2_scale(
-    const mrcal_point2_t a,
+__attribute__((unused)) static drcal_point2_t drcal_point2_scale(
+    const drcal_point2_t a,
     const double s
 ) {
-    return (mrcal_point2_t){.x = a.x * s, .y = a.y * s};
+    return (drcal_point2_t){.x = a.x * s, .y = a.y * s};
 }
 ////// point3
-__attribute__((unused)) static double mrcal_point3_inner(
-    const mrcal_point3_t a,
-    const mrcal_point3_t b
+__attribute__((unused)) static double drcal_point3_inner(
+    const drcal_point3_t a,
+    const drcal_point3_t b
 ) {
     return a.x * b.x + a.y * b.y + a.z * b.z;
 }
-__attribute__((unused)) static double mrcal_point3_norm2(
-    const mrcal_point3_t a
+__attribute__((unused)) static double drcal_point3_norm2(
+    const drcal_point3_t a
 ) {
-    return mrcal_point3_inner(a, a);
+    return drcal_point3_inner(a, a);
 }
-#define mrcal_point3_mag(a) \
-    sqrt(mrcal_point3_norm2(a))  // macro to not require #include <math.h>
+#define drcal_point3_mag(a) \
+    sqrt(drcal_point3_norm2(a))  // macro to not require #include <math.h>
 
-__attribute__((unused)) static mrcal_point3_t mrcal_point3_add(
-    const mrcal_point3_t a,
-    const mrcal_point3_t b
+__attribute__((unused)) static drcal_point3_t drcal_point3_add(
+    const drcal_point3_t a,
+    const drcal_point3_t b
 ) {
-    return (mrcal_point3_t){.x = a.x + b.x, .y = a.y + b.y, .z = a.z + b.z};
+    return (drcal_point3_t){.x = a.x + b.x, .y = a.y + b.y, .z = a.z + b.z};
 }
-__attribute__((unused)) static mrcal_point3_t mrcal_point3_sub(
-    const mrcal_point3_t a,
-    const mrcal_point3_t b
+__attribute__((unused)) static drcal_point3_t drcal_point3_sub(
+    const drcal_point3_t a,
+    const drcal_point3_t b
 ) {
-    return (mrcal_point3_t){.x = a.x - b.x, .y = a.y - b.y, .z = a.z - b.z};
+    return (drcal_point3_t){.x = a.x - b.x, .y = a.y - b.y, .z = a.z - b.z};
 }
-__attribute__((unused)) static mrcal_point3_t mrcal_point3_scale(
-    const mrcal_point3_t a,
+__attribute__((unused)) static drcal_point3_t drcal_point3_scale(
+    const drcal_point3_t a,
     const double s
 ) {
-    return (mrcal_point3_t){.x = a.x * s, .y = a.y * s, .z = a.z * s};
+    return (drcal_point3_t){.x = a.x * s, .y = a.y * s, .z = a.z * s};
 }
-__attribute__((unused)) static mrcal_point3_t mrcal_point3_cross(
-    const mrcal_point3_t a,
-    const mrcal_point3_t b
+__attribute__((unused)) static drcal_point3_t drcal_point3_cross(
+    const drcal_point3_t a,
+    const drcal_point3_t b
 ) {
-    return (mrcal_point3_t){.x = a.y * b.z - a.z * b.y,
+    return (drcal_point3_t){.x = a.y * b.z - a.z * b.y,
                             .y = a.z * b.x - a.x * b.z,
                             .z = a.x * b.y - a.y * b.x};
 }
 
-#define mrcal_point2_print(p)                    \
+#define drcal_point2_print(p)                    \
     do {                                         \
         printf(#p " = (%f %f)\n", (p).x, (p).y); \
     } while (0)
-#define mrcal_point3_print(p)                              \
+#define drcal_point3_print(p)                              \
     do {                                                   \
         printf(#p " = (%f %f %f)\n", (p).x, (p).y, (p).z); \
     } while (0)
-#define mrcal_Rt_print(Rt)                                                    \
+#define drcal_Rt_print(Rt)                                                    \
     do {                                                                      \
         printf(                                                               \
             #Rt                                                               \
@@ -148,7 +148,7 @@ __attribute__((unused)) static mrcal_point3_t mrcal_point3_cross(
             (Rt)[11]                                                          \
         );                                                                    \
     } while (0)
-#define mrcal_rt_print(rt)                   \
+#define drcal_rt_print(rt)                   \
     do {                                     \
         printf(                              \
             #rt " = (%f %f %f;  %f %f %f\n", \

@@ -1,9 +1,9 @@
 r"""Read/write camera models using the legacy .cahvor file format
 
-The .cahvor functionality is available via the mrcal.cameramodel class. There's
-no reason for end users to use the mrcal.cahvor module directly.
+The .cahvor functionality is available via the drcal.cameramodel class. There's
+no reason for end users to use the drcal.cahvor module directly.
 
-mrcal supports the .cahvor file format to interoperate with tools that work with
+drcal supports the .cahvor file format to interoperate with tools that work with
 that format only.
 
 Models stored as .cahvor support a subset of .cameramodel functionality: the
@@ -69,7 +69,7 @@ def _construct_model(
     distortions_fallback=None,
     **rest,
 ):
-    r"""Construct a mrcal.cameramodel object from cahvor chunks
+    r"""Construct a drcal.cameramodel object from cahvor chunks
 
     I'm going to be calling this from the outside, but everything about cahvor is a
     massive hack, so I'm not documenting this

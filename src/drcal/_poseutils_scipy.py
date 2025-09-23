@@ -13,7 +13,7 @@ def quat_from_R(R, *, out=None):
         ===>
         (3,3)
 
-        quat = mrcal.quat_from_R(R)
+        quat = drcal.quat_from_R(R)
 
         print(quat.shape)
         ===>
@@ -26,7 +26,7 @@ def quat_from_R(R, *, out=None):
 
         rotation_axis = quat[1:] / s
 
-    This is mostly for compatibility with some old stuff. mrcal doesn't use
+    This is mostly for compatibility with some old stuff. drcal doesn't use
     quaternions anywhere. Test this thoroughly before using.
 
     This function supports broadcasting fully.

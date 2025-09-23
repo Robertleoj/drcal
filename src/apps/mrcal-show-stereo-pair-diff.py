@@ -12,14 +12,14 @@ r"""Visualize the difference in projection between N models
 
 SYNOPSIS
 
-  $ mrcal-show-stereo-pair-diff before.cameramodel after.cameramodel
+  $ drcal-show-stereo-pair-diff before.cameramodel after.cameramodel
   ... a plot pops up showing how these two models differ in their projections
 
 The operation of this tool is documented at
 
-  https://mrcal.secretsauce.net/differencing.html
+  https://drcal.secretsauce.net/differencing.html
 
-This tool visualizes the results of mrcal.stereo_pair_diff()
+This tool visualizes the results of drcal.stereo_pair_diff()
 
 It is often useful to compare the projection behavior of two camera models. For
 instance, one may want to validate a calibration by comparing the results of two
@@ -43,7 +43,7 @@ The top-level operation of this tool:
 - Look at the resulting pixel difference in the reprojection
 
 The details of how the comparison is computed, and the meaning of the arguments
-controlling this, are in the docstring of mrcal.stereo_pair_diff().
+controlling this, are in the docstring of drcal.stereo_pair_diff().
 
 """
 
@@ -191,7 +191,7 @@ if args.vectorscale != 1.0 and not args.vectorfield:
 #         sys.exit(1)
 
 
-import mrcal
+import drcal
 
 
 plotkwargs_extra = {}
@@ -208,7 +208,7 @@ if args.extratitle is not None:
 
 def openmodel(f):
     try:
-        return mrcal.cameramodel(f)
+        return drcal.cameramodel(f)
     except Exception as e:
         print(f"Couldn't load camera model '{f}': {e}", file=sys.stderr)
         sys.exit(1)
@@ -222,11 +222,11 @@ model_pairs = [(models[i0], models[i0 + 1]) for i0 in range(0, len(models), 2)]
 # if args.observations:
 #     optimization_inputs = [ model_pair[0].optimization_inputs() for model_pair in model_pairs ]
 #     if any( oi is None for oi in optimization_inputs ):
-#         print("mrcal-show-stereo-pair-diff --observations requires optimization_inputs to be available for all models, but this is missing for some models",
+#         print("drcal-show-stereo-pair-diff --observations requires optimization_inputs to be available for all models, but this is missing for some models",
 #               file=sys.stderr)
 #         sys.exit(1)
 
-plot = mrcal.show_stereo_pair_diff(
+plot = drcal.show_stereo_pair_diff(
     model_pairs,
     gridn_width=args.gridn[0],
     gridn_height=args.gridn[1],

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-r"""Checks mrcal._extrinsics_moved_since_calibration()"""
+r"""Checks drcal._extrinsics_moved_since_calibration()"""
 
 import sys
 import os
@@ -8,9 +8,9 @@ import os
 
 testdir = os.path.dirname(os.path.realpath(__file__))
 
-# I import the LOCAL mrcal since that's what I'm testing
+# I import the LOCAL drcal since that's what I'm testing
 sys.path[:0] = (f"{testdir}/..",)
-import mrcal
+import drcal
 import testutils
 import numpy as np
 
@@ -52,7 +52,7 @@ optimization_inputs_baseline, models_true, frames_true = calibration_baseline(
 )
 
 models_baseline = [
-    mrcal.cameramodel(
+    drcal.cameramodel(
         optimization_inputs=optimization_inputs_baseline, icam_intrinsics=i
     )
     for i in range(Ncameras)

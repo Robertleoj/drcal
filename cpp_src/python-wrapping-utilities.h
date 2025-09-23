@@ -38,9 +38,9 @@
 
 #define PERCENT_S_COMMA(s, n) "'%s',"
 #define COMMA_LENSMODEL_NAME(s, n) \
-    , mrcal_lensmodel_name_unconfigured(&(mrcal_lensmodel_t){.type = MRCAL_##s})
-#define VALID_LENSMODELS_FORMAT "(" MRCAL_LENSMODEL_LIST(PERCENT_S_COMMA) ")"
-#define VALID_LENSMODELS_ARGLIST MRCAL_LENSMODEL_LIST(COMMA_LENSMODEL_NAME)
+    , drcal_lensmodel_name_unconfigured(&(drcal_lensmodel_t){.type = drcal_##s})
+#define VALID_LENSMODELS_FORMAT "(" drcal_LENSMODEL_LIST(PERCENT_S_COMMA) ")"
+#define VALID_LENSMODELS_ARGLIST drcal_LENSMODEL_LIST(COMMA_LENSMODEL_NAME)
 
 #define CHECK_CONTIGUOUS(x)                                                \
     do {                                                                   \

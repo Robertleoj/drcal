@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-r"""Test of the mrcal-convert-lensmodel tool"""
+r"""Test of the drcal-convert-lensmodel tool"""
 
 import sys
 import numpy as np
@@ -11,9 +11,9 @@ import io
 
 testdir = os.path.dirname(os.path.realpath(__file__))
 
-# I import the LOCAL mrcal since that's what I'm testing
+# I import the LOCAL drcal since that's what I'm testing
 sys.path[:0] = (f"{testdir}/..",)
-import mrcal
+import drcal
 import testutils
 
 
@@ -48,7 +48,7 @@ def check(
 ):
     process = subprocess.Popen(
         (
-            f"{testdir}/../mrcal-convert-lensmodel",
+            f"{testdir}/../drcal-convert-lensmodel",
             *args,
             "--outdir",
             workdir,
@@ -84,9 +84,9 @@ def check(
             )
 
         with io.StringIO(stdout) as f:
-            model_converted = mrcal.cameramodel(f)
+            model_converted = drcal.cameramodel(f)
 
-        difflen, diff, q0, implied_Rt10 = mrcal.projection_diff(
+        difflen, diff, q0, implied_Rt10 = drcal.projection_diff(
             (model_converted, model_from), use_uncertainties=False, distance=distance
         )
         icenter = np.array(difflen.shape) // 2
@@ -108,7 +108,7 @@ def check(
 
 
 filename_from = f"{testdir}/data/cam0.splined.cameramodel"
-model_from = mrcal.cameramodel(filename_from)
+model_from = drcal.cameramodel(filename_from)
 
 check(
     filename_from,
@@ -180,13 +180,13 @@ check(
 )
 
 # Need a model with optimization_inputs to do non-sampled fits
-if not os.path.isdir(f"{testdir}/../../mrcal-doc-external"):
+if not os.path.isdir(f"{testdir}/../../drcal-doc-external"):
     testutils.print_blue(
-        "../mrcal-doc-external isn't on this disk. Skipping non-sampled tests"
+        "../drcal-doc-external isn't on this disk. Skipping non-sampled tests"
     )
 else:
-    filename_from = f"{testdir}/../../mrcal-doc-external/2022-11-05--dtla-overpass--samyang--alpha7/2-f22-infinity/splined.cameramodel"
-    model_from = mrcal.cameramodel(filename_from)
+    filename_from = f"{testdir}/../../drcal-doc-external/2022-11-05--dtla-overpass--samyang--alpha7/2-f22-infinity/splined.cameramodel"
+    model_from = drcal.cameramodel(filename_from)
 
     check(
         filename_from,

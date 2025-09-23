@@ -268,9 +268,9 @@ for k in pointscale.keys():
 
 testdir = os.path.dirname(os.path.realpath(__file__))
 
-# I import the LOCAL mrcal since that's what I'm testing
+# I import the LOCAL drcal since that's what I'm testing
 sys.path[:0] = (f"{testdir}/..",)
-import mrcal
+import drcal
 import testutils
 import copy
 import numpy as np
@@ -340,14 +340,14 @@ def triangulate_nograd(
 ):
     q = nps.atleast_dims(q, -3)
 
-    rt01 = mrcal.compose_rt(rt_cam0_ref, mrcal.invert_rt(rt_cam1_ref))
+    rt01 = drcal.compose_rt(rt_cam0_ref, drcal.invert_rt(rt_cam1_ref))
 
     # all the v have shape (...,3)
-    vlocal0 = mrcal.unproject(q[..., 0, :], lensmodel, intrinsics_data0)
-    vlocal1 = mrcal.unproject(q[..., 1, :], lensmodel, intrinsics_data1)
+    vlocal0 = drcal.unproject(q[..., 0, :], lensmodel, intrinsics_data0)
+    vlocal1 = drcal.unproject(q[..., 1, :], lensmodel, intrinsics_data1)
 
     v0 = vlocal0
-    v1 = mrcal.rotate_point_r(rt01[:3], vlocal1)
+    v1 = drcal.rotate_point_r(rt01[:3], vlocal1)
 
     # The triangulated point in the perturbed camera-0 coordinate system.
     # Calibration-time perturbations move this coordinate system, so to get
@@ -356,7 +356,7 @@ def triangulate_nograd(
     # stabilization path below does that.
     #
     # shape (..., 3)
-    p_triangulated0 = mrcal.triangulate_leecivera_mid2(v0, v1, rt01[3:])
+    p_triangulated0 = drcal.triangulate_leecivera_mid2(v0, v1, rt01[3:])
 
     if not stabilize_coords:
         return p_triangulated0
@@ -372,23 +372,23 @@ def triangulate_nograd(
 
     p_cam0_perturbed = p_triangulated0
 
-    p_ref_perturbed = mrcal.transform_point_rt(
+    p_ref_perturbed = drcal.transform_point_rt(
         rt_cam0_ref, p_cam0_perturbed, inverted=True
     )
 
     # shape (..., Nframes, 3)
-    p_frames = mrcal.transform_point_rt(
+    p_frames = drcal.transform_point_rt(
         rt_ref_frame, nps.dummy(p_ref_perturbed, -2), inverted=True
     )
 
     # shape (..., Nframes, 3)
-    p_ref_baseline_all = mrcal.transform_point_rt(rt_ref_frame_baseline, p_frames)
+    p_ref_baseline_all = drcal.transform_point_rt(rt_ref_frame_baseline, p_frames)
 
     # shape (..., 3)
     p_ref_baseline = np.mean(p_ref_baseline_all, axis=-2)
 
     # shape (..., 3)
-    return mrcal.transform_point_rt(rt_cam0_ref_baseline, p_ref_baseline)
+    return drcal.transform_point_rt(rt_cam0_ref_baseline, p_ref_baseline)
 
 
 ################# Sampling
@@ -413,7 +413,7 @@ if args.cache is None or args.cache == "write":
 
     lensmodel = optimization_inputs_baseline["lensmodel"]
     imagersizes = optimization_inputs_baseline["imagersizes"]
-    Nintrinsics = mrcal.lensmodel_num_params(lensmodel)
+    Nintrinsics = drcal.lensmodel_num_params(lensmodel)
 
 else:
     with open(cache_file, "rb") as f:
@@ -432,7 +432,7 @@ else:
 
 
 models_baseline = [
-    mrcal.cameramodel(
+    drcal.cameramodel(
         optimization_inputs=optimization_inputs_baseline, icam_intrinsics=i
     )
     for i in range(args.Ncameras)
@@ -442,16 +442,16 @@ baseline_rt_ref_frame = optimization_inputs_baseline["frames_rt_toref"]
 
 icam0, icam1 = args.cameras
 
-Rt01_true = mrcal.compose_Rt(
-    mrcal.Rt_from_rt(extrinsics_rt_fromref_true[icam0]),
-    mrcal.invert_Rt(mrcal.Rt_from_rt(extrinsics_rt_fromref_true[icam1])),
+Rt01_true = drcal.compose_Rt(
+    drcal.Rt_from_rt(extrinsics_rt_fromref_true[icam0]),
+    drcal.invert_Rt(drcal.Rt_from_rt(extrinsics_rt_fromref_true[icam1])),
 )
-Rt10_true = mrcal.invert_Rt(Rt01_true)
+Rt10_true = drcal.invert_Rt(Rt01_true)
 
 # shape (Npoints,Ncameras,3)
 p_triangulated_true_local = nps.xchg(
     nps.cat(
-        p_triangulated_true0, mrcal.transform_point_Rt(Rt10_true, p_triangulated_true0)
+        p_triangulated_true0, drcal.transform_point_Rt(Rt10_true, p_triangulated_true0)
     ),
     0,
     1,
@@ -462,7 +462,7 @@ p_triangulated_true_local = nps.xchg(
 q_true = nps.xchg(
     np.array(
         [
-            mrcal.project(
+            drcal.project(
                 p_triangulated_true_local[:, i, :],
                 lensmodel,
                 models_true[args.cameras[i]].intrinsics()[1],
@@ -534,7 +534,7 @@ slices = (
     icam_extrinsics1,
     istate_e0,
     istate_e1,
-) = mrcal.triangulation._triangulation_uncertainty_internal(
+) = drcal.triangulation._triangulation_uncertainty_internal(
     slices, optimization_inputs_baseline, 0, 0, stabilize_coords=args.stabilize_coords
 )
 
@@ -673,8 +673,8 @@ if istate_e1 is not None:
 
 
 if optimization_inputs_baseline.get("do_optimize_frames"):
-    istate_f0 = mrcal.state_index_frames(0, **optimization_inputs_baseline)
-    Nstate_frames = mrcal.num_states_frames(**optimization_inputs_baseline)
+    istate_f0 = drcal.state_index_frames(0, **optimization_inputs_baseline)
+    Nstate_frames = drcal.num_states_frames(**optimization_inputs_baseline)
     testutils.confirm_equal(
         dp_triangulated_dbstate[..., istate_f0 : istate_f0 + Nstate_frames],
         nps.clump(dp_triangulated_drtrf_empirical, n=-2),
@@ -699,7 +699,7 @@ for ipt in range(Npoints):
     dp_triangulated_dq_empirical_cross_only[ipt, :, ipt, :, :] = 0
 
     p = np.zeros((3,), dtype=float)
-    dp_triangulated_dq_flattened[ipt] = mrcal.triangulation._triangulate_grad_simple(
+    dp_triangulated_dq_flattened[ipt] = drcal.triangulation._triangulate_grad_simple(
         *slices[ipt], p
     )
 
@@ -720,25 +720,25 @@ testutils.confirm_equal(
 )
 
 
-p_alone = mrcal.triangulate(
+p_alone = drcal.triangulate(
     q_true,
     (models_baseline[icam0], models_baseline[icam1]),
     stabilize_coords=args.stabilize_coords,
 )
-p_calnoise, Var_p_calibration_alone = mrcal.triangulate(
+p_calnoise, Var_p_calibration_alone = drcal.triangulate(
     q_true,
     (models_baseline[icam0], models_baseline[icam1]),
     q_calibration_stdev=args.q_calibration_stdev,
     stabilize_coords=args.stabilize_coords,
 )
-p_obsnoise, Var_p_observation_alone = mrcal.triangulate(
+p_obsnoise, Var_p_observation_alone = drcal.triangulate(
     q_true,
     (models_baseline[icam0], models_baseline[icam1]),
     q_observation_stdev=args.q_observation_stdev,
     q_observation_stdev_correlation=args.q_observation_stdev_correlation,
     stabilize_coords=args.stabilize_coords,
 )
-p, Var_p_calibration, Var_p_observation, Var_p_joint = mrcal.triangulate(
+p, Var_p_calibration, Var_p_observation, Var_p_joint = drcal.triangulate(
     q_true,
     (models_baseline[icam0], models_baseline[icam1]),
     q_calibration_stdev=args.q_calibration_stdev,
@@ -841,7 +841,7 @@ if not did_sample:
 # Let's actually apply the noise to compute var(distancep) empirically to compare
 # against the var(distancep) prediction I just computed
 # shape (Nsamples,Npoints,2,2)
-var_qt_onepoint = mrcal.triangulation._compute_Var_q_triangulation(
+var_qt_onepoint = drcal.triangulation._compute_Var_q_triangulation(
     args.q_observation_stdev, args.q_observation_stdev_correlation
 )
 var_qt = np.zeros((Npoints * 2 * 2, Npoints * 2 * 2), dtype=float)
@@ -986,7 +986,7 @@ if args.make_documentation_plots is not None:
     import gnuplotlib as gp
 
     empirical_distributions_xz = [
-        mrcal.utils._plot_args_points_and_covariance_ellipse(
+        drcal.utils._plot_args_points_and_covariance_ellipse(
             p_triangulated_sampled0[:, ipt, (0, 2)], "Observed"
         )
         for ipt in range(Npoints)
@@ -1031,17 +1031,17 @@ if args.make_documentation_plots is not None:
                 empirical_distributions_xz[ipt][
                     1
                 ],  # points; plot first to not obscure the ellipses
-                mrcal.utils._plot_arg_covariance_ellipse(
+                drcal.utils._plot_arg_covariance_ellipse(
                     p_triangulated0[ipt][(0, 2),],
                     Var_p_joint_diagonal[ipt],
                     "Predicted-joint",
                 ),
-                mrcal.utils._plot_arg_covariance_ellipse(
+                drcal.utils._plot_arg_covariance_ellipse(
                     p_triangulated0[ipt][(0, 2),],
                     Var_p_calibration_diagonal[ipt],
                     "Predicted-calibration-only",
                 ),
-                mrcal.utils._plot_arg_covariance_ellipse(
+                drcal.utils._plot_arg_covariance_ellipse(
                     p_triangulated0[ipt][(0, 2),],
                     Var_p_observation_diagonal[ipt],
                     "Predicted-observations-only",
@@ -1118,19 +1118,19 @@ if args.make_documentation_plots is not None:
 
         processoptions = copy.deepcopy(processoptions_base)
         binwidth = np.sqrt(Var_ranges_joint[0]) / 4.0
-        equation_range0_observed_gaussian = mrcal.fitted_gaussian_equation(
+        equation_range0_observed_gaussian = drcal.fitted_gaussian_equation(
             x=ranges_sampled[0],
             binwidth=binwidth,
             legend="Idealized gaussian fit to data",
         )
-        equation_range0_predicted_joint_gaussian = mrcal.fitted_gaussian_equation(
+        equation_range0_predicted_joint_gaussian = drcal.fitted_gaussian_equation(
             mean=ranges[0],
             sigma=np.sqrt(Var_ranges_joint[0]),
             N=len(ranges_sampled[0]),
             binwidth=binwidth,
             legend="Predicted-joint",
         )
-        equation_range0_predicted_calibration_gaussian = mrcal.fitted_gaussian_equation(
+        equation_range0_predicted_calibration_gaussian = drcal.fitted_gaussian_equation(
             mean=ranges[0],
             sigma=np.sqrt(Var_ranges_calibration[0]),
             N=len(ranges_sampled[0]),
@@ -1138,7 +1138,7 @@ if args.make_documentation_plots is not None:
             legend="Predicted-calibration",
         )
         equation_range0_predicted_observations_gaussian = (
-            mrcal.fitted_gaussian_equation(
+            drcal.fitted_gaussian_equation(
                 mean=ranges[0],
                 sigma=np.sqrt(Var_ranges_observations[0]),
                 N=len(ranges_sampled[0]),
@@ -1171,12 +1171,12 @@ if args.make_documentation_plots is not None:
 
         processoptions = copy.deepcopy(processoptions_base)
         binwidth = np.sqrt(Var_distance) / 4.0
-        equation_distance_observed_gaussian = mrcal.fitted_gaussian_equation(
+        equation_distance_observed_gaussian = drcal.fitted_gaussian_equation(
             x=distance_sampled,
             binwidth=binwidth,
             legend="Idealized gaussian fit to data",
         )
-        equation_distance_predicted_gaussian = mrcal.fitted_gaussian_equation(
+        equation_distance_predicted_gaussian = drcal.fitted_gaussian_equation(
             mean=distance,
             sigma=np.sqrt(Var_distance),
             N=len(distance_sampled),

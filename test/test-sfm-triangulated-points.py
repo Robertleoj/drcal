@@ -21,9 +21,9 @@ import os
 
 testdir = os.path.dirname(os.path.realpath(__file__))
 
-# I import the LOCAL mrcal since that's what I'm testing
+# I import the LOCAL drcal since that's what I'm testing
 sys.path[:0] = (f"{testdir}/..",)
-import mrcal
+import drcal
 import testutils
 
 import numpy.random
@@ -34,7 +34,7 @@ np.random.seed(0)
 ############# Set up my world, and compute all the perfect positions, pixel
 ############# observations of everything
 (W, H) = (4000, 2200)
-m = mrcal.cameramodel(
+m = drcal.cameramodel(
     intrinsics=(
         "LENSMODEL_PINHOLE",
         np.array((600.0, 600.0, (W - 1) / 2, (H - 1) / 2)),
@@ -124,15 +124,15 @@ rt_ref_cam_true = nps.glue(
     np.zeros((Ncameras, 1)),  # z
     axis=-1,
 )
-rt_cam_ref_true = mrcal.invert_rt(rt_ref_cam_true)
+rt_cam_ref_true = drcal.invert_rt(rt_ref_cam_true)
 
 # I project all the points into all the cameras. Anything that's in view, I keep
 
 # shape (Npoints, Ncameras, 3)
-pcam_true = mrcal.transform_point_rt(rt_cam_ref_true, nps.mv(points_true, -2, -3))
+pcam_true = drcal.transform_point_rt(rt_cam_ref_true, nps.mv(points_true, -2, -3))
 
 # shape (Npoints, Ncameras, 2)
-qcam_true = mrcal.project(pcam_true, *m.intrinsics())
+qcam_true = drcal.project(pcam_true, *m.intrinsics())
 
 # ALL the indices. I'm about to cut these down to the visible ones
 # shape (Npoints, Ncameras)
@@ -258,8 +258,8 @@ optimization_inputs = dict(
 
 if 1:
     optimization_inputs["verbose"] = True
-    stats = mrcal.optimize(**optimization_inputs)
-p, x, j, f = mrcal.optimizer_callback(**optimization_inputs)
+    stats = drcal.optimize(**optimization_inputs)
+p, x, j, f = drcal.optimizer_callback(**optimization_inputs)
 
 
 import IPython

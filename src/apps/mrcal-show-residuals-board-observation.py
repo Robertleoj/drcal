@@ -12,7 +12,7 @@ r"""Visualize calibration residuals for one or more observations of a board
 
 SYNOPSIS
 
-  $ mrcal-show-residuals-board-observation
+  $ drcal-show-residuals-board-observation
       --from-worst --explore left.cameramodel 0-2
 
   ... a plot pops up showing the 3 worst-fitting chessboard observations in this
@@ -232,7 +232,7 @@ args = parse_args()
 # stuff, so that I can generate the manpages and README
 
 
-import mrcal
+import drcal
 import numpy as np
 import numpysane as nps
 import pprint
@@ -250,7 +250,7 @@ if args.extratitle is not None:
     plotkwargs_extra["extratitle"] = args.extratitle
 
 try:
-    model = mrcal.cameramodel(args.model)
+    model = drcal.cameramodel(args.model)
 except Exception as e:
     print(f"Couldn't load camera model '{args.model}': {e}", file=sys.stderr)
     sys.exit(1)
@@ -298,7 +298,7 @@ if args.from_glob:
     ]
 
 
-x = mrcal.optimizer_callback(**optimization_inputs)[1]
+x = drcal.optimizer_callback(**optimization_inputs)[1]
 
 # for --explore
 indices_frame_camintrinsics_camextrinsics = optimization_inputs[
@@ -321,7 +321,7 @@ i_observations_sorted_from_worst = list(reversed(np.argsort(err_per_observation)
 
 def show(i_observation):
     try:
-        mrcal.show_residuals_board_observation(
+        drcal.show_residuals_board_observation(
             optimization_inputs,
             i_observation,
             from_worst=args.from_worst,
@@ -368,7 +368,7 @@ else:
 if args.explore:
     explore_message = f"""We're exploring. The first plot being shown can be re-created with:
 
-mrcal.show_residuals_board_observation(optimization_inputs,
+drcal.show_residuals_board_observation(optimization_inputs,
                                        {args.observations[0]},
                                        from_worst                       = args.from_worst,
                                        i_observations_sorted_from_worst = i_observations_sorted_from_worst,

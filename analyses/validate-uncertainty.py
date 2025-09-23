@@ -22,7 +22,7 @@ SYNOPSIS
   ... source of error (what the uncertainty modeling expects), then the
   ... uncertainty plots would predict the cross-validation plots well
 
-A big feature of mrcal is the ability to gauge the accuracy of the solved
+A big feature of drcal is the ability to gauge the accuracy of the solved
 intrinsics: by computing the projection uncertainty. This measures the
 sensitivity of the solution to noise in the inputs. So using this as a measure
 of calibration accuracy makes a core assumption: this input noise is the only
@@ -148,12 +148,12 @@ def parse_args():
 args = parse_args()
 
 
-# I import the LOCAL mrcal
+# I import the LOCAL drcal
 sys.path[:0] = (f"{os.path.dirname(os.path.realpath(__file__))}/..",)
 
 
-import mrcal
-import mrcal.model_analysis
+import drcal
+import drcal.model_analysis
 import numpy as np
 import numpysane as nps
 
@@ -233,24 +233,24 @@ def apply_noise(optimization_inputs, *, observed_pixel_uncertainty):
 
 def validate_input_noise(model, *, observed_pixel_uncertainty):
     optimization_inputs = model.optimization_inputs()
-    mrcal.make_perfect_observations(
+    drcal.make_perfect_observations(
         optimization_inputs, observed_pixel_uncertainty=observed_pixel_uncertainty
     )
 
-    mrcal.optimize(**optimization_inputs)
+    drcal.optimize(**optimization_inputs)
 
     noise_observed_ratio = (
-        mrcal.model_analysis._observed_pixel_uncertainty_from_inputs(
+        drcal.model_analysis._observed_pixel_uncertainty_from_inputs(
             optimization_inputs
         )
         / observed_pixel_uncertainty
     )
 
-    Nstates = mrcal.num_states(**optimization_inputs)
-    Nmeasurements = mrcal.num_measurements(**optimization_inputs)
+    Nstates = drcal.num_states(**optimization_inputs)
+    Nmeasurements = drcal.num_measurements(**optimization_inputs)
 
     # This correction is documented here:
-    #   https://mrcal.secretsauce.net/docs-3.0/formulation.html#estimating-input-noise
+    #   https://drcal.secretsauce.net/docs-3.0/formulation.html#estimating-input-noise
     # Should be added to _observed_pixel_uncertainty_from_inputs()
     f = np.sqrt(1 - Nstates / Nmeasurements)
     noise_predicted_ratio = noise_observed_ratio / f
@@ -274,7 +274,7 @@ def validate_uncertainty(model, *, Nsamples, observed_pixel_uncertainty):
     plots = []
 
     plots.append(
-        mrcal.show_projection_uncertainty(
+        drcal.show_projection_uncertainty(
             model,
             gridn_width=args.gridn_width,
             observed_pixel_uncertainty=observed_pixel_uncertainty,
@@ -284,7 +284,7 @@ def validate_uncertainty(model, *, Nsamples, observed_pixel_uncertainty):
     )
 
     optimization_inputs_perfect = model.optimization_inputs()
-    mrcal.make_perfect_observations(
+    drcal.make_perfect_observations(
         optimization_inputs_perfect, observed_pixel_uncertainty=0
     )
 
@@ -293,8 +293,8 @@ def validate_uncertainty(model, *, Nsamples, observed_pixel_uncertainty):
         apply_noise(
             optimization_inputs, observed_pixel_uncertainty=observed_pixel_uncertainty
         )
-        mrcal.optimize(**optimization_inputs)
-        return mrcal.cameramodel(
+        drcal.optimize(**optimization_inputs)
+        return drcal.cameramodel(
             optimization_inputs=optimization_inputs, icam_intrinsics=0
         )
 
@@ -302,7 +302,7 @@ def validate_uncertainty(model, *, Nsamples, observed_pixel_uncertainty):
 
     def diff_sample():
         model1 = model_sample()
-        return mrcal.show_projection_diff(
+        return drcal.show_projection_diff(
             (model0, model1),
             gridn_width=args.gridn_width,
             use_uncertainties=False,
@@ -358,11 +358,11 @@ def validate_noncentral(models, *, percentile, mode="too-close"):
         print(f"Before culling the {what_culling} points: {Noutliers=}")
 
         if mode == "too-close":
-            p = mrcal.hypothesis_board_corner_positions(**optimization_inputs)[0]
+            p = drcal.hypothesis_board_corner_positions(**optimization_inputs)[0]
             r = nps.mag(p)
 
         elif mode == "too-far-from-center":
-            if not mrcal.lensmodel_metadata_and_config(model.intrinsics()[0])[
+            if not drcal.lensmodel_metadata_and_config(model.intrinsics()[0])[
                 "has_core"
             ]:
                 raise Exception("Here I'm assuming the model has an fxycxy core")
@@ -381,8 +381,8 @@ def validate_noncentral(models, *, percentile, mode="too-close"):
             # range,qdiff_off_center domain. Hopefully I'll be able to see
             # model-error patterns off this
 
-            x_board = mrcal.measurements_board(optimization_inputs)
-            p = mrcal.hypothesis_board_corner_positions(**optimization_inputs)[2]
+            x_board = drcal.measurements_board(optimization_inputs)
+            p = drcal.hypothesis_board_corner_positions(**optimization_inputs)[2]
             r = nps.mag(p)
 
             qcenter = model.intrinsics()[1][2:4]
@@ -439,10 +439,10 @@ def validate_noncentral(models, *, percentile, mode="too-close"):
         Noutliers = np.count_nonzero(observations_board[..., 2] <= 0)
         print(f"After culling the {what_culling} points: {Noutliers=}")
 
-        mrcal.optimize(**optimization_inputs)
+        drcal.optimize(**optimization_inputs)
 
         return (
-            mrcal.cameramodel(
+            drcal.cameramodel(
                 optimization_inputs=optimization_inputs, icam_intrinsics=0
             ),
             histogram,
@@ -456,7 +456,7 @@ def validate_noncentral(models, *, percentile, mode="too-close"):
 
     plots.extend(
         [
-            mrcal.show_projection_uncertainty(
+            drcal.show_projection_uncertainty(
                 m,
                 gridn_width=args.gridn_width,
                 cbmax=0.3,
@@ -468,7 +468,7 @@ def validate_noncentral(models, *, percentile, mode="too-close"):
 
     plots.extend(
         [
-            mrcal.show_projection_diff(
+            drcal.show_projection_diff(
                 (models[i], models_reoptimized[i]),
                 gridn_width=args.gridn_width,
                 use_uncertainties=False,
@@ -487,7 +487,7 @@ def validate_noncentral(models, *, percentile, mode="too-close"):
     else:
         plots.extend(
             [
-                mrcal.show_projection_diff(
+                drcal.show_projection_diff(
                     (models[0], models[1]),
                     gridn_width=args.gridn_width,
                     use_uncertainties=False,
@@ -495,7 +495,7 @@ def validate_noncentral(models, *, percentile, mode="too-close"):
                     cbmax=1.0,
                     title="Original, poor cross-validation diff",
                 )[0],
-                mrcal.show_projection_diff(
+                drcal.show_projection_diff(
                     (models_reoptimized[0], models_reoptimized[1]),
                     gridn_width=args.gridn_width,
                     use_uncertainties=False,
@@ -509,7 +509,7 @@ def validate_noncentral(models, *, percentile, mode="too-close"):
     return plots
 
 
-models = [mrcal.cameramodel(f) for f in args.models]
+models = [drcal.cameramodel(f) for f in args.models]
 
 if len(models) > 2:
     Nmodels = args.models
@@ -519,11 +519,11 @@ if len(models) > 2:
         *[models[i].optimization_inputs() for i in range(Nmodels // 2, Nmodels)]
     )
 
-    mrcal.optimize(**o0)
-    mrcal.optimize(**o1)
+    drcal.optimize(**o0)
+    drcal.optimize(**o1)
     models = (
-        mrcal.cameramodel(optimization_inputs=o0, icam_intrinsics=0),
-        mrcal.cameramodel(optimization_inputs=o1, icam_intrinsics=0),
+        drcal.cameramodel(optimization_inputs=o0, icam_intrinsics=0),
+        drcal.cameramodel(optimization_inputs=o1, icam_intrinsics=0),
     )
 
 

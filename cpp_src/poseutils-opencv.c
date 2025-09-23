@@ -1,4 +1,4 @@
-// The implementation of mrcal_R_from_r is based on opencv.
+// The implementation of drcal_R_from_r is based on opencv.
 // The sources have been heavily modified, but the opencv logic remains.
 //
 // from opencv-4.1.2+dfsg/modules/calib3d/src/calibration.cpp
@@ -42,7 +42,7 @@
 #include "poseutils.h"
 #include "strides.h"
 
-void mrcal_R_from_r_full(
+void drcal_R_from_r_full(
     double* R,      // (3,3) array
     int R_stride0,  // in bytes. <= 0 means "contiguous"
     int R_stride1,  // in bytes. <= 0 means "contiguous"
@@ -65,7 +65,7 @@ void mrcal_R_from_r_full(
     }
 
     if (norm2r < DBL_EPSILON * DBL_EPSILON) {
-        mrcal_identity_R_full(R, R_stride0, R_stride1);
+        drcal_identity_R_full(R, R_stride0, R_stride1);
 
         if (J) {
             for (int i = 0; i < 3; i++) {

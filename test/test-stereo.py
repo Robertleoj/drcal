@@ -9,24 +9,24 @@ import os
 
 testdir = os.path.dirname(os.path.realpath(__file__))
 
-# I import the LOCAL mrcal since that's what I'm testing
+# I import the LOCAL drcal since that's what I'm testing
 sys.path[:0] = (f"{testdir}/..",)
-import mrcal
+import drcal
 import scipy.interpolate
 import testutils
 
 
-model0 = mrcal.cameramodel(f"{testdir}/data/cam0.opencv8.cameramodel")
-model1 = mrcal.cameramodel(model0)
+model0 = drcal.cameramodel(f"{testdir}/data/cam0.opencv8.cameramodel")
+model1 = drcal.cameramodel(model0)
 
 for lensmodel in ("LENSMODEL_LATLON", "LENSMODEL_PINHOLE"):
     # I create geometries to test. First off, a vanilla geometry for left-right stereo
     rt01 = np.array((0, 0, 0, 3.0, 0, 0))
-    model1.extrinsics_rt_toref(mrcal.compose_rt(model0.extrinsics_rt_toref(), rt01))
+    model1.extrinsics_rt_toref(drcal.compose_rt(model0.extrinsics_rt_toref(), rt01))
 
     az_fov_deg = 90
     el_fov_deg = 50
-    models_rectified = mrcal.rectified_system(
+    models_rectified = drcal.rectified_system(
         (model0, model1),
         az_fov_deg=az_fov_deg,
         el_fov_deg=el_fov_deg,
@@ -38,15 +38,15 @@ for lensmodel in ("LENSMODEL_LATLON", "LENSMODEL_PINHOLE"):
     el0 = 0.0
 
     try:
-        mrcal.stereo._validate_models_rectified(models_rectified)
+        drcal.stereo._validate_models_rectified(models_rectified)
         testutils.confirm(True, msg=f"Generated models pass validation ({lensmodel})")
     except:
         testutils.confirm(False, msg=f"Generated models pass validation ({lensmodel})")
 
-    Rt_cam0_rect = mrcal.compose_Rt(
+    Rt_cam0_rect = drcal.compose_Rt(
         model0.extrinsics_Rt_fromref(), models_rectified[0].extrinsics_Rt_toref()
     )
-    Rt01_rectified = mrcal.compose_Rt(
+    Rt01_rectified = drcal.compose_Rt(
         models_rectified[0].extrinsics_Rt_fromref(),
         models_rectified[1].extrinsics_Rt_toref(),
     )
@@ -64,7 +64,7 @@ for lensmodel in ("LENSMODEL_LATLON", "LENSMODEL_PINHOLE"):
 
     testutils.confirm_equal(
         Rt_cam0_rect,
-        mrcal.identity_Rt(),
+        drcal.identity_Rt(),
         msg=f"vanilla stereo has a vanilla geometry ({lensmodel})",
     )
 
@@ -77,10 +77,10 @@ for lensmodel in ("LENSMODEL_LATLON", "LENSMODEL_PINHOLE"):
     Naz, Nel = models_rectified[0].imagersize()
 
     q0 = np.array(((Naz - 1.0) / 2.0, (Nel - 1.0) / 2.0))
-    v0 = mrcal.unproject(q0, *models_rectified[0].intrinsics(), normalize=True)
+    v0 = drcal.unproject(q0, *models_rectified[0].intrinsics(), normalize=True)
 
     if lensmodel == "LENSMODEL_LATLON":
-        v0_rect = mrcal.unproject_latlon(np.array((az0, el0)))
+        v0_rect = drcal.unproject_latlon(np.array((az0, el0)))
         # already normalized
         testutils.confirm_equal(
             v0_rect,
@@ -88,7 +88,7 @@ for lensmodel in ("LENSMODEL_LATLON", "LENSMODEL_PINHOLE"):
             msg=f"vanilla stereo: az0,el0 represent the same point ({lensmodel})",
         )
     else:
-        v0_rect = mrcal.unproject_pinhole(np.array((np.tan(az0), np.tan(el0))))
+        v0_rect = drcal.unproject_pinhole(np.array((np.tan(az0), np.tan(el0))))
         v0_rect /= nps.mag(v0_rect)
         testutils.confirm_equal(
             v0_rect,
@@ -99,21 +99,21 @@ for lensmodel in ("LENSMODEL_LATLON", "LENSMODEL_PINHOLE"):
 
     dq0x = np.array((1e-1, 0))
     dq0y = np.array((0, 1e-1))
-    v0x = mrcal.unproject(q0 + dq0x, *models_rectified[0].intrinsics())
-    v0y = mrcal.unproject(q0 + dq0y, *models_rectified[0].intrinsics())
+    v0x = drcal.unproject(q0 + dq0x, *models_rectified[0].intrinsics())
+    v0y = drcal.unproject(q0 + dq0y, *models_rectified[0].intrinsics())
     dthx = np.arccos(nps.inner(v0x, v0) / np.sqrt(nps.norm2(v0x) * nps.norm2(v0)))
     dthy = np.arccos(nps.inner(v0y, v0) / np.sqrt(nps.norm2(v0y) * nps.norm2(v0)))
     pixels_per_rad_az_rect = nps.mag(dq0x) / dthx
     pixels_per_rad_el_rect = nps.mag(dq0y) / dthy
 
-    q0_cam0 = mrcal.project(
-        mrcal.rotate_point_R(Rt_cam0_rect[:3, :], v0), *model0.intrinsics()
+    q0_cam0 = drcal.project(
+        drcal.rotate_point_R(Rt_cam0_rect[:3, :], v0), *model0.intrinsics()
     )
-    q0x_cam0 = mrcal.project(
-        mrcal.rotate_point_R(Rt_cam0_rect[:3, :], v0x), *model0.intrinsics()
+    q0x_cam0 = drcal.project(
+        drcal.rotate_point_R(Rt_cam0_rect[:3, :], v0x), *model0.intrinsics()
     )
-    q0y_cam0 = mrcal.project(
-        mrcal.rotate_point_R(Rt_cam0_rect[:3, :], v0y), *model0.intrinsics()
+    q0y_cam0 = drcal.project(
+        drcal.rotate_point_R(Rt_cam0_rect[:3, :], v0y), *model0.intrinsics()
     )
     pixels_per_rad_az_cam0 = nps.mag(q0x_cam0 - q0_cam0) / dthx
     pixels_per_rad_el_cam0 = nps.mag(q0y_cam0 - q0_cam0) / dthy
@@ -134,10 +134,10 @@ for lensmodel in ("LENSMODEL_LATLON", "LENSMODEL_PINHOLE"):
         eps=1e-2,
     )
 
-    v0 = mrcal.unproject(
+    v0 = drcal.unproject(
         np.array((0, (Nel - 1.0) / 2.0)), *models_rectified[0].intrinsics()
     )
-    v1 = mrcal.unproject(
+    v1 = drcal.unproject(
         np.array((Naz - 1, (Nel - 1.0) / 2.0)), *models_rectified[0].intrinsics()
     )
     az_fov_deg_observed = (
@@ -150,7 +150,7 @@ for lensmodel in ("LENSMODEL_LATLON", "LENSMODEL_PINHOLE"):
         eps=0.5,
     )
 
-    v0 = mrcal.unproject(
+    v0 = drcal.unproject(
         np.array(
             (
                 (Naz - 1.0) / 2.0,
@@ -160,7 +160,7 @@ for lensmodel in ("LENSMODEL_LATLON", "LENSMODEL_PINHOLE"):
         *models_rectified[0].intrinsics(),
     )
     v0[0] = 0  # el_fov applies at the stereo center only
-    v1 = mrcal.unproject(
+    v1 = drcal.unproject(
         np.array(
             (
                 (Naz - 1.0) / 2.0,
@@ -184,9 +184,9 @@ for lensmodel in ("LENSMODEL_LATLON", "LENSMODEL_PINHOLE"):
     # Left-right stereo, with sizeable rotation and position fuzz.
     # I especially make sure there's a forward/back shift
     rt01 = np.array((0.1, 0.2, 0.05, 3.0, 0.2, 1.0))
-    model1.extrinsics_rt_toref(mrcal.compose_rt(model0.extrinsics_rt_toref(), rt01))
+    model1.extrinsics_rt_toref(drcal.compose_rt(model0.extrinsics_rt_toref(), rt01))
     el0_deg = 10.0
-    models_rectified = mrcal.rectified_system(
+    models_rectified = drcal.rectified_system(
         (model0, model1),
         az_fov_deg=az_fov_deg,
         el_fov_deg=el_fov_deg,
@@ -201,20 +201,20 @@ for lensmodel in ("LENSMODEL_LATLON", "LENSMODEL_PINHOLE"):
     baseline = rt01[3:] / nps.mag(rt01[3:])
     # "forward" for each of the two cameras, in the cam0 coord system
     forward0 = np.array((0, 0, 1.0))
-    forward1 = mrcal.rotate_point_r(rt01[:3], np.array((0, 0, 1.0)))
+    forward1 = drcal.rotate_point_r(rt01[:3], np.array((0, 0, 1.0)))
     forward01 = forward0 + forward1
     az0 = np.arcsin(nps.inner(forward01, baseline) / nps.mag(forward01))
 
     try:
-        mrcal.stereo._validate_models_rectified(models_rectified)
+        drcal.stereo._validate_models_rectified(models_rectified)
         testutils.confirm(True, msg=f"Generated models pass validation ({lensmodel})")
     except:
         testutils.confirm(False, msg=f"Generated models pass validation ({lensmodel})")
 
-    Rt_cam0_rect = mrcal.compose_Rt(
+    Rt_cam0_rect = drcal.compose_Rt(
         model0.extrinsics_Rt_fromref(), models_rectified[0].extrinsics_Rt_toref()
     )
-    Rt01_rectified = mrcal.compose_Rt(
+    Rt01_rectified = drcal.compose_Rt(
         models_rectified[0].extrinsics_Rt_fromref(),
         models_rectified[1].extrinsics_Rt_toref(),
     )
@@ -223,10 +223,10 @@ for lensmodel in ("LENSMODEL_LATLON", "LENSMODEL_PINHOLE"):
     # is the correct-looking geometry
     #
     # Rt_cam0_ref   = model0.extrinsics_Rt_fromref()
-    # Rt_rect_ref  = mrcal.compose_Rt( mrcal.invert_Rt(Rt_cam0_rect),
+    # Rt_rect_ref  = drcal.compose_Rt( drcal.invert_Rt(Rt_cam0_rect),
     #                                  Rt_cam0_ref )
-    # rt_rect_ref  = mrcal.rt_from_Rt(Rt_rect_ref)
-    # mrcal.show_geometry( [ model0, model1, rt_rect_ref ],
+    # rt_rect_ref  = drcal.rt_from_Rt(Rt_rect_ref)
+    # drcal.show_geometry( [ model0, model1, rt_rect_ref ],
     #                      cameranames = ( "camera0", "camera1", "stereo" ),
     #                      show_calobjects = False,
     #                      wait            = True )
@@ -254,10 +254,10 @@ for lensmodel in ("LENSMODEL_LATLON", "LENSMODEL_PINHOLE"):
     Naz, Nel = models_rectified[0].imagersize()
 
     q0 = np.array(((Naz - 1.0) / 2.0, (Nel - 1.0) / 2.0))
-    v0 = mrcal.unproject(q0, *models_rectified[0].intrinsics(), normalize=True)
+    v0 = drcal.unproject(q0, *models_rectified[0].intrinsics(), normalize=True)
 
     if lensmodel == "LENSMODEL_LATLON":
-        v0_rect = mrcal.unproject_latlon(np.array((az0, el0)))
+        v0_rect = drcal.unproject_latlon(np.array((az0, el0)))
         # already normalized
         testutils.confirm_equal(
             v0_rect,
@@ -265,7 +265,7 @@ for lensmodel in ("LENSMODEL_LATLON", "LENSMODEL_PINHOLE"):
             msg=f"complex stereo: az0,el0 represent the same point ({lensmodel})",
         )
     else:
-        v0_rect = mrcal.unproject_pinhole(np.array((np.tan(az0), np.tan(el0))))
+        v0_rect = drcal.unproject_pinhole(np.array((np.tan(az0), np.tan(el0))))
         v0_rect /= nps.mag(v0_rect)
         testutils.confirm_equal(
             v0_rect,
@@ -276,21 +276,21 @@ for lensmodel in ("LENSMODEL_LATLON", "LENSMODEL_PINHOLE"):
 
     dq0x = np.array((1e-1, 0))
     dq0y = np.array((0, 1e-1))
-    v0x = mrcal.unproject(q0 + dq0x, *models_rectified[0].intrinsics())
-    v0y = mrcal.unproject(q0 + dq0y, *models_rectified[0].intrinsics())
+    v0x = drcal.unproject(q0 + dq0x, *models_rectified[0].intrinsics())
+    v0y = drcal.unproject(q0 + dq0y, *models_rectified[0].intrinsics())
     dthx = np.arccos(nps.inner(v0x, v0) / np.sqrt(nps.norm2(v0x) * nps.norm2(v0)))
     dthy = np.arccos(nps.inner(v0y, v0) / np.sqrt(nps.norm2(v0y) * nps.norm2(v0)))
     pixels_per_rad_az_rect = nps.mag(dq0x) / dthx
     pixels_per_rad_el_rect = nps.mag(dq0y) / dthy
 
-    q0_cam0 = mrcal.project(
-        mrcal.rotate_point_R(Rt_cam0_rect[:3, :], v0), *model0.intrinsics()
+    q0_cam0 = drcal.project(
+        drcal.rotate_point_R(Rt_cam0_rect[:3, :], v0), *model0.intrinsics()
     )
-    q0x_cam0 = mrcal.project(
-        mrcal.rotate_point_R(Rt_cam0_rect[:3, :], v0x), *model0.intrinsics()
+    q0x_cam0 = drcal.project(
+        drcal.rotate_point_R(Rt_cam0_rect[:3, :], v0x), *model0.intrinsics()
     )
-    q0y_cam0 = mrcal.project(
-        mrcal.rotate_point_R(Rt_cam0_rect[:3, :], v0y), *model0.intrinsics()
+    q0y_cam0 = drcal.project(
+        drcal.rotate_point_R(Rt_cam0_rect[:3, :], v0y), *model0.intrinsics()
     )
     pixels_per_rad_az_cam0 = nps.mag(q0x_cam0 - q0_cam0) / dthx
     pixels_per_rad_el_cam0 = nps.mag(q0y_cam0 - q0_cam0) / dthy
@@ -311,10 +311,10 @@ for lensmodel in ("LENSMODEL_LATLON", "LENSMODEL_PINHOLE"):
         eps=1e-2,
     )
 
-    v0 = mrcal.unproject(
+    v0 = drcal.unproject(
         np.array((0, (Nel - 1.0) / 2.0)), *models_rectified[0].intrinsics()
     )
-    v1 = mrcal.unproject(
+    v1 = drcal.unproject(
         np.array((Naz - 1, (Nel - 1.0) / 2.0)), *models_rectified[0].intrinsics()
     )
     az_fov_deg_observed = (
@@ -327,7 +327,7 @@ for lensmodel in ("LENSMODEL_LATLON", "LENSMODEL_PINHOLE"):
         eps=1.0,
     )
 
-    v0 = mrcal.unproject(
+    v0 = drcal.unproject(
         np.array(
             (
                 (Naz - 1.0) / 2.0,
@@ -337,7 +337,7 @@ for lensmodel in ("LENSMODEL_LATLON", "LENSMODEL_PINHOLE"):
         *models_rectified[0].intrinsics(),
     )
     v0[0] = 0  # el_fov applies at the stereo center only
-    v1 = mrcal.unproject(
+    v1 = drcal.unproject(
         np.array(
             (
                 (Naz - 1.0) / 2.0,
@@ -362,22 +362,22 @@ for lensmodel in ("LENSMODEL_LATLON", "LENSMODEL_PINHOLE"):
     # been, and I check the geometric functions
     pcam0 = np.array(((1.0, 2.0, 12.0), (-4.0, 3.0, 12.0)))
 
-    qcam0 = mrcal.project(pcam0, *model0.intrinsics())
+    qcam0 = drcal.project(pcam0, *model0.intrinsics())
 
-    pcam1 = mrcal.transform_point_rt(mrcal.invert_rt(rt01), pcam0)
-    qcam1 = mrcal.project(pcam1, *model1.intrinsics())
+    pcam1 = drcal.transform_point_rt(drcal.invert_rt(rt01), pcam0)
+    qcam1 = drcal.project(pcam1, *model1.intrinsics())
 
-    prect0 = mrcal.transform_point_Rt(mrcal.invert_Rt(Rt_cam0_rect), pcam0)
+    prect0 = drcal.transform_point_Rt(drcal.invert_Rt(Rt_cam0_rect), pcam0)
     prect1 = prect0 - Rt01_rectified[3, :]
-    qrect0 = mrcal.project(prect0, *models_rectified[0].intrinsics())
-    qrect1 = mrcal.project(prect1, *models_rectified[1].intrinsics())
+    qrect0 = drcal.project(prect0, *models_rectified[0].intrinsics())
+    qrect1 = drcal.project(prect1, *models_rectified[1].intrinsics())
 
     Naz, Nel = models_rectified[0].imagersize()
 
     row = np.arange(Naz, dtype=float)
     col = np.arange(Nel, dtype=float)
 
-    rectification_maps = mrcal.rectification_maps((model0, model1), models_rectified)
+    rectification_maps = drcal.rectification_maps((model0, model1), models_rectified)
 
     interp_rectification_map0x = scipy.interpolate.RectBivariateSpline(
         row, col, nps.transpose(rectification_maps[0][..., 0])
@@ -441,7 +441,7 @@ for lensmodel in ("LENSMODEL_LATLON", "LENSMODEL_PINHOLE"):
     )
 
     disparity = qrect0[:, 0] - qrect1[:, 0]
-    r = mrcal.stereo_range(
+    r = drcal.stereo_range(
         disparity,
         models_rectified,
         qrect0=qrect0,
@@ -451,7 +451,7 @@ for lensmodel in ("LENSMODEL_LATLON", "LENSMODEL_PINHOLE"):
         r, nps.mag(pcam0), msg=f"stereo_range reports the right thing ({lensmodel})"
     )
 
-    r = mrcal.stereo_range(
+    r = drcal.stereo_range(
         disparity[0],
         models_rectified,
         qrect0=qrect0[0],
@@ -463,7 +463,7 @@ for lensmodel in ("LENSMODEL_LATLON", "LENSMODEL_PINHOLE"):
         eps=2e-6,
     )
 
-    r = mrcal.stereo_range(
+    r = drcal.stereo_range(
         float(disparity[0]),
         models_rectified,
         qrect0=qrect0[0],
@@ -476,7 +476,7 @@ for lensmodel in ("LENSMODEL_LATLON", "LENSMODEL_PINHOLE"):
     )
 
     disparity = qrect0[:, 0] - qrect1[:, 0]
-    p = mrcal.stereo_unproject(
+    p = drcal.stereo_unproject(
         disparity,
         models_rectified,
         qrect0=qrect0,
@@ -485,7 +485,7 @@ for lensmodel in ("LENSMODEL_LATLON", "LENSMODEL_PINHOLE"):
         p, prect0, msg=f"stereo_unproject reports the right thing ({lensmodel})"
     )
 
-    p = mrcal.stereo_unproject(
+    p = drcal.stereo_unproject(
         float(disparity[0]),
         models_rectified,
         qrect0=qrect0[0],

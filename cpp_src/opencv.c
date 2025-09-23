@@ -6,9 +6,9 @@
 //
 //     http://www.apache.org/licenses/LICENSE-2.0
 
-#include "mrcal.h"
+#include "drcal.h"
 
-// The implementation of _mrcal_project_internal_opencv is based on opencv. The
+// The implementation of _drcal_project_internal_opencv is based on opencv. The
 // sources have been heavily modified, but the opencv logic remains. This
 // function is a cut-down cvProjectPoints2Internal() to keep only the
 // functionality I want and to use my interfaces. Putting this here allows me to
@@ -47,16 +47,16 @@
 // contract, strict liability, or tort (including negligence or otherwise)
 // arising in any way out of
 
-// NOT A PART OF THE EXTERNAL API. This is exported for the mrcal python wrapper
+// NOT A PART OF THE EXTERNAL API. This is exported for the drcal python wrapper
 // only
-void _mrcal_project_internal_opencv(
+void _drcal_project_internal_opencv(
     // outputs
-    mrcal_point2_t* q,
-    mrcal_point3_t* dq_dp,          // may be NULL
+    drcal_point2_t* q,
+    drcal_point3_t* dq_dp,          // may be NULL
     double* dq_dintrinsics_nocore,  // may be NULL
 
     // inputs
-    const mrcal_point3_t* p,
+    const drcal_point3_t* p,
     int N,
     const double* intrinsics,
     int Nintrinsics

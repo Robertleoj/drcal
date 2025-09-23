@@ -12,7 +12,7 @@ r"""Triangulate a feature in a pair of images to report a range
 
 SYNOPSIS
 
-  $ mrcal-triangulate
+  $ drcal-triangulate
       --range-estimate 870
       left.cameramodel right.cameramodel
       left.jpg right.jpg
@@ -94,7 +94,7 @@ def parse_args():
         help="""The size of the template used for feature
                         matching, in pixel coordinates of the second image. Two
                         arguments are required: width height. This is passed
-                        directly to mrcal.match_feature(). We default to
+                        directly to drcal.match_feature(). We default to
                         13x13""",
     )
     parser.add_argument(
@@ -105,7 +105,7 @@ def parse_args():
                         search, in pixel coordinates of the second image. This
                         should be larger if the range estimate is poor,
                         especially, at near ranges. This is passed directly to
-                        mrcal.match_feature(). We default to 20 pixels""",
+                        drcal.match_feature(). We default to 20 pixels""",
     )
     parser.add_argument(
         "--range-estimate",
@@ -192,7 +192,7 @@ def parse_args():
         "--corr-floor",
         type=float,
         default=0.9,
-        help='''This is used to reject mrcal.match_feature() results. The default is 0.9:
+        help='''This is used to reject drcal.match_feature() results. The default is 0.9:
                         accept only very good matches. A lower threshold may
                         still result in usable matches, but do interactively
                         check the feature-matcher results by passing
@@ -334,24 +334,24 @@ else:
 
 import numpysane as nps
 
-import mrcal
-import mrcal.utils
+import drcal
+import drcal.utils
 import scipy.optimize
 import time
 
 
 if args.method == "geometric":
-    method = mrcal.triangulate_geometric
+    method = drcal.triangulate_geometric
 elif args.method == "lindstrom":
-    method = mrcal.triangulate_lindstrom
+    method = drcal.triangulate_lindstrom
 elif args.method == "leecivera-l1":
-    method = mrcal.triangulate_leecivera_l1
+    method = drcal.triangulate_leecivera_l1
 elif args.method == "leecivera-linf":
-    method = mrcal.triangulate_leecivera_linf
+    method = drcal.triangulate_leecivera_linf
 elif args.method == "leecivera-mid2":
-    method = mrcal.triangulate_leecivera_mid2
+    method = drcal.triangulate_leecivera_mid2
 elif args.method == "leecivera-wmid2":
-    method = mrcal.triangulate_leecivera_wmid2
+    method = drcal.triangulate_leecivera_wmid2
 else:
     raise Exception("Getting here is a bug")
 
@@ -398,7 +398,7 @@ def compute_H10_planes(models, q0, v0, plane_n, plane_d):
         b = np.cross(n, a)
         return nps.transpose(nps.cat(a, b, n))
 
-    Rt10 = mrcal.compose_Rt(
+    Rt10 = drcal.compose_Rt(
         models[1].extrinsics_Rt_fromref(), models[0].extrinsics_Rt_toref()
     )
     R10 = Rt10[:3, :]
@@ -414,7 +414,7 @@ def compute_H10_planes(models, q0, v0, plane_n, plane_d):
     # inner(k*v0, n) = d -> k = d / inner(v0,n)
     k = plane_d / nps.inner(v0, plane_n)
     p0 = k * v0
-    p1 = mrcal.transform_point_Rt(Rt10, p0)
+    p1 = drcal.transform_point_Rt(Rt10, p0)
 
     # I now compute the "projection matrix" for the two cameras at p. Such a
     # matrix can only fully describe a pinhole lens, but I can compute the local
@@ -427,7 +427,7 @@ def compute_H10_planes(models, q0, v0, plane_n, plane_d):
     # Where K00 is a (2,2) matrix and K02 is a (2,1) matrix. So q = K00 vxy
     # + K02. K00 = dq/dvxy
     K0 = np.eye(3, dtype=float)
-    _, dq0_dvxy0, _ = mrcal.project(
+    _, dq0_dvxy0, _ = drcal.project(
         p0 / p0[2], *models[0].intrinsics(), get_gradients=True
     )
     K0[:2, :2] = dq0_dvxy0[:, :2]
@@ -435,7 +435,7 @@ def compute_H10_planes(models, q0, v0, plane_n, plane_d):
 
     # Now the same thing for K1
     K1 = np.eye(3, dtype=float)
-    q1, dq1_dvxy1, _ = mrcal.project(
+    q1, dq1_dvxy1, _ = drcal.project(
         p1 / p1[2], *models[1].intrinsics(), get_gradients=True
     )
     K1[:2, :2] = dq1_dvxy1[:, :2]
@@ -448,7 +448,7 @@ def compute_H10_planes(models, q0, v0, plane_n, plane_d):
     # ALTERNATIVE IMPLEMENTATION I MIGHT WANT LATER FOR OTHER PURPOSES: affine
     # transformation that has no projective behavior
 
-    v0 = mrcal.unproject(q0, *models[0].intrinsics())
+    v0 = drcal.unproject(q0, *models[0].intrinsics())
 
     # k*v0 is on the plane: inner(k*v0, n) = d -> k = d/inner(v0,n)
     p0 = v0 * (plane_d / nps.inner(v0, plane_n))
@@ -458,19 +458,19 @@ def compute_H10_planes(models, q0, v0, plane_n, plane_d):
     # R_cam0_uv
     R_cam0_uv = get_R_abn(plane_n)[:, :2]
 
-    _, dq0_dp0, _ = mrcal.project(p0, *models[0].intrinsics(), get_gradients=True)
+    _, dq0_dp0, _ = drcal.project(p0, *models[0].intrinsics(), get_gradients=True)
     dq0_duv = nps.matmult(dq0_dp0, R_cam0_uv)
 
     # For the same (u,v,n) coord system we have p1 = R10 R_cam0_uvn * p_uvn +
     # t10 -> dp1/dp_uvn = R10 R_cam0_uvn, dp1/dp_uv = R10 R_cam0_uv
-    p1 = mrcal.transform_point_Rt(Rt10, p0)
-    q1, dq1_dp1, _ = mrcal.project(p1, *models[1].intrinsics(), get_gradients=True)
+    p1 = drcal.transform_point_Rt(Rt10, p0)
+    q1, dq1_dp1, _ = drcal.project(p1, *models[1].intrinsics(), get_gradients=True)
     dq1_duv = nps.matmult(dq1_dp1, Rt10[:3, :], R_cam0_uv)
 
     H10 = np.eye(3, dtype=float)
     nps.matmult2(dq1_duv, np.linalg.inv(dq0_duv), out=H10[:2, :2])
 
-    H10[:2, 2] = q1 - mrcal.apply_homography(H10, q0)
+    H10[:2, 2] = q1 - drcal.apply_homography(H10, q0)
 
     return H10
 
@@ -511,7 +511,7 @@ def visualize_uncertainty(
         z = np.cross(x, y)
 
         R_uvn_cam0 = nps.cat(x, y, z)
-        p_rotated = mrcal.rotate_point_R(R_uvn_cam0, p)
+        p_rotated = drcal.rotate_point_R(R_uvn_cam0, p)
         return p_rotated[:2], R_uvn_cam0[:2, :]
 
     # I want to plot the ellipse in uv coords. So I want to plot
@@ -529,7 +529,7 @@ def visualize_uncertainty(
         var = nps.matmult(R_uv_cam0, var, nps.transpose(R_uv_cam0))
 
         plotargs.append(
-            mrcal.utils._plot_arg_covariance_ellipse(p_uv, var, f"{what} noise")
+            drcal.utils._plot_arg_covariance_ellipse(p_uv, var, f"{what} noise")
         )
 
     plot_options = dict(
@@ -569,7 +569,7 @@ if images is not None:
 
     def imread(filename):
         try:
-            image = mrcal.load_image(filename, bits_per_pixel=8, channels=1)
+            image = drcal.load_image(filename, bits_per_pixel=8, channels=1)
         except:
             print(f"Couldn't load '{filename}'", file=sys.stderr)
             sys.exit(1)
@@ -583,7 +583,7 @@ if images is not None:
 
 def openmodel(f):
     try:
-        return mrcal.cameramodel(f)
+        return drcal.cameramodel(f)
     except Exception as e:
         print(f"Couldn't load camera model '{f}': {e}", file=sys.stderr)
         sys.exit(1)
@@ -622,11 +622,11 @@ print(
     )
 )
 
-v0 = mrcal.unproject(q0, *models[0].intrinsics(), normalize=True)
+v0 = drcal.unproject(q0, *models[0].intrinsics(), normalize=True)
 
 Rtr0 = models[0].extrinsics_Rt_toref()
 
-Rt01 = mrcal.compose_Rt(
+Rt01 = drcal.compose_Rt(
     models[0].extrinsics_Rt_fromref(), models[1].extrinsics_Rt_toref()
 )
 
@@ -646,7 +646,7 @@ else:
         # "forward" for cam0 in cam0 coords
         n0 = np.array((0, 0, 1.0))
         # "forward" for cam1 in cam0 coords
-        n1 = mrcal.rotate_point_R(Rt01[:3, :], np.array((0, 0, 1.0)))
+        n1 = drcal.rotate_point_R(Rt01[:3, :], np.array((0, 0, 1.0)))
         n = n0 + n1
         # normalized "mean forward" in cam0 coords
         n /= nps.mag(n)
@@ -655,7 +655,7 @@ else:
         d = nps.inner(n, args.range_estimate * v0)
         H10 = compute_H10_planes(models, q0, v0, n, d)
 
-    q1_perfect = mrcal.apply_homography(H10, q0)
+    q1_perfect = drcal.apply_homography(H10, q0)
     print(
         f"## Feature {q0} in the left image corresponds to {q1_perfect} at {args.range_estimate}m"
     )
@@ -666,7 +666,7 @@ else:
     if args.extratitle is not None:
         plotkwargs_extra["extratitle"] = args.extratitle
 
-    match_feature_out = mrcal.match_feature(
+    match_feature_out = drcal.match_feature(
         *images,
         q0=q0,
         H10=H10,
@@ -699,11 +699,11 @@ Var_p_calibration = None
 Var_p_observation = None
 Var_p_joint = None
 if args.q_calibration_stdev is None and args.q_observation_stdev is None:
-    p0 = mrcal.triangulate(
+    p0 = drcal.triangulate(
         nps.cat(q0, q1), models, stabilize_coords=args.stabilize_coords, method=method
     )
 elif args.q_calibration_stdev is not None and args.q_observation_stdev is None:
-    p0, Var_p_calibration = mrcal.triangulate(
+    p0, Var_p_calibration = drcal.triangulate(
         nps.cat(q0, q1),
         models,
         q_calibration_stdev=args.q_calibration_stdev,
@@ -711,7 +711,7 @@ elif args.q_calibration_stdev is not None and args.q_observation_stdev is None:
         method=method,
     )
 elif args.q_calibration_stdev is None and args.q_observation_stdev is not None:
-    p0, Var_p_observation = mrcal.triangulate(
+    p0, Var_p_observation = drcal.triangulate(
         nps.cat(q0, q1),
         models,
         q_observation_stdev=args.q_observation_stdev,
@@ -720,7 +720,7 @@ elif args.q_calibration_stdev is None and args.q_observation_stdev is not None:
         method=method,
     )
 else:
-    p0, Var_p_calibration, Var_p_observation, Var_p_joint = mrcal.triangulate(
+    p0, Var_p_calibration, Var_p_observation, Var_p_joint = drcal.triangulate(
         nps.cat(q0, q1),
         models,
         q_calibration_stdev=args.q_calibration_stdev,
@@ -746,12 +746,12 @@ if nps.norm2(p0) == 0:
 
 # I use the lower-level triangulation function further on, for the empirical
 # sensitivity calculation. I call it here as a sanity check, to make sure that
-# mrcal.triangulate() gave me the same thing
-v1 = mrcal.unproject(q1, *models[1].intrinsics())
+# drcal.triangulate() gave me the same thing
+v1 = drcal.unproject(q1, *models[1].intrinsics())
 
 if nps.norm2(p0 - method(v0, v1, Rt01=Rt01, v_are_local=True)) > 1e-6:
     print(
-        "## WARNING: mrcal.triangulate() returned something different from the internal routine. This is a bug. The empirical sensitivities may be off"
+        "## WARNING: drcal.triangulate() returned something different from the internal routine. This is a bug. The empirical sensitivities may be off"
     )
 
 
@@ -779,7 +779,7 @@ def get_rt10_perturbed(
     # orthogonal axes, so they commute
     R = np.eye(3)
     if r01err_yaw:
-        K = mrcal.skew_symmetric(r01err_yaw_axis)
+        K = drcal.skew_symmetric(r01err_yaw_axis)
         Ryaw = (
             np.eye(3)
             + np.sin(r01err_yaw) * K
@@ -787,7 +787,7 @@ def get_rt10_perturbed(
         )
         R = Ryaw
     if r01err_pitch:
-        K = mrcal.skew_symmetric(r01err_pitch_axis)
+        K = drcal.skew_symmetric(r01err_pitch_axis)
         Rpitch = (
             np.eye(3)
             + np.sin(r01err_pitch) * K
@@ -795,8 +795,8 @@ def get_rt10_perturbed(
         )
         R = nps.matmult(R, Rpitch)
 
-    rt10 = mrcal.rt_from_Rt(
-        mrcal.compose_Rt(mrcal.invert_Rt(Rt01), nps.glue(R, np.zeros((3,)), axis=-2))
+    rt10 = drcal.rt_from_Rt(
+        drcal.compose_Rt(drcal.invert_Rt(Rt01), nps.glue(R, np.zeros((3,)), axis=-2))
     )
     rt10[3:] -= t01err
     return rt10
@@ -804,10 +804,10 @@ def get_rt10_perturbed(
 
 def get_world_intersection_point(qerr1=np.array((0, 0)), **kwargs):
     rt10 = get_rt10_perturbed(**kwargs)
-    v1 = mrcal.unproject(q1 + qerr1, *models[1].intrinsics())
+    v1 = drcal.unproject(q1 + qerr1, *models[1].intrinsics())
 
     return method(
-        v0, v1, Rt01=mrcal.invert_Rt(mrcal.Rt_from_rt(rt10)), v_are_local=True
+        v0, v1, Rt01=drcal.invert_Rt(drcal.Rt_from_rt(rt10)), v_are_local=True
     )
 
 
@@ -827,15 +827,15 @@ if range0 == 0:
 else:
     range_err_have = range0 - args.range_estimate
 
-    p0_ref = mrcal.transform_point_Rt(Rtr0, p0)
-    v0_ref = mrcal.rotate_point_R(Rtr0[:3, :], v0)
+    p0_ref = drcal.transform_point_Rt(Rtr0, p0)
+    v0_ref = drcal.rotate_point_R(Rtr0[:3, :], v0)
     print(f"## Triangulated point at {p0}; direction: {v0} [camera coordinates]")
     print(
         f"## Triangulated point at {p0_ref}; direction: {v0_ref} [reference coordinates]"
     )
     print("## Range: {:.2f} m (error: {:.2f} m)".format(range0, range_err_have))
     print(
-        f"## q0 - q0_triangulation = {q0 - mrcal.project(p0, *models[0].intrinsics())}"
+        f"## q0 - q0_triangulation = {q0 - drcal.project(p0, *models[0].intrinsics())}"
     )
 
     for what, var in (
@@ -844,7 +844,7 @@ else:
         ("joint", Var_p_joint),
     ):
         if var is not None:
-            l, v = mrcal.sorted_eig(var)
+            l, v = drcal.sorted_eig(var)
             # look at the least-confident direction
             sigma = np.sqrt(l[-1])
             v = v[:, -1]
@@ -963,7 +963,7 @@ def get_range_err_yaw_pitch_sq(dyawdpitch):
         # very large
         return 1e6
     erange = r - args.range_estimate
-    ereprojection = mrcal.project(p, *models[0].intrinsics()) - q0
+    ereprojection = drcal.project(p, *models[0].intrinsics()) - q0
 
     # The range errors are generally much higher than pixel errors, so I scale
     # these. Nothing about any of this is particularly principled, but it is
@@ -1032,7 +1032,7 @@ if args.make_corrected_model1:
             file=sys.stderr,
         )
         sys.exit(1)
-    rt_1r = mrcal.compose_rt(rt10, models[0].extrinsics_rt_fromref())
+    rt_1r = drcal.compose_rt(rt10, models[0].extrinsics_rt_fromref())
     models[1].extrinsics_rt_fromref(rt_1r)
     models[1].write(sys.stdout)
 

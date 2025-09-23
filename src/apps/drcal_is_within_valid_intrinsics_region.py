@@ -3,11 +3,11 @@ r"""Reports which input points lie within the valid-intrinsics region
 SYNOPSIS
 
   $ < points-in.vnl
-    mrcal-is-within-valid-intrinsics-region --cols-xy x y
+    drcal-is-within-valid-intrinsics-region --cols-xy x y
       camera.cameramodel
     > points-annotated.vnl
 
-mrcal camera models may have an estimate of the region of the imager where the
+drcal camera models may have an estimate of the region of the imager where the
 intrinsics are trustworthy (originally computed with a low-enough error and
 uncertainty). When using a model, we may want to process points that fall
 outside of this region differently from points that fall within this region.

@@ -12,15 +12,15 @@
 #include <float.h>
 #include <math.h>
 
+#include "drcal.h"
 #include "minimath/minimath.h"
-#include "mrcal.h"
 #include "util.h"
 
 // The equivalent function in Python is _rectified_resolution_python() in
 // stereo.py
 //
-// Documentation is in the docstring of mrcal.rectified_resolution()
-bool mrcal_rectified_resolution(
+// Documentation is in the docstring of drcal.rectified_resolution()
+bool drcal_rectified_resolution(
     // output and input
     // > 0: use given value
     // < 0: autodetect and scale
@@ -28,16 +28,16 @@ bool mrcal_rectified_resolution(
     double* pixels_per_deg_el,
 
     // input
-    const mrcal_lensmodel_t* lensmodel,
+    const drcal_lensmodel_t* lensmodel,
     const double* intrinsics,
-    const mrcal_point2_t* azel_fov_deg,
-    const mrcal_point2_t* azel0_deg,
+    const drcal_point2_t* azel_fov_deg,
+    const drcal_point2_t* azel0_deg,
     const double* R_cam0_rect0,
-    const mrcal_lensmodel_type_t rectification_model_type
+    const drcal_lensmodel_type_t rectification_model_type
 ) {
     // Get the rectified image resolution
     if (*pixels_per_deg_az < 0 || *pixels_per_deg_el < 0) {
-        const mrcal_point2_t azel0 = {
+        const drcal_point2_t azel0 = {
             .x = azel0_deg->x * M_PI / 180.,
             .y = azel0_deg->y * M_PI / 180.
         };
@@ -51,30 +51,30 @@ bool mrcal_rectified_resolution(
         // where th is an angular perturbation applied to v.
         double v[3];
         double dv_dazel[3 * 2];
-        if (rectification_model_type == MRCAL_LENSMODEL_LATLON) {
-            mrcal_unproject_latlon(
-                (mrcal_point3_t*)v,
-                (mrcal_point2_t*)dv_dazel,
+        if (rectification_model_type == drcal_LENSMODEL_LATLON) {
+            drcal_unproject_latlon(
+                (drcal_point3_t*)v,
+                (drcal_point2_t*)dv_dazel,
                 &azel0,
                 1,
                 (double[]){1., 1., 0., 0.}
             );
-        } else if (rectification_model_type == MRCAL_LENSMODEL_LONLAT) {
-            mrcal_unproject_lonlat(
-                (mrcal_point3_t*)v,
-                (mrcal_point2_t*)dv_dazel,
+        } else if (rectification_model_type == drcal_LENSMODEL_LONLAT) {
+            drcal_unproject_lonlat(
+                (drcal_point3_t*)v,
+                (drcal_point2_t*)dv_dazel,
                 &azel0,
                 1,
                 (double[]){1., 1., 0., 0.}
             );
-        } else if (rectification_model_type == MRCAL_LENSMODEL_PINHOLE) {
-            mrcal_point2_t q0_normalized = {
+        } else if (rectification_model_type == drcal_LENSMODEL_PINHOLE) {
+            drcal_point2_t q0_normalized = {
                 .x = tan(azel0.x),
                 .y = tan(azel0.y)
             };
-            mrcal_unproject_pinhole(
-                (mrcal_point3_t*)v,
-                (mrcal_point2_t*)dv_dazel,
+            drcal_unproject_pinhole(
+                (drcal_point3_t*)v,
+                (drcal_point2_t*)dv_dazel,
                 &q0_normalized,
                 1,
                 (double[]){1., 1., 0., 0.}
@@ -93,7 +93,7 @@ bool mrcal_rectified_resolution(
         }
 
         double v0[3];
-        mrcal_rotate_point_R(v0, NULL, NULL, R_cam0_rect0, v);
+        drcal_rotate_point_R(v0, NULL, NULL, R_cam0_rect0, v);
 
         // dv0_dazel  = nps.matmult(R_cam0_rect0, dv_dazel)
         double dv0_daz[3] = {};
@@ -105,15 +105,15 @@ bool mrcal_rectified_resolution(
             }
         }
 
-        mrcal_point2_t qdummy;
-        mrcal_point3_t dq_dv0[2];
-        // _,dq_dv0,_ = mrcal.project(v0, *model.intrinsics(), get_gradients =
+        drcal_point2_t qdummy;
+        drcal_point3_t dq_dv0[2];
+        // _,dq_dv0,_ = drcal.project(v0, *model.intrinsics(), get_gradients =
         // True)
-        mrcal_project(
+        drcal_project(
             &qdummy,
             dq_dv0,
             NULL,
-            (const mrcal_point3_t*)v0,
+            (const drcal_point3_t*)v0,
             1,
             lensmodel,
             intrinsics
@@ -133,14 +133,14 @@ bool mrcal_rectified_resolution(
         //     with the
         //     // eigenvalues of MtM giving me the best and worst sensitivities.
         //     I can
-        //     // use mrcal.worst_direction_stdev() to find the densest
+        //     // use drcal.worst_direction_stdev() to find the densest
         //     direction. But I
         //     // actually know the directions I care about, so I evaluate them
         //     // independently for the az and el directions
-        //     Ruv = mrcal.R_aligned_to_vector(v0);
+        //     Ruv = drcal.R_aligned_to_vector(v0);
         //     M = nps.matmult(dq_dv0, nps.transpose(Ruv[:2,:]))
         //     // I pick the densest direction: highest |dq/dth|
-        //     pixels_per_rad = mrcal.worst_direction_stdev( nps.matmult(
+        //     pixels_per_rad = drcal.worst_direction_stdev( nps.matmult(
         //     nps.transpose(M),M) );
 
         // dq_dazel = nps.matmult(dq_dv0, dv0_dazel)
@@ -184,8 +184,8 @@ bool mrcal_rectified_resolution(
     //
     // With LENSMODEL_PINHOLE this is much more complex, so this function just
     // leaves the desired pixels_per_deg as it is
-    if (rectification_model_type == MRCAL_LENSMODEL_LATLON ||
-        rectification_model_type == MRCAL_LENSMODEL_LONLAT) {
+    if (rectification_model_type == drcal_LENSMODEL_LATLON ||
+        rectification_model_type == drcal_LENSMODEL_LONLAT) {
         int Naz = (int)round(azel_fov_deg->x * (*pixels_per_deg_az));
         int Nel = (int)round(azel_fov_deg->y * (*pixels_per_deg_el));
 
@@ -198,8 +198,8 @@ bool mrcal_rectified_resolution(
 
 // The equivalent function in Python is _rectified_system_python() in stereo.py
 //
-// Documentation is in the docstring of mrcal.rectified_system()
-bool mrcal_rectified_system(
+// Documentation is in the docstring of drcal.rectified_system()
+bool drcal_rectified_system(
     // output
     unsigned int* imagersize_rectified,
     double* fxycxy_rectified,
@@ -214,17 +214,17 @@ bool mrcal_rectified_system(
 
     // input, output
     // if(..._autodetect) { the results are returned here }
-    mrcal_point2_t* azel_fov_deg,
-    mrcal_point2_t* azel0_deg,
+    drcal_point2_t* azel_fov_deg,
+    drcal_point2_t* azel0_deg,
 
     // input
-    const mrcal_lensmodel_t* lensmodel0,
+    const drcal_lensmodel_t* lensmodel0,
     const double* intrinsics0,
 
     const double* rt_cam0_ref,
     const double* rt_cam1_ref,
 
-    const mrcal_lensmodel_type_t rectification_model_type,
+    const drcal_lensmodel_type_t rectification_model_type,
 
     bool az0_deg_autodetect,
     bool el0_deg_autodetect,
@@ -244,20 +244,20 @@ bool mrcal_rectified_system(
         return false;
     }
 
-    if (!(rectification_model_type == MRCAL_LENSMODEL_LATLON ||
-          rectification_model_type == MRCAL_LENSMODEL_PINHOLE)) {
+    if (!(rectification_model_type == drcal_LENSMODEL_LATLON ||
+          rectification_model_type == drcal_LENSMODEL_PINHOLE)) {
         MSG("Unsupported rectification model '%s'. Only LENSMODEL_LATLON and "
             "LENSMODEL_PINHOLE are supported",
-            mrcal_lensmodel_name_unconfigured(&(mrcal_lensmodel_t
+            drcal_lensmodel_name_unconfigured(&(drcal_lensmodel_t
             ){.type = rectification_model_type}));
         return false;
     }
 
-    mrcal_lensmodel_metadata_t meta = mrcal_lensmodel_metadata(lensmodel0);
+    drcal_lensmodel_metadata_t meta = drcal_lensmodel_metadata(lensmodel0);
     if (meta.noncentral) {
-        if (lensmodel0->type == MRCAL_LENSMODEL_CAHVORE) {
+        if (lensmodel0->type == drcal_LENSMODEL_CAHVORE) {
             // CAHVORE is generally noncentral, but if E=0, then it is
-            const int Nintrinsics = mrcal_lensmodel_num_params(lensmodel0);
+            const int Nintrinsics = drcal_lensmodel_num_params(lensmodel0);
             for (int i = Nintrinsics - 3; i < Nintrinsics; i++) {
                 if (intrinsics0[i] != 0) {
                     MSG("Stereo rectification is only possible with a central "
@@ -274,11 +274,11 @@ bool mrcal_rectified_system(
         }
     }
 
-    ///// TODAY this C implementation supports MRCAL_LENSMODEL_LATLON only. This
+    ///// TODAY this C implementation supports drcal_LENSMODEL_LATLON only. This
     ///// isn't a design choice, I just don't want to do the extra work yet. The
     ///// API already is general enough to support both rectification schemes.
-    if (rectification_model_type != MRCAL_LENSMODEL_LATLON) {
-        MSG("Today this C implementation supports MRCAL_LENSMODEL_LATLON only."
+    if (rectification_model_type != drcal_LENSMODEL_LATLON) {
+        MSG("Today this C implementation supports drcal_LENSMODEL_LATLON only."
         );
         return false;
     }
@@ -308,13 +308,13 @@ bool mrcal_rectified_system(
     //    normal to the baseline
     double Rt_cam0_ref[4 * 3];
     double Rt_cam1_ref[4 * 3];
-    mrcal_Rt_from_rt(Rt_cam0_ref, NULL, rt_cam0_ref);
-    mrcal_Rt_from_rt(Rt_cam1_ref, NULL, rt_cam1_ref);
+    drcal_Rt_from_rt(Rt_cam0_ref, NULL, rt_cam0_ref);
+    drcal_Rt_from_rt(Rt_cam1_ref, NULL, rt_cam1_ref);
 
     double Rt01[4 * 3];
     double Rt_ref_cam1[4 * 3];
-    mrcal_invert_Rt(Rt_ref_cam1, Rt_cam1_ref);
-    mrcal_compose_Rt(Rt01, Rt_cam0_ref, Rt_ref_cam1);
+    drcal_invert_Rt(Rt_ref_cam1, Rt_cam1_ref);
+    drcal_compose_Rt(Rt01, Rt_cam0_ref, Rt_ref_cam1);
 
     // Rotation relating camera0 coords to the rectified camera coords. I fill
     // in each row separately
@@ -380,7 +380,7 @@ bool mrcal_rectified_system(
     // Done with the geometry! Now to get the az/el grid. I need to figure
     // out the resolution and the extents
 
-    mrcal_point2_t azel0 = {
+    drcal_point2_t azel0 = {
         .x = azel0_deg->x * M_PI / 180.,
         .y = azel0_deg->y * M_PI / 180.
     };
@@ -419,9 +419,9 @@ bool mrcal_rectified_system(
     }
 
     double R_cam0_rect0[3 * 3];
-    mrcal_invert_R(R_cam0_rect0, R_rect0_cam0);
+    drcal_invert_R(R_cam0_rect0, R_rect0_cam0);
 
-    if (!mrcal_rectified_resolution(  // output
+    if (!drcal_rectified_resolution(  // output
             pixels_per_deg_az,
             pixels_per_deg_el,
             // input
@@ -474,8 +474,8 @@ bool mrcal_rectified_system(
 
     // The geometry
     double Rt_rect0_ref[4 * 3];
-    mrcal_compose_Rt(Rt_rect0_ref, Rt_rect0_cam0, Rt_cam0_ref);
-    mrcal_rt_from_Rt(rt_rect0_ref, NULL, Rt_rect0_ref);
+    drcal_compose_Rt(Rt_rect0_ref, Rt_rect0_cam0, Rt_cam0_ref);
+    drcal_rt_from_Rt(rt_rect0_ref, NULL, Rt_rect0_ref);
 
     return true;
 }
@@ -488,56 +488,56 @@ static void set_rectification_map_pixel(
 
     const int i,
     const int j,
-    const mrcal_point3_t* v,
+    const drcal_point3_t* v,
 
-    const mrcal_lensmodel_t* lensmodel0,
+    const drcal_lensmodel_t* lensmodel0,
     const double* intrinsics0,
     const double* R_cam0_rect,
 
-    const mrcal_lensmodel_t* lensmodel1,
+    const drcal_lensmodel_t* lensmodel1,
     const double* intrinsics1,
     const double* R_cam1_rect,
 
     const unsigned int* imagersize_rectified
 ) {
-    mrcal_point3_t vcam;
-    mrcal_point2_t q;
+    drcal_point3_t vcam;
+    drcal_point2_t q;
 
     vcam = *v;
-    mrcal_rotate_point_R(vcam.xyz, NULL, NULL, R_cam0_rect, v->xyz);
-    mrcal_project(&q, NULL, NULL, &vcam, 1, lensmodel0, intrinsics0);
+    drcal_rotate_point_R(vcam.xyz, NULL, NULL, R_cam0_rect, v->xyz);
+    drcal_project(&q, NULL, NULL, &vcam, 1, lensmodel0, intrinsics0);
     rectification_map0[(i * imagersize_rectified[0] + j) * 2 + 0] = (float)q.x;
     rectification_map0[(i * imagersize_rectified[0] + j) * 2 + 1] = (float)q.y;
 
     vcam = *v;
-    mrcal_rotate_point_R(vcam.xyz, NULL, NULL, R_cam1_rect, v->xyz);
-    mrcal_project(&q, NULL, NULL, &vcam, 1, lensmodel1, intrinsics1);
+    drcal_rotate_point_R(vcam.xyz, NULL, NULL, R_cam1_rect, v->xyz);
+    drcal_project(&q, NULL, NULL, &vcam, 1, lensmodel1, intrinsics1);
     rectification_map1[(i * imagersize_rectified[0] + j) * 2 + 0] = (float)q.x;
     rectification_map1[(i * imagersize_rectified[0] + j) * 2 + 1] = (float)q.y;
 }
 
-bool mrcal_rectification_maps(
+bool drcal_rectification_maps(
     // output
     // Dense array of shape (Ncameras=2, Nel, Naz, Nxy=2)
     float* rectification_maps,
 
     // input
-    const mrcal_lensmodel_t* lensmodel0,
+    const drcal_lensmodel_t* lensmodel0,
     const double* intrinsics0,
     const double* r_cam0_ref,
 
-    const mrcal_lensmodel_t* lensmodel1,
+    const drcal_lensmodel_t* lensmodel1,
     const double* intrinsics1,
     const double* r_cam1_ref,
 
-    const mrcal_lensmodel_type_t rectification_model_type,
+    const drcal_lensmodel_type_t rectification_model_type,
     const double* fxycxy_rectified,
     const unsigned int* imagersize_rectified,
     const double* r_rect0_ref
 ) {
-    if (!(rectification_model_type == MRCAL_LENSMODEL_LATLON ||
-          rectification_model_type == MRCAL_LENSMODEL_PINHOLE)) {
-        MSG("%s() supports MRCAL_LENSMODEL_LATLON and MRCAL_LENSMODEL_PINHOLE "
+    if (!(rectification_model_type == drcal_LENSMODEL_LATLON ||
+          rectification_model_type == drcal_LENSMODEL_PINHOLE)) {
+        MSG("%s() supports drcal_LENSMODEL_LATLON and drcal_LENSMODEL_PINHOLE "
             "only",
             __func__);
         return false;
@@ -545,14 +545,14 @@ bool mrcal_rectification_maps(
 
     double R_cam0_ref[3 * 3];
     double R_cam1_ref[3 * 3];
-    mrcal_R_from_r(R_cam0_ref, NULL, r_cam0_ref);
-    mrcal_R_from_r(R_cam1_ref, NULL, r_cam1_ref);
+    drcal_R_from_r(R_cam0_ref, NULL, r_cam0_ref);
+    drcal_R_from_r(R_cam1_ref, NULL, r_cam1_ref);
 
     double R_cam0_rect[3 * 3];
     double R_cam1_rect[3 * 3];
 
     double R_rect0_ref[3 * 3];
-    mrcal_R_from_r(R_rect0_ref, NULL, r_rect0_ref);
+    drcal_R_from_r(R_rect0_ref, NULL, r_rect0_ref);
 
     mul_genN3_gen33t_vout(3, R_cam0_ref, R_rect0_ref, R_cam0_rect);
     mul_genN3_gen33t_vout(3, R_cam1_ref, R_rect0_ref, R_cam1_rect);
@@ -566,15 +566,15 @@ bool mrcal_rectification_maps(
     //   for(int i=0; i<imagersize_rectified[1]; i++)
     //       for(int j=0; j<imagersize_rectified[0]; j++)
     //       {
-    //           mrcal_point2_t q = {.x = j, .y = i};
-    //           mrcal_point3_t v;
-    //           mrcal_unproject_latlon(&v, NULL,
+    //           drcal_point2_t q = {.x = j, .y = i};
+    //           drcal_point3_t v;
+    //           drcal_unproject_latlon(&v, NULL,
     //                                  &q,
     //                                  1,
     //                                  fxycxy_rectified);
     //           ....
     //
-    // I'm inlining the mrcal_unproject_latlon() call, and moving some constant
+    // I'm inlining the drcal_unproject_latlon() call, and moving some constant
     // guts outside the loops.
     //
     //  And I'm computing sin,cos incrementally:
@@ -593,7 +593,7 @@ bool mrcal_rectification_maps(
     const double c_over_f_x = fxycxy_rectified[2] * fx_recip;
     const double c_over_f_y = fxycxy_rectified[3] * fy_recip;
 
-    if (rectification_model_type == MRCAL_LENSMODEL_LATLON) {
+    if (rectification_model_type == drcal_LENSMODEL_LATLON) {
         double sdlon = sin(fy_recip);
         double cdlon = cos(fy_recip);
         double sdlat = sin(fx_recip);
@@ -611,7 +611,7 @@ bool mrcal_rectification_maps(
         for (unsigned int i = 0; i < imagersize_rectified[1]; i++) {
             double slat = slat0, clat = clat0;
             for (unsigned int j = 0; j < imagersize_rectified[0]; j++) {
-                mrcal_point3_t v = (mrcal_point3_t
+                drcal_point3_t v = (drcal_point3_t
                 ){.x = slat, .y = clat * slon, .z = clat * clon};
 
                 set_rectification_map_pixel(
@@ -638,11 +638,11 @@ bool mrcal_rectification_maps(
             clon = clon * cdlon - _slon * sdlon;
         }
     } else {
-        // MRCAL_LENSMODEL_PINHOLE
+        // drcal_LENSMODEL_PINHOLE
         for (unsigned int i = 0; i < imagersize_rectified[1]; i++) {
             for (unsigned int j = 0; j < imagersize_rectified[0]; j++) {
-                mrcal_point3_t v =
-                    (mrcal_point3_t){.x = (double)j * fx_recip - c_over_f_x,
+                drcal_point3_t v =
+                    (drcal_point3_t){.x = (double)j * fx_recip - c_over_f_x,
                                      .y = (double)i * fy_recip - c_over_f_y,
                                      .z = 1.0};
 
@@ -845,10 +845,10 @@ static bool gnuplot_color_formula(
 //        36: 2*x - 1
 //      * negative numbers mean inverted=negative colour component
 //      * thus the ranges in `set pm3d rgbformulae' are -36..36
-#define DEFINE_mrcal_apply_color_map(T, Tname, T_MIN, T_MAX)                   \
-    bool mrcal_apply_color_map_##Tname(                                 \
-        mrcal_image_bgr_t*    out,                                      \
-        const mrcal_image_##Tname##_t* in,                              \
+#define DEFINE_drcal_apply_color_map(T, Tname, T_MIN, T_MAX)                   \
+    bool drcal_apply_color_map_##Tname(                                 \
+        drcal_image_bgr_t*    out,                                      \
+        const drcal_image_##Tname##_t* in,                              \
                                                                         \
         /* If true, I set in_min/in_max from the */                     \
         /* min/max of the input data */                                 \
@@ -886,7 +886,7 @@ static bool gnuplot_color_formula(
                                                                                \
             for (int y = 0; y < h; y++)                                        \
                 for (int x = 0; x < w; x++) {                                  \
-                    const T v = *mrcal_image_##Tname##_at_const(in, x, y);     \
+                    const T v = *drcal_image_##Tname##_at_const(in, x, y);     \
                     if (auto_min && v < in_min)                                \
                         in_min = v;                                            \
                     if (auto_max && v > in_max)                                \
@@ -902,9 +902,9 @@ static bool gnuplot_color_formula(
                                                                                \
         for (int y = 0; y < h; y++) {                                          \
             for (int x = 0; x < w; x++) {                                      \
-                const T* in_T = mrcal_image_##Tname##_at_const(in, x, y);      \
+                const T* in_T = drcal_image_##Tname##_at_const(in, x, y);      \
                                                                                \
-                mrcal_bgr_t* out_bgr = mrcal_image_bgr_at(out, x, y);          \
+                drcal_bgr_t* out_bgr = drcal_image_bgr_at(out, x, y);          \
                                                                                \
                 float x;                                                       \
                 if (*in_T <= in_min)                                           \
@@ -937,17 +937,17 @@ static bool gnuplot_color_formula(
     }
 
 static bool _validate_rectification_model_type(
-    const mrcal_lensmodel_type_t rectification_model_type
+    const drcal_lensmodel_type_t rectification_model_type
 ) {
-    if (rectification_model_type == MRCAL_LENSMODEL_LATLON ||
-        rectification_model_type == MRCAL_LENSMODEL_PINHOLE) {
+    if (rectification_model_type == drcal_LENSMODEL_LATLON ||
+        rectification_model_type == drcal_LENSMODEL_PINHOLE) {
         return true;
     }
 
     // ERROR
 
     const char* rectification_model_string =
-        mrcal_lensmodel_name_unconfigured(&(mrcal_lensmodel_t
+        drcal_lensmodel_name_unconfigured(&(drcal_lensmodel_t
         ){.type = rectification_model_type});
     if (rectification_model_string == NULL) {
         MSG("Unknown rectification_model_type=%d\n", rectification_model_type);
@@ -955,27 +955,27 @@ static bool _validate_rectification_model_type(
     }
 
     MSG("Invalid rectification_model_type for rectification: %s; I know about "
-        "MRCAL_LENSMODEL_LATLON and MRCAL_LENSMODEL_PINHOLE\n",
+        "drcal_LENSMODEL_LATLON and drcal_LENSMODEL_PINHOLE\n",
         rectification_model_string);
     return false;
 }
 
 static double _stereo_range_one(
     const double disparity,
-    const mrcal_point2_t qrect0,
+    const drcal_point2_t qrect0,
 
     // models_rectified
-    const mrcal_lensmodel_type_t rectification_model_type,
+    const drcal_lensmodel_type_t rectification_model_type,
     const double* fxycxy_rectified,
     const double baseline
 ) {
-    // See the docstring for mrcal.stereo_range() for the derivation
+    // See the docstring for drcal.stereo_range() for the derivation
     const double fx = fxycxy_rectified[0];
     const double fy = fxycxy_rectified[1];
     const double cx = fxycxy_rectified[2];
     const double cy = fxycxy_rectified[3];
 
-    if (rectification_model_type == MRCAL_LENSMODEL_LATLON) {
+    if (rectification_model_type == drcal_LENSMODEL_LATLON) {
         const double az0 = (qrect0.x - cx) / fx;
         const double disparity_rad = disparity / fx;
 
@@ -989,7 +989,7 @@ static double _stereo_range_one(
     }
 
     // _validate_rectification_model_type() makes sure this is true
-    // if(rectification_model_type == MRCAL_LENSMODEL_PINHOLE)
+    // if(rectification_model_type == drcal_LENSMODEL_PINHOLE)
     {
         const double tanaz0 = (qrect0.x - cx) / fx;
         const double tanel = (qrect0.y - cy) / fy;
@@ -1008,20 +1008,20 @@ static double _stereo_range_one(
     }
 }
 
-bool mrcal_stereo_range_sparse(
+bool drcal_stereo_range_sparse(
     // output
     double* range,  // N of these
 
     // input
     const double* disparity,       // N of these
-    const mrcal_point2_t* qrect0,  // N of these
+    const drcal_point2_t* qrect0,  // N of these
     const int N,                   // how many points
 
     const double disparity_min,
     const double disparity_max,
 
     // models_rectified
-    const mrcal_lensmodel_type_t rectification_model_type,
+    const drcal_lensmodel_type_t rectification_model_type,
     const double* fxycxy_rectified,
     const double baseline
 ) {

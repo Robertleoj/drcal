@@ -4,7 +4,7 @@
 A simple min-priority-queue implementation. Uses STL internally
 
 This is for the most part an internal implementation detail of
-mrcal_traverse_sensor_links(), but could potentially be useful somewhere
+drcal_traverse_sensor_links(), but could potentially be useful somewhere
 on its own, so I'm exposing it here
  */
 
@@ -28,9 +28,9 @@ typedef struct {
     uint16_t* buffer;  // each of these indexes an external node_t[] array,
                        // which contains the cost
     int size;
-} mrcal_heap_t;
+} drcal_heap_t;
 
-bool mrcal_heap_empty(mrcal_heap_t* heap, node_t* nodes);
-void mrcal_heap_push(mrcal_heap_t* heap, node_t* nodes, uint16_t x);
-uint16_t mrcal_heap_pop(mrcal_heap_t* heap, node_t* nodes);
-void mrcal_heap_resort(mrcal_heap_t* heap, node_t* nodes);
+bool drcal_heap_empty(drcal_heap_t* heap, node_t* nodes);
+void drcal_heap_push(drcal_heap_t* heap, node_t* nodes, uint16_t x);
+uint16_t drcal_heap_pop(drcal_heap_t* heap, node_t* nodes);
+void drcal_heap_resort(drcal_heap_t* heap, node_t* nodes);

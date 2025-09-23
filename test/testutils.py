@@ -4,7 +4,7 @@ import numpysane as nps
 import os
 import re
 from inspect import currentframe
-import mrcal
+import drcal
 
 Nchecks = 0
 NchecksFailed = 0
@@ -314,8 +314,8 @@ def confirm_covariances_equal(
         nps.transpose(var), var, worstcase=True, msg=f"Var(dq) is symmetric for {what}"
     )
 
-    l_predicted, v_predicted = mrcal.sorted_eig(var)
-    l_observed, v_observed = mrcal.sorted_eig(var_ref)
+    l_predicted, v_predicted = drcal.sorted_eig(var)
+    l_observed, v_observed = drcal.sorted_eig(var_ref)
 
     eccentricity_threshold = 2.0
 

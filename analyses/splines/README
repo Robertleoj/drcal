@@ -27,13 +27,13 @@ support: so my jacobian will remain sparse. The
 
 script derives and validates the spline equations. fpbisp.py is a part of that.
 
-Then I implemented the spline equations in mrcal.c, and wanted to make sure the
+Then I implemented the spline equations in drcal.c, and wanted to make sure the
 behavior was correct. This is done by the
 
   verify-interpolated-surface.py
 
-script. It produces a random splined model, projects it with mrcal, and
+script. It produces a random splined model, projects it with drcal, and
 visualizes the sparse control point surface with the dense sampled surface. The
 sampled surface should appear smooth, and should be guided by the control
-points. This tool is the first test that the mrcal projection is implemented
+points. This tool is the first test that the drcal projection is implemented
 correctly

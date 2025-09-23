@@ -200,10 +200,10 @@ def parse_args():
                         Some of these methods will be probably wrong.""",
     )
     parser.add_argument(
-        "--compare-baseline-against-mrcal-2.4",
+        "--compare-baseline-against-drcal-2.4",
         action="store_true",
-        dest="compare_baseline_against_mrcal_2_4",
-        help="""If given, compare against mrcal 2.4. Only some
+        dest="compare_baseline_against_drcal_2_4",
+        help="""If given, compare against drcal 2.4. Only some
                         paths support this. If we cannot honor this option, we
                         throw an error""",
     )
@@ -261,9 +261,9 @@ if args.points and not re.match("cross-reprojection", args.reproject_perturbed):
 
 testdir = os.path.dirname(os.path.realpath(__file__))
 
-# I import the LOCAL mrcal since that's what I'm testing
+# I import the LOCAL drcal since that's what I'm testing
 sys.path[:0] = (f"{testdir}/..",)
-import mrcal
+import drcal
 import testutils
 import copy
 import numpy as np
@@ -381,7 +381,7 @@ if args.observations_left_right_with_gap:
 else:
     calibration_baseline_kwargs = dict()
 
-if args.compare_baseline_against_mrcal_2_4:
+if args.compare_baseline_against_drcal_2_4:
     calibration_baseline_kwargs["avoid_oblique_views"] = False
 
 # The "baseline" is a solve with perfect, noiseless observations, reoptimized
@@ -438,11 +438,11 @@ if args.non_vanilla:
 
 if args.points:
     calibration_boards_to_points(optimization_inputs_baseline)
-x_baseline_unoptimized = mrcal.optimizer_callback(
+x_baseline_unoptimized = drcal.optimizer_callback(
     **optimization_inputs_baseline, no_jacobian=True, no_factorization=True
 )[1]
-mrcal.optimize(**optimization_inputs_baseline)
-x_baseline_optimized = mrcal.optimizer_callback(
+drcal.optimize(**optimization_inputs_baseline)
+x_baseline_optimized = drcal.optimizer_callback(
     **optimization_inputs_baseline, no_jacobian=True, no_factorization=True
 )[1]
 
@@ -452,7 +452,7 @@ imagersizes = optimization_inputs_baseline["imagersizes"]
 intrinsics_true = nps.cat(*[m.intrinsics()[1] for m in models_true])
 
 models_baseline = [
-    mrcal.cameramodel(
+    drcal.cameramodel(
         optimization_inputs=optimization_inputs_baseline, icam_intrinsics=i
     )
     for i in range(args.Ncameras)
@@ -468,7 +468,7 @@ models_baseline = [
 q0_baseline = imagersizes[0] / 3.0
 
 
-# I reimplemented much of the uncertainty logic since the method in mrcal 2.4,
+# I reimplemented much of the uncertainty logic since the method in drcal 2.4,
 # and I want to make sure that the new implementation doesn't break anything.
 # With some inputs the results should be EXACTLY the same, and I verify that
 # here. I got the reference data by checking out the 'release-2.4' branch, and
@@ -510,7 +510,7 @@ test/test-projection-uncertainty.py \
   --model opencv4                   \
   --Ncameras 4
 """
-if args.compare_baseline_against_mrcal_2_4:
+if args.compare_baseline_against_drcal_2_4:
     if (
         args.model == "opencv4"
         and args.Nframes == 50
@@ -529,7 +529,7 @@ if args.compare_baseline_against_mrcal_2_4:
         # calobject_warp_true
 
         if args.Ncameras == 1:
-            # The values reported by mrcal 2.4
+            # The values reported by drcal 2.4
             Var_dq_ref = np.array(
                 [[[389.84692117, 166.10448933], [166.10448933, 250.77439795]]]
             )
@@ -555,25 +555,25 @@ if args.compare_baseline_against_mrcal_2_4:
             )
         else:
             raise Exception(
-                f"Given --compare-baseline-against-mrcal-2.4, but an unknown scenario requested: {args.Ncameras=}"
+                f"Given --compare-baseline-against-drcal-2.4, but an unknown scenario requested: {args.Ncameras=}"
             )
 
         for icam in range(args.Ncameras):
             model = models_baseline[icam]
 
             # At 1.0m out
-            p_cam_baseline = mrcal.unproject(
+            p_cam_baseline = drcal.unproject(
                 q0_baseline, *model.intrinsics(), normalize=True
             )
 
-            Var_dq = mrcal.projection_uncertainty(
+            Var_dq = drcal.projection_uncertainty(
                 p_cam_baseline * 1.0,
                 model=model,
                 atinfinity=False,
                 method="mean-pcam",
                 observed_pixel_uncertainty=args.observed_pixel_uncertainty,
             )
-            Var_dq_inf = mrcal.projection_uncertainty(
+            Var_dq_inf = drcal.projection_uncertainty(
                 p_cam_baseline * 1.0,
                 model=model,
                 atinfinity=True,
@@ -586,14 +586,14 @@ if args.compare_baseline_against_mrcal_2_4:
                 Var_dq_ref[icam],
                 eps=1e-6,
                 worstcase=True,
-                msg=f"var(dq) for camera {icam}/{args.Ncameras} matches the legacy implementation in mrcal 2.4",
+                msg=f"var(dq) for camera {icam}/{args.Ncameras} matches the legacy implementation in drcal 2.4",
             )
             testutils.confirm_equal(
                 Var_dq_inf,
                 Var_dq_inf_ref[icam],
                 eps=1e-6,
                 worstcase=True,
-                msg=f"var(dq) at infinity for camera {icam}/{args.Ncameras} matches the legacy implementation in mrcal 2.4",
+                msg=f"var(dq) at infinity for camera {icam}/{args.Ncameras} matches the legacy implementation in drcal 2.4",
             )
 
         testutils.finish()
@@ -601,7 +601,7 @@ if args.compare_baseline_against_mrcal_2_4:
 
     else:
         raise Exception(
-            "Given --compare-baseline-against-mrcal-2.4, but an unknown scenario requested"
+            "Given --compare-baseline-against-drcal-2.4, but an unknown scenario requested"
         )
 
 
@@ -645,7 +645,7 @@ if args.make_documentation_plots is not None:
                 hardcopy=f"{args.make_documentation_plots}--simulated-geometry.{extension}",
             )
             gp.add_plot_option(processoptions_output, "set", "xyplane relative 0")
-            mrcal.show_geometry(
+            drcal.show_geometry(
                 models_baseline,
                 show_calobjects=True,
                 unset="key",
@@ -660,7 +660,7 @@ if args.make_documentation_plots is not None:
         processoptions_output = dict(wait=True)
 
         gp.add_plot_option(processoptions_output, "set", "xyplane relative 0")
-        mrcal.show_geometry(
+        drcal.show_geometry(
             models_baseline,
             show_calobjects=True,
             title="",
@@ -847,12 +847,12 @@ def reproject_perturbed__common(
 
     # shape (Ncameras, 3)
     p_cam_baseline = (
-        mrcal.unproject(q, lensmodel, baseline_intrinsics, normalize=True) * distance
+        drcal.unproject(q, lensmodel, baseline_intrinsics, normalize=True) * distance
     )
 
     # shape (Ncameras, 3)
-    p_ref_baseline = mrcal.transform_point_rt(
-        mrcal.invert_rt(baseline_rt_cam_ref), p_cam_baseline
+    p_ref_baseline = drcal.transform_point_rt(
+        drcal.invert_rt(baseline_rt_cam_ref), p_cam_baseline
     )
 
     if fixedframes:
@@ -860,12 +860,12 @@ def reproject_perturbed__common(
     else:
         # shape (Nframes, Ncameras, 3)
         # The point in the coord system of all the frames
-        p_frames = mrcal.transform_point_rt(
-            nps.dummy(mrcal.invert_rt(baseline_rt_ref_frame), -2), p_ref_baseline
+        p_frames = drcal.transform_point_rt(
+            nps.dummy(drcal.invert_rt(baseline_rt_ref_frame), -2), p_ref_baseline
         )
 
         # shape (..., Nframes, Ncameras, 3)
-        p_ref_query_allframes = mrcal.transform_point_rt(
+        p_ref_query_allframes = drcal.transform_point_rt(
             nps.dummy(query_rt_ref_frame, -2), p_frames
         )
 
@@ -873,10 +873,10 @@ def reproject_perturbed__common(
         # Mean 3D point
         if fixedframes:
             # shape (..., Ncameras, 3)
-            p_cam_query = mrcal.transform_point_rt(query_rt_cam_ref, p_ref_query)
+            p_cam_query = drcal.transform_point_rt(query_rt_cam_ref, p_ref_query)
         else:
             # shape (..., Nframes, Ncameras, 3)
-            p_cam_query_allframes = mrcal.transform_point_rt(
+            p_cam_query_allframes = drcal.transform_point_rt(
                 nps.dummy(query_rt_cam_ref, -3), p_ref_query_allframes
             )
 
@@ -884,7 +884,7 @@ def reproject_perturbed__common(
             p_cam_query = np.mean(p_cam_query_allframes, axis=-3)
 
         # shape (..., Ncameras, 2)
-        return mrcal.project(p_cam_query, lensmodel, query_intrinsics)
+        return drcal.project(p_cam_query, lensmodel, query_intrinsics)
 
     else:
         # I'm looking at projections q, NOT points p. Several paths here:
@@ -896,12 +896,12 @@ def reproject_perturbed__common(
             )
 
         # shape (..., Nframes, Ncameras, 3)
-        p_cam_query_allframes = mrcal.transform_point_rt(
+        p_cam_query_allframes = drcal.transform_point_rt(
             nps.dummy(query_rt_cam_ref, -3), p_ref_query_allframes
         )
 
         # shape (..., Nframes, Ncameras, 2)
-        q_reprojected = mrcal.project(
+        q_reprojected = drcal.project(
             p_cam_query_allframes, lensmodel, nps.dummy(query_intrinsics, -3)
         )
 
@@ -982,7 +982,7 @@ def reproject_perturbed__fit_boards_ref(
     if query_calobject_warp.ndim > 1:
         calibration_object_query = nps.cat(
             *[
-                mrcal.ref_calibration_object(
+                drcal.ref_calibration_object(
                     calobject_width,
                     calobject_height,
                     baseline_optimization_inputs["calibration_object_spacing"],
@@ -992,7 +992,7 @@ def reproject_perturbed__fit_boards_ref(
             ]
         )
     else:
-        calibration_object_query = mrcal.ref_calibration_object(
+        calibration_object_query = drcal.ref_calibration_object(
             calobject_width,
             calobject_height,
             baseline_optimization_inputs["calibration_object_spacing"],
@@ -1000,12 +1000,12 @@ def reproject_perturbed__fit_boards_ref(
         )
 
     # shape (Nsamples, Nframes, Nh, Nw, 3)
-    pcorners_ref_query = mrcal.transform_point_rt(
+    pcorners_ref_query = drcal.transform_point_rt(
         nps.dummy(query_rt_ref_frame, -2, -2), nps.dummy(calibration_object_query, -4)
     )
 
     # shape (Nh, Nw, 3)
-    calibration_object_baseline = mrcal.ref_calibration_object(
+    calibration_object_baseline = drcal.ref_calibration_object(
         calobject_width,
         calobject_height,
         baseline_optimization_inputs["calibration_object_spacing"],
@@ -1014,12 +1014,12 @@ def reproject_perturbed__fit_boards_ref(
     # frames_ref.shape is (Nframes, 6)
 
     # shape (Nframes, Nh, Nw, 3)
-    pcorners_ref_baseline = mrcal.transform_point_rt(
+    pcorners_ref_baseline = drcal.transform_point_rt(
         nps.dummy(baseline_rt_ref_frame, -2, -2), calibration_object_baseline
     )
 
     # shape (Nsamples,4,3)
-    Rt_refq_refb = mrcal.align_procrustes_points_Rt01(
+    Rt_refq_refb = drcal.align_procrustes_points_Rt01(
         # shape (Nsamples,N,3)
         nps.mv(nps.clump(nps.mv(pcorners_ref_query, -1, 0), n=-3), 0, -1),
         # shape (N,3)
@@ -1028,22 +1028,22 @@ def reproject_perturbed__fit_boards_ref(
 
     # shape (Ncameras, 3)
     p_cam_baseline = (
-        mrcal.unproject(q, lensmodel, baseline_intrinsics, normalize=True) * distance
+        drcal.unproject(q, lensmodel, baseline_intrinsics, normalize=True) * distance
     )
 
     # shape (Ncameras, 3). In the ref coord system
-    p_ref_baseline = mrcal.transform_point_rt(
-        mrcal.invert_rt(baseline_rt_cam_ref), p_cam_baseline
+    p_ref_baseline = drcal.transform_point_rt(
+        drcal.invert_rt(baseline_rt_cam_ref), p_cam_baseline
     )
 
     # shape (Nsamples,Ncameras,3)
-    p_ref_query = mrcal.transform_point_Rt(nps.mv(Rt_refq_refb, -3, -4), p_ref_baseline)
+    p_ref_query = drcal.transform_point_Rt(nps.mv(Rt_refq_refb, -3, -4), p_ref_baseline)
 
     # shape (..., Ncameras, 3)
-    p_cam_query = mrcal.transform_point_rt(query_rt_cam_ref, p_ref_query)
+    p_cam_query = drcal.transform_point_rt(query_rt_cam_ref, p_ref_query)
 
     # shape (..., Ncameras, 2)
-    q1 = mrcal.project(p_cam_query, lensmodel, query_intrinsics)
+    q1 = drcal.project(p_cam_query, lensmodel, query_intrinsics)
 
     if q1.shape[-3] == 1:
         q1 = q1[0, :, :]
@@ -1112,31 +1112,31 @@ def reproject_perturbed__diff(
 
     # shape (Ncameras, 3)
     p_cam_baseline = (
-        mrcal.unproject(q, lensmodel, baseline_intrinsics, normalize=True) * distance
+        drcal.unproject(q, lensmodel, baseline_intrinsics, normalize=True) * distance
     )
     p_cam_query = np.zeros((args.Ncameras, 3), dtype=float)
     for icam in range(args.Ncameras):
         # This method only cares about the intrinsics
-        model_baseline = mrcal.cameramodel(
+        model_baseline = drcal.cameramodel(
             intrinsics=(lensmodel, baseline_intrinsics[icam]), imagersize=imagersizes[0]
         )
-        model_query = mrcal.cameramodel(
+        model_query = drcal.cameramodel(
             intrinsics=(lensmodel, query_intrinsics[icam]), imagersize=imagersizes[0]
         )
 
-        implied_Rt10_query = mrcal.projection_diff(
+        implied_Rt10_query = drcal.projection_diff(
             (model_baseline, model_query),
             distance=distance,
             use_uncertainties=False,
             focus_center=None,
             focus_radius=1000.0,
         )[3]
-        mrcal.transform_point_Rt(
+        drcal.transform_point_Rt(
             implied_Rt10_query, p_cam_baseline[icam], out=p_cam_query[icam]
         )
 
     # shape (Ncameras, 2)
-    return mrcal.project(p_cam_query, lensmodel, query_intrinsics)
+    return drcal.project(p_cam_query, lensmodel, query_intrinsics)
 
 
 def reproject_perturbed__cross_reprojection(
@@ -1177,7 +1177,7 @@ def reproject_perturbed__cross_reprojection(
 
     The logic here is described thoroughly in
 
-      https://mrcal.secretsauce.net/uncertainty-cross-reprojection.html
+      https://drcal.secretsauce.net/uncertainty-cross-reprojection.html
     """
 
     if fixedframes:
@@ -1199,34 +1199,34 @@ def reproject_perturbed__cross_reprojection(
     mode = re.match("cross-reprojection-(.+)", args.reproject_perturbed).group(1)
 
     b_baseline_unpacked, x_baseline, J_packed_baseline, factorization = (
-        mrcal.optimizer_callback(**baseline_optimization_inputs)
+        drcal.optimizer_callback(**baseline_optimization_inputs)
     )
-    mrcal.unpack_state(b_baseline_unpacked, **baseline_optimization_inputs)
+    drcal.unpack_state(b_baseline_unpacked, **baseline_optimization_inputs)
 
-    Nstate = mrcal.num_states(**optimization_inputs_baseline)
+    Nstate = drcal.num_states(**optimization_inputs_baseline)
 
-    imeas_board0 = mrcal.measurement_index_boards(0, **optimization_inputs_baseline)
-    Nmeas_board = mrcal.num_measurements_boards(**optimization_inputs_baseline)
+    imeas_board0 = drcal.measurement_index_boards(0, **optimization_inputs_baseline)
+    Nmeas_board = drcal.num_measurements_boards(**optimization_inputs_baseline)
 
-    imeas_point0 = mrcal.measurement_index_points(0, **optimization_inputs_baseline)
-    Nmeas_point = mrcal.num_measurements_points(**optimization_inputs_baseline)
+    imeas_point0 = drcal.measurement_index_points(0, **optimization_inputs_baseline)
+    Nmeas_point = drcal.num_measurements_points(**optimization_inputs_baseline)
 
-    istate_intrinsics0 = mrcal.state_index_intrinsics(0, **optimization_inputs_baseline)
-    Nstates_intrinsics = mrcal.num_states_intrinsics(**optimization_inputs_baseline)
+    istate_intrinsics0 = drcal.state_index_intrinsics(0, **optimization_inputs_baseline)
+    Nstates_intrinsics = drcal.num_states_intrinsics(**optimization_inputs_baseline)
 
-    istate_extrinsics0 = mrcal.state_index_extrinsics(0, **optimization_inputs_baseline)
-    Nstates_extrinsics = mrcal.num_states_extrinsics(**optimization_inputs_baseline)
+    istate_extrinsics0 = drcal.state_index_extrinsics(0, **optimization_inputs_baseline)
+    Nstates_extrinsics = drcal.num_states_extrinsics(**optimization_inputs_baseline)
 
-    istate_frame0 = mrcal.state_index_frames(0, **optimization_inputs_baseline)
-    Nstates_frame = mrcal.num_states_frames(**optimization_inputs_baseline)
+    istate_frame0 = drcal.state_index_frames(0, **optimization_inputs_baseline)
+    Nstates_frame = drcal.num_states_frames(**optimization_inputs_baseline)
 
-    istate_point0 = mrcal.state_index_points(0, **optimization_inputs_baseline)
-    Nstates_point = mrcal.num_states_points(**optimization_inputs_baseline)
+    istate_point0 = drcal.state_index_points(0, **optimization_inputs_baseline)
+    Nstates_point = drcal.num_states_points(**optimization_inputs_baseline)
 
-    istate_calobject_warp0 = mrcal.state_index_calobject_warp(
+    istate_calobject_warp0 = drcal.state_index_calobject_warp(
         **optimization_inputs_baseline
     )
-    Nstates_calobject_warp = mrcal.num_states_calobject_warp(
+    Nstates_calobject_warp = drcal.num_states_calobject_warp(
         **optimization_inputs_baseline
     )
 
@@ -1400,7 +1400,7 @@ def reproject_perturbed__cross_reprojection(
         W_delta_qref.shape[:1] + J_observations.shape[-1:], dtype=float
     )
 
-    mrcal._mrcal_npsp._Jt_x(
+    drcal._drcal_npsp._Jt_x(
         J_observations.indptr,
         J_observations.indices,
         J_observations.data,
@@ -1411,17 +1411,17 @@ def reproject_perturbed__cross_reprojection(
     def get_rt_ref_refperturbed():
         def transform_point_rt3_withgrad_drt1(rt0, rt1, rt2, p):
             def compose_rt3_withgrad_drt1(rt0, rt1, rt2):
-                rt01, drt01_drt0, drt01_drt1 = mrcal.compose_rt(
+                rt01, drt01_drt0, drt01_drt1 = drcal.compose_rt(
                     rt0, rt1, get_gradients=True
                 )
-                rt012, drt012_drt01, drt012_drt2 = mrcal.compose_rt(
+                rt012, drt012_drt01, drt012_drt2 = drcal.compose_rt(
                     rt01, rt2, get_gradients=True
                 )
                 drt012_drt1 = nps.matmult(drt012_drt01, drt01_drt1)
                 return rt012, drt012_drt1
 
             rt012, drt012_drt1 = compose_rt3_withgrad_drt1(rt0, rt1, rt2)
-            pp, dpp_drt012, dpp_dp = mrcal.transform_point_rt(
+            pp, dpp_drt012, dpp_dp = drcal.transform_point_rt(
                 rt012, p, get_gradients=True
             )
             dpp_drt1 = nps.matmult(dpp_drt012, drt012_drt1)
@@ -1438,7 +1438,7 @@ def reproject_perturbed__cross_reprojection(
 
             Now let's look at the rotation
 
-            mrcal_transform_point_rt_full() from rotate_point_r_core() defines
+            drcal_transform_point_rt_full() from rotate_point_r_core() defines
             prot = rotate(rt, p) at rt=identity:
 
               const val_withgrad_t<N> cross[3] =
@@ -1482,15 +1482,15 @@ def reproject_perturbed__cross_reprojection(
             # strange-looking implementation to make broadcasting work
             dprot_drt = np.zeros(p.shape[:-1] + (3, 6), dtype=float)
 
-            mrcal.skew_symmetric(p, out=dprot_drt[..., :3])
+            drcal.skew_symmetric(p, out=dprot_drt[..., :3])
             dprot_drt *= -1.0
 
             dprot_drt[..., 0, 0 + 3] = 1.0
             dprot_drt[..., 1, 1 + 3] = 1.0
             dprot_drt[..., 2, 2 + 3] = 1.0
 
-            _, dprot_drt_reference, _ = mrcal.transform_point_rt(
-                mrcal.identity_rt(), p, get_gradients=True
+            _, dprot_drt_reference, _ = drcal.transform_point_rt(
+                drcal.identity_rt(), p, get_gradients=True
             )
             if nps.norm2((dprot_drt - dprot_drt_reference).ravel()) > 1e-10:
                 raise Exception(
@@ -1554,7 +1554,7 @@ def reproject_perturbed__cross_reprojection(
                         if what == "board":
                             # shape (Nsamples, Nmeas_observations_all,Nh,Nw,2)
                             #       (Nsamples, Nmeas_observations_all,Nh,Nw,2,3)
-                            qcross, dq_dpcam, _ = mrcal.project(
+                            qcross, dq_dpcam, _ = drcal.project(
                                 pcam[what],
                                 baseline_optimization_inputs["lensmodel"],
                                 nps.dummy(
@@ -1567,7 +1567,7 @@ def reproject_perturbed__cross_reprojection(
                         elif what == "point":
                             # shape (Nsamples, Nmeas_observations_all,2)
                             #       (Nsamples, Nmeas_observations_all,2,3)
-                            qcross, dq_dpcam, _ = mrcal.project(
+                            qcross, dq_dpcam, _ = drcal.project(
                                 pcam[what],
                                 baseline_optimization_inputs["lensmodel"],
                                 baseline_intrinsics[idx_camintrinsics[what], :],
@@ -1635,7 +1635,7 @@ def reproject_perturbed__cross_reprojection(
                         if what == "board":
                             # shape (..., Nmeas_observations_all,Nh,Nw,2)
                             #       (..., Nmeas_observations_all,Nh,Nw,2,3)
-                            qcross, dq_dpcamperturbed, _ = mrcal.project(
+                            qcross, dq_dpcamperturbed, _ = drcal.project(
                                 pcamperturbed[what],
                                 baseline_optimization_inputs["lensmodel"],
                                 nps.dummy(
@@ -1646,7 +1646,7 @@ def reproject_perturbed__cross_reprojection(
                         elif what == "point":
                             # shape (..., Nmeas_observations_all,2)
                             #       (..., Nmeas_observations_all,2,3)
-                            qcross, dq_dpcamperturbed, _ = mrcal.project(
+                            qcross, dq_dpcamperturbed, _ = drcal.project(
                                 pcamperturbed[what],
                                 baseline_optimization_inputs["lensmodel"],
                                 query_intrinsics[:, idx_camintrinsics[what]],
@@ -1773,7 +1773,7 @@ def reproject_perturbed__cross_reprojection(
                 state_mask_ie[slice_state_extrinsics] = 1
 
             db_predicted = factorization.solve_xt_JtJ_bt(Jt_W_qref)
-            mrcal.unpack_state(db_predicted, **baseline_optimization_inputs)
+            drcal.unpack_state(db_predicted, **baseline_optimization_inputs)
 
             #### I just computed db = M dqref
             if not hasattr(get_cross_operating_point__linearization, "did_check_count"):
@@ -1806,13 +1806,13 @@ def reproject_perturbed__cross_reprojection(
             # set db_cross_fpcw_packed to contain only state from
             # frames,points,calobject_warp. All other state is 0
             db_cross_fpcw_packed = np.array(db_predicted)
-            mrcal.pack_state(db_cross_fpcw_packed, **baseline_optimization_inputs)
+            drcal.pack_state(db_cross_fpcw_packed, **baseline_optimization_inputs)
             db_cross_fpcw_packed[~state_mask_fpcw] = 0
 
             # set db_cross_ie_packed to contain only state from intrinsics,
             # extrinsics (if we have extrinsics). All other state is 0
             db_cross_ie_packed = np.array(db_predicted)
-            mrcal.pack_state(db_cross_ie_packed, **baseline_optimization_inputs)
+            drcal.pack_state(db_cross_ie_packed, **baseline_optimization_inputs)
             db_cross_ie_packed[~state_mask_ie] = 0
 
             dx_cross_fpcw0 = J_observations.dot(db_cross_fpcw_packed)
@@ -1849,7 +1849,7 @@ def reproject_perturbed__cross_reprojection(
                     Nextrinsics, 6
                 )
                 # shape (Nextrinsics,6,6)
-                drt_drt = mrcal.compose_rt_tinyrt1_gradientrt1(rt_cam_ref)
+                drt_drt = drcal.compose_rt_tinyrt1_gradientrt1(rt_cam_ref)
                 # Pack
                 drt_drt /= nps.dummy(scale_extrinsics, -1)
                 # shape (Nextrinsics*6,6) = (Nstates_extrinsics,6)
@@ -1891,7 +1891,7 @@ def reproject_perturbed__cross_reprojection(
                         Nframes, 6
                     )
                     # shape (Nframes,6,6)
-                    drt_drt = mrcal.compose_rt_tinyrt0_gradientrt0(rt_ref_frame)
+                    drt_drt = drcal.compose_rt_tinyrt0_gradientrt0(rt_ref_frame)
                     # Pack numerator
                     drt_drt /= nps.dummy(scale_frames, -1)
                     # shape (Nframes*6,6) = (Nstates_frame,6)
@@ -1906,11 +1906,11 @@ def reproject_perturbed__cross_reprojection(
 
                     # shape (Npoints,3,6)
                     dp_drt = np.zeros((Npoints, 3, 6), dtype=float)
-                    mrcal.skew_symmetric(p, out=dp_drt[..., :3])
+                    drcal.skew_symmetric(p, out=dp_drt[..., :3])
                     dp_drt[..., :3] *= -1
 
                     # I want:
-                    #   mrcal.identity_R(out = dp_drt[...,3:])
+                    #   drcal.identity_R(out = dp_drt[...,3:])
                     # But this doesn't work today: npsp has a fix in 0.39, but I
                     # don't want to demand this later release
                     dp_drt[..., :, 3:] = 0
@@ -1931,7 +1931,7 @@ def reproject_perturbed__cross_reprojection(
                     Kpacked_ref_fpcw = -np.linalg.lstsq(
                         J_cross_fp, Jpacked_fpcw, rcond=None
                     )[0]
-                    Kpacked = mrcal.drt_ref_refperturbed__dbpacked(
+                    Kpacked = drcal.drt_ref_refperturbed__dbpacked(
                         **optimization_inputs_baseline
                     )
 
@@ -1959,7 +1959,7 @@ def reproject_perturbed__cross_reprojection(
                         print(JctJc)
                         print(JctJc_ref)
 
-                        istate_point0 = mrcal.state_index_points(
+                        istate_point0 = drcal.state_index_points(
                             0, **optimization_inputs_baseline
                         )
 
@@ -1998,7 +1998,7 @@ def reproject_perturbed__cross_reprojection(
             ]
             object_spacing = baseline_optimization_inputs["calibration_object_spacing"]
             # shape (Nh,Nw,3)
-            baseline_calibration_object = mrcal.ref_calibration_object(
+            baseline_calibration_object = drcal.ref_calibration_object(
                 object_width_n,
                 object_height_n,
                 object_spacing,
@@ -2006,7 +2006,7 @@ def reproject_perturbed__cross_reprojection(
             )
 
             # shape (...,Nh, Nw,3)
-            query_calibration_object = mrcal.ref_calibration_object(
+            query_calibration_object = drcal.ref_calibration_object(
                 object_width_n,
                 object_height_n,
                 object_spacing,
@@ -2014,7 +2014,7 @@ def reproject_perturbed__cross_reprojection(
             )
 
             # shape (Nmeas_observations_all,Nh,Nw,3),
-            pref["board"] = mrcal.transform_point_rt(
+            pref["board"] = drcal.transform_point_rt(
                 nps.dummy(baseline_rt_ref_frame[..., idx_frame, :], -2, -2),
                 baseline_calibration_object,
             )
@@ -2035,8 +2035,8 @@ def reproject_perturbed__cross_reprojection(
 
                     if what == "board":
                         # shape (Nmeas_observations_all/2,Nh,Nw,2)
-                        qq = mrcal.project(
-                            mrcal.transform_point_rt(
+                        qq = drcal.project(
+                            drcal.transform_point_rt(
                                 nps.dummy(
                                     baseline_rt_cam_ref[idx_camextrinsics[what] + 1, :],
                                     -2,
@@ -2051,8 +2051,8 @@ def reproject_perturbed__cross_reprojection(
                         )
                     elif what == "point":
                         # shape (Nmeas_observations_all/2,2)
-                        qq = mrcal.project(
-                            mrcal.transform_point_rt(
+                        qq = drcal.project(
+                            drcal.transform_point_rt(
                                 baseline_rt_cam_ref[idx_camextrinsics[what] + 1, :],
                                 pref[what],
                             ),
@@ -2105,7 +2105,7 @@ def reproject_perturbed__cross_reprojection(
                             -2,
                             -2,
                         ),
-                        mrcal.identity_rt(),
+                        drcal.identity_rt(),
                         nps.dummy(query_rt_ref_frame[..., idx_frame, :], -2, -2),
                         nps.mv(query_calibration_object, -4, -5),
                     )
@@ -2114,8 +2114,8 @@ def reproject_perturbed__cross_reprojection(
                 pcam["point"], dpcam_drt_ref_refperturbed["point"] = (
                     transform_point_rt3_withgrad_drt1(
                         baseline_rt_cam_ref[idx_camextrinsics["point"] + 1, :],
-                        mrcal.identity_rt(),
-                        mrcal.identity_rt(),
+                        drcal.identity_rt(),
+                        drcal.identity_rt(),
                         query_point[:, idx_points],
                     )
                 )
@@ -2138,7 +2138,7 @@ def reproject_perturbed__cross_reprojection(
                             -2,
                             -2,
                         ),
-                        mrcal.identity_rt(),
+                        drcal.identity_rt(),
                         nps.dummy(baseline_rt_ref_frame[..., idx_frame, :], -2, -2),
                         baseline_calibration_object,
                     )
@@ -2147,8 +2147,8 @@ def reproject_perturbed__cross_reprojection(
                 pcamperturbed["point"], dpcamperturbed_drt_refperturbed_ref["point"] = (
                     transform_point_rt3_withgrad_drt1(
                         query_rt_cam_ref[..., idx_camextrinsics["point"] + 1, :],
-                        mrcal.identity_rt(),
-                        mrcal.identity_rt(),
+                        drcal.identity_rt(),
+                        drcal.identity_rt(),
                         baseline_point[idx_points],
                     )
                 )
@@ -2169,7 +2169,7 @@ def reproject_perturbed__cross_reprojection(
 
             if have_state["board"]:
                 # shape (..., Nmeas_observations_all,Nh,Nw,3),
-                prefperturbed = mrcal.transform_point_rt(
+                prefperturbed = drcal.transform_point_rt(
                     nps.dummy(query_rt_ref_frame[..., idx_frame, :], -2, -2),
                     nps.mv(query_calibration_object, -4, -5),
                 )
@@ -2179,7 +2179,7 @@ def reproject_perturbed__cross_reprojection(
                 )
                 # shape (..., Nmeas_observations_all,Nh,Nw,3),
                 #       (..., Nmeas_observations_all,Nh,Nw,3,6)
-                pcam["board"], _, dpcam_dpref = mrcal.transform_point_rt(
+                pcam["board"], _, dpcam_dpref = drcal.transform_point_rt(
                     nps.dummy(
                         baseline_rt_cam_ref[idx_camextrinsics["board"] + 1, :], -2, -2
                     ),
@@ -2204,7 +2204,7 @@ def reproject_perturbed__cross_reprojection(
                 )
                 # shape (..., Nmeas_observations_all,3),
                 #       (..., Nmeas_observations_all,3,6)
-                pcam["point"], _, dpcam_dpref = mrcal.transform_point_rt(
+                pcam["point"], _, dpcam_dpref = drcal.transform_point_rt(
                     baseline_rt_cam_ref[idx_camextrinsics["point"] + 1, :],
                     prefperturbed,
                     get_gradients=True,
@@ -2235,7 +2235,7 @@ def reproject_perturbed__cross_reprojection(
                 # shape (..., Nmeas_observations_all,Nh,Nw,3),
                 #       (..., Nmeas_observations_all,Nh,Nw,3,6)
                 pcamperturbed["board"], _, dpcamperturbed_dprefperturbed = (
-                    mrcal.transform_point_rt(
+                    drcal.transform_point_rt(
                         nps.dummy(
                             query_rt_cam_ref[..., idx_camextrinsics["board"] + 1, :],
                             -2,
@@ -2261,7 +2261,7 @@ def reproject_perturbed__cross_reprojection(
                 # shape (..., Nmeas_observations_all,3),
                 #       (..., Nmeas_observations_all,3,6)
                 pcamperturbed["point"], _, dpcamperturbed_dprefperturbed = (
-                    mrcal.transform_point_rt(
+                    drcal.transform_point_rt(
                         query_rt_cam_ref[..., idx_camextrinsics["point"] + 1, :],
                         pref["point"],
                         get_gradients=True,
@@ -2287,7 +2287,7 @@ def reproject_perturbed__cross_reprojection(
             method = "linearization"
 
             b = np.ones((Nstate,), dtype=float)
-            mrcal.unpack_state(b, **baseline_optimization_inputs)
+            drcal.unpack_state(b, **baseline_optimization_inputs)
 
             if istate_extrinsics0 is not None:
                 scale_extrinsics = b[istate_extrinsics0 : istate_extrinsics0 + 6]
@@ -2401,7 +2401,7 @@ def reproject_perturbed__cross_reprojection(
         # compare the rt_ref_refperturbed,rt_refperturbed_ref results to each
         # other
         for method in rt_rr_all["rt_ref_refperturbed"].keys():
-            rt_error = mrcal.compose_rt(
+            rt_error = drcal.compose_rt(
                 rt_rr_all["rt_ref_refperturbed"][method],
                 rt_rr_all["rt_refperturbed_ref"][method],
             )
@@ -2474,7 +2474,7 @@ def reproject_perturbed__cross_reprojection(
         if direction == "rt_ref_refperturbed":
             rt_ref_refperturbed = rt_rr_all[direction][method]
         else:
-            rt_ref_refperturbed = mrcal.invert_rt(rt_rr_all[direction][method])
+            rt_ref_refperturbed = drcal.invert_rt(rt_rr_all[direction][method])
 
         # I have a least-squares solve of the linearized system. Let's look at
         # the error to confirm that it's smaller. This is an optional validation
@@ -2501,8 +2501,8 @@ def reproject_perturbed__cross_reprojection(
 
                 if what == "board":
                     # shape (..., Nmeas_observations_all,Nh,Nw,3)
-                    pcam = mrcal.transform_point_rt(
-                        mrcal.compose_rt(
+                    pcam = drcal.transform_point_rt(
+                        drcal.compose_rt(
                             nps.dummy(
                                 baseline_rt_cam_ref[idx_camextrinsics["board"] + 1, :],
                                 -2,
@@ -2514,7 +2514,7 @@ def reproject_perturbed__cross_reprojection(
                         nps.mv(query_calibration_object, -4, -5),
                     )
                     # shape (..., Nmeas_observations_all,Nh,Nw,2)
-                    q_cross = mrcal.project(
+                    q_cross = drcal.project(
                         pcam,
                         baseline_optimization_inputs["lensmodel"],
                         nps.dummy(
@@ -2523,8 +2523,8 @@ def reproject_perturbed__cross_reprojection(
                     )
                 elif what == "point":
                     # shape (..., Nmeas_observations_all,3)
-                    pcam = mrcal.transform_point_rt(
-                        mrcal.compose_rt(
+                    pcam = drcal.transform_point_rt(
+                        drcal.compose_rt(
                             baseline_rt_cam_ref[idx_camextrinsics["point"] + 1, :],
                             nps.mv(rt_ref_refperturbed, -2, -3),
                         ),
@@ -2532,7 +2532,7 @@ def reproject_perturbed__cross_reprojection(
                     )
 
                     # shape (..., Nmeas_observations_all,2)
-                    q_cross = mrcal.project(
+                    q_cross = drcal.project(
                         pcam,
                         baseline_optimization_inputs["lensmodel"],
                         baseline_intrinsics[idx_camintrinsics[what], :],
@@ -2588,14 +2588,14 @@ def reproject_perturbed__cross_reprojection(
                     # are near optimal
                     def compute(rt_ref_refperturbed):
                         what = "point"
-                        pcam = mrcal.transform_point_rt(
-                            mrcal.compose_rt(
+                        pcam = drcal.transform_point_rt(
+                            drcal.compose_rt(
                                 baseline_rt_cam_ref[idx_camextrinsics["point"] + 1, :],
                                 rt_ref_refperturbed,
                             ),
                             query_point[0, idx_points],
                         )
-                        q_cross = mrcal.project(
+                        q_cross = drcal.project(
                             pcam,
                             baseline_optimization_inputs["lensmodel"],
                             baseline_intrinsics[idx_camintrinsics[what], :],
@@ -2651,7 +2651,7 @@ def reproject_perturbed__cross_reprojection(
             )
 
         # shape (6,Nstate)
-        Kpacked = mrcal.drt_ref_refperturbed__dbpacked(**optimization_inputs_baseline)
+        Kpacked = drcal.drt_ref_refperturbed__dbpacked(**optimization_inputs_baseline)
 
         # I have
         #
@@ -2684,7 +2684,7 @@ def reproject_perturbed__cross_reprojection(
         # Now let's compute and compare the linearized Var(rt_ref_refperturbed)
 
         var_predicted__rt_ref_refperturbed = (
-            mrcal._mrcal_npsp._A_Jt_J_At(
+            drcal._drcal_npsp._A_Jt_J_At(
                 Kpacked_inv_JtJ,
                 J_observations.indptr,
                 J_observations.indices,
@@ -2704,8 +2704,8 @@ def reproject_perturbed__cross_reprojection(
 
         if 0:
             # I do this more or less below in the confirm_covariances_equal()
-            l0, v0 = mrcal.sorted_eig(var_empirical__rt_ref_refperturbed)
-            l1, v1 = mrcal.sorted_eig(var_predicted__rt_ref_refperturbed)
+            l0, v0 = drcal.sorted_eig(var_empirical__rt_ref_refperturbed)
+            l1, v1 = drcal.sorted_eig(var_predicted__rt_ref_refperturbed)
 
             import gnuplotlib as gp
 
@@ -2726,25 +2726,25 @@ def reproject_perturbed__cross_reprojection(
 
     # shape (Ncameras, 3)
     p_cam_baseline = (
-        mrcal.unproject(q, lensmodel, baseline_intrinsics, normalize=True) * distance
+        drcal.unproject(q, lensmodel, baseline_intrinsics, normalize=True) * distance
     )
     # shape (Ncameras, 3)
-    p_ref_baseline = mrcal.transform_point_rt(
+    p_ref_baseline = drcal.transform_point_rt(
         baseline_rt_cam_ref, p_cam_baseline, inverted=True
     )
     # shape (...,Ncameras, 3)
-    p_ref_query = mrcal.transform_point_rt(
+    p_ref_query = drcal.transform_point_rt(
         nps.dummy(rt_ref_refperturbed, -2), p_ref_baseline, inverted=True
     )
 
     # shape (..., Ncameras, 3)
-    p_cam_query = mrcal.transform_point_rt(query_rt_cam_ref, p_ref_query)
+    p_cam_query = drcal.transform_point_rt(query_rt_cam_ref, p_ref_query)
 
     # shape (..., Ncameras, 2)
     #
     # If ... was (), the current code sets it to (1,). So I force the right
     # shape
-    return mrcal.project(p_cam_query, lensmodel, query_intrinsics).reshape(
+    return drcal.project(p_cam_query, lensmodel, query_intrinsics).reshape(
         *query_intrinsics.shape[:-1], 2
     )
 
@@ -2762,7 +2762,7 @@ else:
     reproject_perturbed = reproject_perturbed__common
 
 
-# "method" argument for mrcal.projection_uncertainty()
+# "method" argument for drcal.projection_uncertainty()
 if re.match("^(mean-pcam|bestq)$", args.reproject_perturbed):
     method = args.reproject_perturbed
 elif re.match("cross-reprojection", args.reproject_perturbed):
@@ -2828,13 +2828,13 @@ for icam in (0, 3):
     # I move the extrinsics of a model, write it to disk, and make sure the same
     # uncertainties come back
     if True:
-        model_moved = mrcal.cameramodel(models_baseline[icam])
+        model_moved = drcal.cameramodel(models_baseline[icam])
         model_moved.extrinsics_rt_fromref([1.0, 2.0, 3.0, 4.0, 5.0, 6.0])
         model_moved.write(f"{workdir}/out.cameramodel")
-        model_read = mrcal.cameramodel(f"{workdir}/out.cameramodel")
+        model_read = drcal.cameramodel(f"{workdir}/out.cameramodel")
 
         icam_intrinsics_read = model_read.icam_intrinsics()
-        icam_extrinsics_read = mrcal.corresponding_icam_extrinsics(
+        icam_extrinsics_read = drcal.corresponding_icam_extrinsics(
             icam_intrinsics_read, **model_read.optimization_inputs()
         )
 
@@ -2844,18 +2844,18 @@ for icam in (0, 3):
             msg=f"corresponding icam_extrinsics reported correctly for camera {icam}",
         )
 
-        p_cam_baseline = mrcal.unproject(
+        p_cam_baseline = drcal.unproject(
             q0_baseline, *models_baseline[icam].intrinsics(), normalize=True
         )
 
-        Var_dq_ref = mrcal.projection_uncertainty(
+        Var_dq_ref = drcal.projection_uncertainty(
             p_cam_baseline * 1.0,
             model=models_baseline[icam],
             atinfinity=False,
             method=method,
             observed_pixel_uncertainty=args.observed_pixel_uncertainty,
         )
-        Var_dq_moved_written_read = mrcal.projection_uncertainty(
+        Var_dq_moved_written_read = drcal.projection_uncertainty(
             p_cam_baseline * 1.0,
             model=model_read,
             atinfinity=False,
@@ -2871,14 +2871,14 @@ for icam in (0, 3):
             msg=f"var(dq) with full rt matches for camera {icam} after moving, writing to disk, reading from disk",
         )
 
-        Var_dq_inf_ref = mrcal.projection_uncertainty(
+        Var_dq_inf_ref = drcal.projection_uncertainty(
             p_cam_baseline * 1.0,
             model=models_baseline[icam],
             atinfinity=True,
             method=method,
             observed_pixel_uncertainty=args.observed_pixel_uncertainty,
         )
-        Var_dq_inf_moved_written_read = mrcal.projection_uncertainty(
+        Var_dq_inf_moved_written_read = drcal.projection_uncertainty(
             p_cam_baseline * 1.0,
             model=model_read,
             atinfinity=True,
@@ -2898,7 +2898,7 @@ for icam in (0, 3):
     # real scaling used is infinity). The not-at-infinity uncertainty is NOT
     # invariant, so I don't check that
     if True:
-        Var_dq_inf_far_ref = mrcal.projection_uncertainty(
+        Var_dq_inf_far_ref = drcal.projection_uncertainty(
             p_cam_baseline * 100.0,
             model=models_baseline[icam],
             atinfinity=True,
@@ -2920,7 +2920,7 @@ for icam in (0, 3):
     # defining the same problem, I should get the same residuals and uncertainty
     # estimates in every case
     #
-    # Today mrcal isn't flexible-enough to use these other representations with
+    # Today drcal isn't flexible-enough to use these other representations with
     # more than one camera. If I have a moving multi-camera rig then I want to
     # be able to represent the pose each camera separately, but lock the
     # transform between the cameras. So for now I test this with a single camera
@@ -2937,7 +2937,7 @@ for icam in (0, 3):
             ),
         ):
             ####### compare the (non)vanilla measurement vectors x
-            x = mrcal.optimizer_callback(
+            x = drcal.optimizer_callback(
                 **optimization_inputs_here, no_jacobian=True, no_factorization=True
             )[1]
             testutils.confirm_equal(
@@ -2950,11 +2950,11 @@ for icam in (0, 3):
 
             # This test fails unless I apply this patch:
             #
-            # diff --git a/mrcal.c b/mrcal.c
+            # diff --git a/drcal.c b/drcal.c
             # index ff709e36..d3e7057b 100644
-            # --- a/mrcal.c
-            # +++ b/mrcal.c
-            # @@ -6468,3 +6474,3 @@ mrcal_optimize( // out
+            # --- a/drcal.c
+            # +++ b/drcal.c
+            # @@ -6468,3 +6474,3 @@ drcal_optimize( // out
             #      dogleg_parameters.Jt_x_threshold                    = 0;
             # -    dogleg_parameters.update_threshold                  = 1e-6;
             # +    dogleg_parameters.update_threshold                  = 1e-9;
@@ -2963,8 +2963,8 @@ for icam in (0, 3):
             # Can visualize like this:
             #   import gnuplotlib as gp
             #   gp.plot( np.abs(x_baseline_optimized - x),
-            #            _set = mrcal.plotoptions_measurement_boundaries(**optimization_inputs_baseline_moving_cameras_refcam0) )
-            x = mrcal.optimize(**optimization_inputs_here)["x"]
+            #            _set = drcal.plotoptions_measurement_boundaries(**optimization_inputs_baseline_moving_cameras_refcam0) )
+            x = drcal.optimize(**optimization_inputs_here)["x"]
             testutils.confirm_equal(
                 x_baseline_optimized,
                 x,
@@ -2973,7 +2973,7 @@ for icam in (0, 3):
                 msg=f"x is consistent when looking at {what}; post-optimization",
             )
 
-            m = mrcal.cameramodel(
+            m = drcal.cameramodel(
                 optimization_inputs=optimization_inputs_here,
                 icam_intrinsics=0,
                 # Put the camera at the reference. There isn't
@@ -2984,7 +2984,7 @@ for icam in (0, 3):
             ####### compare the (non)vanilla uncertainties
             ####### only implemented for this one scenario
             if what == "moving-camera-ref-at-frame0":
-                Var_dq_here = mrcal.projection_uncertainty(
+                Var_dq_here = drcal.projection_uncertainty(
                     p_cam_baseline * 1.0,
                     model=m,
                     atinfinity=False,
@@ -3000,7 +3000,7 @@ for icam in (0, 3):
                     msg=f"var(dq) (at 1m) is consistent when looking at {what}",
                 )
 
-                Var_dq_inf_here = mrcal.projection_uncertainty(
+                Var_dq_inf_here = drcal.projection_uncertainty(
                     p_cam_baseline * 1.0,
                     model=m,
                     atinfinity=True,
@@ -3041,7 +3041,7 @@ if not args.do_sample:
 
 if args.write_models:
     for i in range(args.Ncameras):
-        model = mrcal.cameramodel(
+        model = drcal.cameramodel(
             optimization_inputs=optimization_inputs_sampled[0], icam_intrinsics=i
         )
         filename = f"/tmp/models-noisesample0-camera{i}.cameramodel"
@@ -3064,7 +3064,7 @@ def check_uncertainties_at(q0_baseline, idistance):
         distancestr = str(distance)
 
     # shape (Ncameras,3)
-    p_cam_baseline = mrcal.unproject(
+    p_cam_baseline = drcal.unproject(
         q0_baseline, lensmodel, intrinsics_baseline, normalize=True
     )
     # if we're at infinity, I leave p_cam_baseline as a unit vector. This will
@@ -3104,7 +3104,7 @@ def check_uncertainties_at(q0_baseline, idistance):
     # shape (Ncameras, 2,2)
     Var_dq_predicted = nps.cat(
         *[
-            mrcal.projection_uncertainty(
+            drcal.projection_uncertainty(
                 p_cam_baseline[icam],
                 atinfinity=atinfinity,
                 method=method,
@@ -3126,8 +3126,8 @@ def check_uncertainties_at(q0_baseline, idistance):
     )
 
     # shape (Ncameras)
-    worst_direction_stdev_observed = mrcal.worst_direction_stdev(Var_dq_observed)
-    worst_direction_stdev_predicted = mrcal.worst_direction_stdev(Var_dq_predicted)
+    worst_direction_stdev_observed = drcal.worst_direction_stdev(Var_dq_observed)
+    worst_direction_stdev_predicted = drcal.worst_direction_stdev(Var_dq_predicted)
 
     # I accept 20% error. This is plenty good-enough. And I can get tighter matches
     # if I grab more samples
@@ -3177,10 +3177,10 @@ def make_plot__distribution(icam, report_center_points=True, **kwargs):
         return args
 
     data_tuples = make_tuple(
-        *mrcal.utils._plot_args_points_and_covariance_ellipse(
+        *drcal.utils._plot_args_points_and_covariance_ellipse(
             q_sampled__dist0[:, icam, :], "Observed uncertainty"
         ),
-        mrcal.utils._plot_arg_covariance_ellipse(
+        drcal.utils._plot_arg_covariance_ellipse(
             q_sampled_mean, Var_dq_predicted__dist0[icam], "Predicted uncertainty"
         ),
     )
@@ -3278,7 +3278,7 @@ if args.make_documentation_plots is not None:
         )
 
     data_tuples_plot_options = [
-        mrcal.show_projection_uncertainty(
+        drcal.show_projection_uncertainty(
             models_baseline[icam],
             method=method,
             observed_pixel_uncertainty=args.observed_pixel_uncertainty,

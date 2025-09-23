@@ -106,9 +106,9 @@ args = parse_args()
 
 testdir = os.path.dirname(os.path.realpath(__file__))
 
-# I import the LOCAL mrcal since that's what I'm testing
+# I import the LOCAL drcal since that's what I'm testing
 sys.path[:0] = (f"{testdir}/..",)
-import mrcal
+import drcal
 import testutils
 import numpy as np
 
@@ -162,7 +162,7 @@ optimization_inputs_baseline, models_true, frames_true = calibration_baseline(
 )
 
 models_baseline = [
-    mrcal.cameramodel(
+    drcal.cameramodel(
         optimization_inputs=optimization_inputs_baseline, icam_intrinsics=i
     )
     for i in range(args.Ncameras)
@@ -186,12 +186,12 @@ M = [
 q = np.zeros((Npoints, Nmodelpairs, 2, 2), dtype=float)
 for ipt in range(Npoints):
     for imp in range(Nmodelpairs):
-        q[ipt, imp, 0, :] = mrcal.project(
+        q[ipt, imp, 0, :] = drcal.project(
             p_triangulated_true0[ipt], *M[imp][0].intrinsics()
         )
-        q[ipt, imp, 1, :] = mrcal.project(
-            mrcal.transform_point_Rt(
-                mrcal.compose_Rt(
+        q[ipt, imp, 1, :] = drcal.project(
+            drcal.transform_point_Rt(
+                drcal.compose_Rt(
                     M[imp][1].extrinsics_Rt_fromref(), M[imp][0].extrinsics_Rt_toref()
                 ),
                 p_triangulated_true0[ipt],
@@ -200,7 +200,7 @@ for ipt in range(Npoints):
         )
 
 p, Var_p0p1_calibration_big, Var_p0p1_observation_big, Var_p0p1_joint_big = (
-    mrcal.triangulate(
+    drcal.triangulate(
         q,
         M,
         q_calibration_stdev=args.q_calibration_stdev,
@@ -233,7 +233,7 @@ testutils.confirm_equal(
 # Now I check each block in the diagonal individually
 for ipt in range(Npoints):
     for imp in range(Nmodelpairs):
-        p, _, _, Var_p0p1 = mrcal.triangulate(
+        p, _, _, Var_p0p1 = drcal.triangulate(
             q[ipt, imp],
             M[imp],
             q_calibration_stdev=args.q_calibration_stdev,

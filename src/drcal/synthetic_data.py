@@ -2,8 +2,8 @@
 
 These are very useful in analyzing the behavior or cameras and lenses.
 
-All functions are exported into the mrcal module. So you can call these via
-mrcal.synthetic_data.fff() or mrcal.fff(). The latter is preferred.
+All functions are exported into the drcal module. So you can call these via
+drcal.synthetic_data.fff() or drcal.fff(). The latter is preferred.
 
 """
 
@@ -46,13 +46,13 @@ def synthesize_board_observations(
 
 SYNOPSIS
 
-    models = [mrcal.cameramodel("0.cameramodel"),
-              mrcal.cameramodel("1.cameramodel"),]
+    models = [drcal.cameramodel("0.cameramodel"),
+              drcal.cameramodel("1.cameramodel"),]
 
     # shapes (Nframes, Ncameras, object_height_n, object_width_n, 2) and
     #        (Nframes, 4, 3)
     q,Rt_ref_boardref = \
-        mrcal.synthesize_board_observations( \
+        drcal.synthesize_board_observations( \
           models,
 
           # board geometry
@@ -103,7 +103,7 @@ The calibration objects are nominally have pose rt_ref_boardcenter in the
 reference coordinate system, with each pose perturbed uniformly with radius
 rt_ref_boardcenter__noiseradius. This is nonstandard since here I'm placing the
 board origin at its center instead of the corner (as
-mrcal.ref_calibration_object() does). But this is more appropriate to the usage
+drcal.ref_calibration_object() does). But this is more appropriate to the usage
 of this function. The returned Rt_ref_boardref transformation DOES use the
 normal corner-referenced board geometry
 
@@ -112,7 +112,7 @@ observations.
 
 ARGUMENTS
 
-- models: an array of mrcal.cameramodel objects, one for each camera we're
+- models: an array of drcal.cameramodel objects, one for each camera we're
   simulating. This is the intrinsics and the extrinsics. Ncameras = len(models)
 
 - object_width_n:  the number of horizontal points in the calibration object grid
@@ -180,11 +180,11 @@ We return a tuple:
     r"""
     r = np.array((30, 0, 0,), dtype=float) * np.pi/180.
 
-    model = mrcal.cameramodel( intrinsics = ('LENSMODEL_PINHOLE',
+    model = drcal.cameramodel( intrinsics = ('LENSMODEL_PINHOLE',
                                              np.array((1000., 1000., 1000., 1000.,))),
                                imagersize = np.array((2000,2000)) )
     Rt_ref_boardref = \
-        mrcal.synthesize_board_observations([model],
+        drcal.synthesize_board_observations([model],
                                             object_width_n                  = 5,
                                             object_height_n                 = 20,
                                             object_spacing                  = 0.1,
@@ -192,8 +192,8 @@ We return a tuple:
                                             rt_ref_boardcenter              = nps.glue(r, np.array((0,0,3.)), axis=-1),
                                             rt_ref_boardcenter__noiseradius = np.array((0,0,0., 0,0,0)),
                                             Nframes                         = 1) [1]
-    mrcal.show_geometry( models_or_extrinsics_rt_fromref = np.zeros((1,1,6), dtype=float),
-                         frames_rt_toref                 = mrcal.rt_from_Rt(Rt_ref_boardref),
+    drcal.show_geometry( models_or_extrinsics_rt_fromref = np.zeros((1,1,6), dtype=float),
+                         frames_rt_toref                 = drcal.rt_from_Rt(Rt_ref_boardref),
                          object_width_n                  = 20,
                          object_height_n                 = 5,
                          object_spacing                  = 0.1,
@@ -395,27 +395,27 @@ def make_perfect_observations(optimization_inputs, *, observed_pixel_uncertainty
 
     SYNOPSIS
 
-        model = mrcal.cameramodel("0.cameramodel")
+        model = drcal.cameramodel("0.cameramodel")
         optimization_inputs = model.optimization_inputs()
 
         optimization_inputs['calobject_warp'] = np.array((1e-3, -1e-3))
-        mrcal.make_perfect_observations(optimization_inputs)
+        drcal.make_perfect_observations(optimization_inputs)
 
         # We now have perfect data assuming a slightly WARPED chessboard. Let's use
         # this data to compute a calibration assuming a FLAT chessboard
         optimization_inputs['calobject_warp'] *= 0.
         optimization_inputs['do_optimize_calobject_warp'] = False
 
-        mrcal.optimize(**optimization_inputs)
+        drcal.optimize(**optimization_inputs)
 
-        model = mrcal.cameramodel(optimization_inputs = optimization_inputs,
+        model = drcal.cameramodel(optimization_inputs = optimization_inputs,
                                   icam_intrinsics     = model.icam_intrinsics())
         model.write("reoptimized.cameramodel")
 
         # We can now look at the residuals and diffs to see how much a small
         # chessboard deformation affects our results
 
-    Tracking down all the sources of error in real-world models computed by mrcal is
+    Tracking down all the sources of error in real-world models computed by drcal is
     challenging: the models never fit perfectly, and the noise never follows the
     assumed distribution exactly. It is thus really useful to be able to run
     idealized experiments where both the models and the noise are perfect. We can
@@ -434,7 +434,7 @@ def make_perfect_observations(optimization_inputs, *, observed_pixel_uncertainty
     ARGUMENTS
 
     - optimization_inputs: the input from a calibrated model. Usually the output of
-      mrcal.cameramodel.optimization_inputs() call. The output is written into
+      drcal.cameramodel.optimization_inputs() call. The output is written into
       optimization_inputs['observations_board'] and
       optimization_inputs['observations_point']
 

@@ -1,13 +1,13 @@
 """
-Low-level routines for core mrcal operations
+Low-level routines for core drcal operations
 
 This is the written-in-C Python extension module that underlies the routines in
-mrcal.h. Most of the functions in this module (those prefixed with "_") are
+drcal.h. Most of the functions in this module (those prefixed with "_") are
 not meant to be called directly, but have Python wrappers that should be used
 instead.
 
-All functions are exported into the mrcal module. So you can call these via
-mrcal._mrcal.fff() or mrcal.fff(). The latter is preferred.
+All functions are exported into the drcal module. So you can call these via
+drcal._drcal.fff() or drcal.fff(). The latter is preferred.
 """
 from __future__ import annotations
 __all__: list[str] = ['CHOLMOD_factorization', 'corresponding_icam_extrinsics', 'decode_observation_indices_points_triangulated', 'drt_ref_refperturbed__dbpacked', 'knots_for_splined_models', 'lensmodel_metadata_and_config', 'lensmodel_num_params', 'measurement_index_boards', 'measurement_index_points', 'measurement_index_points_triangulated', 'measurement_index_regularization', 'num_intrinsics_optimization_params', 'num_measurements', 'num_measurements_boards', 'num_measurements_points', 'num_measurements_points_triangulated', 'num_measurements_regularization', 'num_states', 'num_states_calobject_warp', 'num_states_extrinsics', 'num_states_frames', 'num_states_intrinsics', 'num_states_points', 'optimize', 'optimizer_callback', 'pack_state', 'state_index_calobject_warp', 'state_index_extrinsics', 'state_index_frames', 'state_index_intrinsics', 'state_index_points', 'supported_lensmodels', 'traverse_sensor_links', 'unpack_state']
@@ -38,7 +38,7 @@ class CHOLMOD_factorization:
               [ 5. -2.] 
               [ 3. -8.]]
     
-        F  = mrcal.CHOLMOD_factorization(Jsparse)
+        F  = drcal.CHOLMOD_factorization(Jsparse)
         xt = F.solve_xt_JtJ_bt(bt)
         print(nps.transpose(xt))
         ===> [[ 0.02199662  0.33953751] 
@@ -50,7 +50,7 @@ class CHOLMOD_factorization:
               [ 5. -2.] 
               [ 3. -8.]]
     
-    The core of the mrcal optimizer is a sparse linear least squares solver using
+    The core of the drcal optimizer is a sparse linear least squares solver using
     CHOLMOD to solve a large, sparse linear system. CHOLMOD is a C library, but it
     is sometimes useful to invoke it from Python.
     
@@ -128,7 +128,7 @@ class CHOLMOD_factorization:
                   [ 5. -2.] 
                   [ 3. -8.]]
         
-            F  = mrcal.CHOLMOD_factorization(Jsparse)
+            F  = drcal.CHOLMOD_factorization(Jsparse)
             xt = F.solve_xt_JtJ_bt(bt)
             print(nps.transpose(xt))
             ===> [[ 0.02199662  0.33953751] 
@@ -140,7 +140,7 @@ class CHOLMOD_factorization:
                   [ 5. -2.] 
                   [ 3. -8.]]
         
-        The core of the mrcal optimizer is a sparse linear least squares solver using
+        The core of the drcal optimizer is a sparse linear least squares solver using
         CHOLMOD to solve a large, sparse linear system. CHOLMOD is a C library, but it
         is sometimes useful to invoke it from Python.
         
@@ -208,7 +208,7 @@ class CHOLMOD_factorization:
         SYNOPSIS
         
             b, x, J, factorization = \\
-                mrcal.optimizer_callback(**optimization_inputs)
+                drcal.optimizer_callback(**optimization_inputs)
         
             rcond = factorization.rcond()
         
@@ -238,7 +238,7 @@ def _rectification_maps(*args, **kwargs):
     
     Construct image transformation maps to make rectified images
     
-    This is an internal function. You probably want mrcal.rectification_maps(). See
+    This is an internal function. You probably want drcal.rectification_maps(). See
     the docs for that function for details.
     
     """
@@ -247,7 +247,7 @@ def _rectified_resolution(*args, **kwargs):
     
     Compute the resolution to be used for the rectified system
     
-    This is an internal function. You probably want mrcal.rectified_resolution(). See the
+    This is an internal function. You probably want drcal.rectified_resolution(). See the
     docs for that function for details.
     
     """
@@ -256,7 +256,7 @@ def _rectified_system(*args, **kwargs):
     
     Build rectified models for stereo rectification
     
-    This is an internal function. You probably want mrcal.rectified_system(). See the
+    This is an internal function. You probably want drcal.rectified_system(). See the
     docs for that function for details.
     
     """
@@ -267,14 +267,14 @@ def corresponding_icam_extrinsics(*args, **kwargs):
     
     SYNOPSIS
     
-        m = mrcal.cameramodel('xxx.cameramodel')
+        m = drcal.cameramodel('xxx.cameramodel')
     
         optimization_inputs = m.optimization_inputs()
     
         icam_intrinsics = m.icam_intrinsics()
     
         icam_extrinsics = \\
-            mrcal.corresponding_icam_extrinsics(icam_intrinsics,
+            drcal.corresponding_icam_extrinsics(icam_intrinsics,
                                                 **optimization_inputs)
     
         if icam_extrinsics >= 0:
@@ -282,7 +282,7 @@ def corresponding_icam_extrinsics(*args, **kwargs):
                 optimization_inputs['extrinsics_rt_fromref'][icam_extrinsics]
         else:
             extrinsics_rt_fromref_at_calibration_time = \\
-                mrcal.identity_rt()
+                drcal.identity_rt()
     
     When calibrating cameras, each observation is associated with some camera
     intrinsics (lens parameters) and some camera extrinsics (geometry). Those two
@@ -319,7 +319,7 @@ def corresponding_icam_extrinsics(*args, **kwargs):
     - Nobservations_board
     - Nobservations_point
       optional integers; default to 0. These specify the sizes of various arrays in
-      the optimization. See the documentation for mrcal.optimize() for details
+      the optimization. See the documentation for drcal.optimize() for details
     
     - indices_frame_camintrinsics_camextrinsics: array of dims (Nobservations_board,
       3). For each observation these are an
@@ -356,7 +356,7 @@ def knots_for_splined_models(*args, **kwargs):
     
     SYNOPSIS
     
-        print(mrcal.knots_for_splined_models('LENSMODEL_SPLINED_STEREOGRAPHIC_order=2_Nx=4_Ny=3_fov_x_deg=200'))
+        print(drcal.knots_for_splined_models('LENSMODEL_SPLINED_STEREOGRAPHIC_order=2_Nx=4_Ny=3_fov_x_deg=200'))
     
         ( array([-3.57526078, -1.19175359,  1.19175359,  3.57526078]),
           array([-2.38350719,  0.        ,  2.38350719]))
@@ -373,9 +373,9 @@ def knots_for_splined_models(*args, **kwargs):
     normalized stereographic projection coordinates. These can be unprojected to
     observation vectors at the knots:
     
-        ux,uy = mrcal.knots_for_splined_models('LENSMODEL_SPLINED_STEREOGRAPHIC_order=2_Nx=4_Ny=3_fov_x_deg=200')
+        ux,uy = drcal.knots_for_splined_models('LENSMODEL_SPLINED_STEREOGRAPHIC_order=2_Nx=4_Ny=3_fov_x_deg=200')
         u  = np.ascontiguousarray(nps.mv(nps.cat(*np.meshgrid(ux,uy)), 0, -1))
-        v  = mrcal.unproject_stereographic(u)
+        v  = drcal.unproject_stereographic(u)
     
         # v[index_y, index_x] is now an observation vector that will project to this
         # knot
@@ -402,7 +402,7 @@ def lensmodel_metadata_and_config(*args, **kwargs):
     SYNOPSIS
     
       import pprint
-      pprint.pprint(mrcal.lensmodel_metadata_and_config('LENSMODEL_SPLINED_STEREOGRAPHIC_order=3_Nx=16_Ny=14_fov_x_deg=200'))
+      pprint.pprint(drcal.lensmodel_metadata_and_config('LENSMODEL_SPLINED_STEREOGRAPHIC_order=3_Nx=16_Ny=14_fov_x_deg=200'))
     
         {'Nx': 16,
          'Ny': 14,
@@ -418,7 +418,7 @@ def lensmodel_metadata_and_config(*args, **kwargs):
     in the model string. This function returns a dict containing the metadata and
     all the configuration values. See the documentation for details:
     
-      https://mrcal.secretsauce.net/lensmodels.html#representation
+      https://drcal.secretsauce.net/lensmodels.html#representation
     
     ARGUMENTS
     
@@ -437,7 +437,7 @@ def lensmodel_num_params(*args, **kwargs):
     
     SYNOPSIS
     
-        print(mrcal.lensmodel_num_params('LENSMODEL_OPENCV4'))
+        print(drcal.lensmodel_num_params('LENSMODEL_OPENCV4'))
     
         8
     
@@ -454,14 +454,14 @@ def lensmodel_num_params(*args, **kwargs):
       LENSMODEL_CAHVOR
       LENSMODEL_SPLINED_STEREOGRAPHIC_order=3_Nx=16_Ny=12_fov_x_deg=100
     
-    The full list can be obtained with mrcal.supported_lensmodels()
+    The full list can be obtained with drcal.supported_lensmodels()
     
     Note that when optimizing a lens model, some lens parameters may be locked down,
     resulting in fewer parameters than this function returns. To retrieve the number
     of parameters used to represent the intrinsics of a camera in an optimization,
-    call mrcal.num_intrinsics_optimization_params(). Or to get the number of
+    call drcal.num_intrinsics_optimization_params(). Or to get the number of
     parameters used to represent the intrinsics of ALL the cameras in an
-    optimization, call mrcal.num_states_intrinsics()
+    optimization, call drcal.num_states_intrinsics()
     
     ARGUMENTS
     
@@ -479,21 +479,21 @@ def measurement_index_boards(*args, **kwargs):
     
     SYNOPSIS
     
-        m = mrcal.cameramodel('xxx.cameramodel')
+        m = drcal.cameramodel('xxx.cameramodel')
     
         optimization_inputs = m.optimization_inputs()
     
-        x = mrcal.optimizer_callback(**optimization_inputs)[1]
+        x = drcal.optimizer_callback(**optimization_inputs)[1]
     
-        Nmeas   = mrcal.num_measurements_boards (   **optimization_inputs)
-        i_meas0 = mrcal.measurement_index_boards(0, **optimization_inputs)
+        Nmeas   = drcal.num_measurements_boards (   **optimization_inputs)
+        i_meas0 = drcal.measurement_index_boards(0, **optimization_inputs)
     
         x_boards_all = x[i_meas0:i_meas0+Nmeas]
     
     The optimization algorithm tries to minimize the norm of a "measurements" vector
     x. The optimizer doesn't know or care about the meaning of each element of this
     vector, but for later analysis, it is useful to know what's what. The
-    mrcal.measurement_index_...() functions report where particular items end up in
+    drcal.measurement_index_...() functions report where particular items end up in
     the vector of measurements.
     
     THIS function reports the index in the measurement vector where a particular
@@ -520,7 +520,7 @@ def measurement_index_boards(*args, **kwargs):
     
     - lensmodel: string specifying the lensmodel we're using (this is always
       'LENSMODEL_...'). The full list of valid models is returned by
-      mrcal.supported_lensmodels(). This is required if we're not passing in the
+      drcal.supported_lensmodels(). This is required if we're not passing in the
       optimization inputs
     
     - do_optimize_intrinsics_core
@@ -531,7 +531,7 @@ def measurement_index_boards(*args, **kwargs):
       do_apply_regularization
     
       optional booleans; default to True. These specify what we're optimizing. See
-      the documentation for mrcal.optimize() for details
+      the documentation for drcal.optimize() for details
     
     - Ncameras_intrinsics
       Ncameras_extrinsics
@@ -544,7 +544,7 @@ def measurement_index_boards(*args, **kwargs):
       calibration_object_height_n
     
       optional integers; default to 0. These specify the sizes of various arrays in
-      the optimization. See the documentation for mrcal.optimize() for details
+      the optimization. See the documentation for drcal.optimize() for details
     
     RETURNED VALUE
     
@@ -559,21 +559,21 @@ def measurement_index_points(*args, **kwargs):
     
     SYNOPSIS
     
-        m = mrcal.cameramodel('xxx.cameramodel')
+        m = drcal.cameramodel('xxx.cameramodel')
     
         optimization_inputs = m.optimization_inputs()
     
-        x = mrcal.optimizer_callback(**optimization_inputs)[1]
+        x = drcal.optimizer_callback(**optimization_inputs)[1]
     
-        Nmeas   = mrcal.num_measurements_points(    **optimization_inputs)
-        i_meas0 = mrcal.measurement_index_points(0, **optimization_inputs)
+        Nmeas   = drcal.num_measurements_points(    **optimization_inputs)
+        i_meas0 = drcal.measurement_index_points(0, **optimization_inputs)
     
         x_points_all = x[i_meas0:i_meas0+Nmeas]
     
     The optimization algorithm tries to minimize the norm of a "measurements" vector
     x. The optimizer doesn't know or care about the meaning of each element of this
     vector, but for later analysis, it is useful to know what's what. The
-    mrcal.measurement_index_...() functions report where particular items end up in
+    drcal.measurement_index_...() functions report where particular items end up in
     the vector of measurements.
     
     THIS function reports the index in the measurement vector where a particular
@@ -600,7 +600,7 @@ def measurement_index_points(*args, **kwargs):
     
     - lensmodel: string specifying the lensmodel we're using (this is always
       'LENSMODEL_...'). The full list of valid models is returned by
-      mrcal.supported_lensmodels(). This is required if we're not passing in the
+      drcal.supported_lensmodels(). This is required if we're not passing in the
       optimization inputs
     
     - do_optimize_intrinsics_core
@@ -611,7 +611,7 @@ def measurement_index_points(*args, **kwargs):
       do_apply_regularization
     
       optional booleans; default to True. These specify what we're optimizing. See
-      the documentation for mrcal.optimize() for details
+      the documentation for drcal.optimize() for details
     
     - Ncameras_intrinsics
       Ncameras_extrinsics
@@ -624,7 +624,7 @@ def measurement_index_points(*args, **kwargs):
       calibration_object_height_n
     
       optional integers; default to 0. These specify the sizes of various arrays in
-      the optimization. See the documentation for mrcal.optimize() for details
+      the optimization. See the documentation for drcal.optimize() for details
     
     RETURNED VALUE
     
@@ -644,21 +644,21 @@ def measurement_index_regularization(*args, **kwargs):
     
     SYNOPSIS
     
-        m = mrcal.cameramodel('xxx.cameramodel')
+        m = drcal.cameramodel('xxx.cameramodel')
     
         optimization_inputs = m.optimization_inputs()
     
-        x = mrcal.optimizer_callback(**optimization_inputs)[1]
+        x = drcal.optimizer_callback(**optimization_inputs)[1]
     
-        Nmeas   = mrcal.num_measurements_regularization( **optimization_inputs)
-        i_meas0 = mrcal.measurement_index_regularization(**optimization_inputs)
+        Nmeas   = drcal.num_measurements_regularization( **optimization_inputs)
+        i_meas0 = drcal.measurement_index_regularization(**optimization_inputs)
     
         x_regularization = x[i_meas0:i_meas0+Nmeas]
     
     The optimization algorithm tries to minimize the norm of a "measurements" vector
     x. The optimizer doesn't know or care about the meaning of each element of this
     vector, but for later analysis, it is useful to know what's what. The
-    mrcal.measurement_index_...() functions report where particular items end up in
+    drcal.measurement_index_...() functions report where particular items end up in
     the vector of measurements.
     
     THIS function reports the index in the measurement vector where the
@@ -682,7 +682,7 @@ def measurement_index_regularization(*args, **kwargs):
     
     - lensmodel: string specifying the lensmodel we're using (this is always
       'LENSMODEL_...'). The full list of valid models is returned by
-      mrcal.supported_lensmodels(). This is required if we're not passing in the
+      drcal.supported_lensmodels(). This is required if we're not passing in the
       optimization inputs
     
     - do_optimize_intrinsics_core
@@ -693,7 +693,7 @@ def measurement_index_regularization(*args, **kwargs):
       do_apply_regularization
     
       optional booleans; default to True. These specify what we're optimizing. See
-      the documentation for mrcal.optimize() for details
+      the documentation for drcal.optimize() for details
     
     - Ncameras_intrinsics
       Ncameras_extrinsics
@@ -706,7 +706,7 @@ def measurement_index_regularization(*args, **kwargs):
       calibration_object_height_n
     
       optional integers; default to 0. These specify the sizes of various arrays in
-      the optimization. See the documentation for mrcal.optimize() for details
+      the optimization. See the documentation for drcal.optimize() for details
     
     RETURNED VALUE
     
@@ -721,7 +721,7 @@ def num_intrinsics_optimization_params(*args, **kwargs):
     
     SYNOPSIS
     
-        m = mrcal.cameramodel('xxx.cameramodel')
+        m = drcal.cameramodel('xxx.cameramodel')
     
         f( m.optimization_inputs() )
     
@@ -729,7 +729,7 @@ def num_intrinsics_optimization_params(*args, **kwargs):
         ...
     
         def f(optimization_inputs):
-            Nstates  = mrcal.num_intrinsics_optimization_params(**optimization_inputs)
+            Nstates  = drcal.num_intrinsics_optimization_params(**optimization_inputs)
             ...
     
     
@@ -742,9 +742,9 @@ def num_intrinsics_optimization_params(*args, **kwargs):
     
     This function reports how many optimization parameters are used to represent the
     intrinsics of a single camera. This is very similar to
-    mrcal.lensmodel_num_params(), except THIS function takes into account the
+    drcal.lensmodel_num_params(), except THIS function takes into account the
     do_optimize_intrinsics_... variables used to lock down some parts of the
-    intrinsics vector. Similarly, we have mrcal.num_states_intrinsics(), which takes
+    intrinsics vector. Similarly, we have drcal.num_states_intrinsics(), which takes
     into account the optimization details also, but reports the number of variables
     needed to describe ALL the cameras instead of just one.
     
@@ -764,7 +764,7 @@ def num_intrinsics_optimization_params(*args, **kwargs):
     
     - lensmodel: string specifying the lensmodel we're using (this is always
       'LENSMODEL_...'). The full list of valid models is returned by
-      mrcal.supported_lensmodels(). This is required if we're not passing in the
+      drcal.supported_lensmodels(). This is required if we're not passing in the
       optimization inputs
     
     - do_optimize_intrinsics_core
@@ -774,7 +774,7 @@ def num_intrinsics_optimization_params(*args, **kwargs):
       do_optimize_frames
     
       optional booleans; default to True. These specify what we're optimizing. See
-      the documentation for mrcal.optimize() for details
+      the documentation for drcal.optimize() for details
     
     RETURNED VALUE
     
@@ -789,13 +789,13 @@ def num_measurements(*args, **kwargs):
     
     SYNOPSIS
     
-        m = mrcal.cameramodel('xxx.cameramodel')
+        m = drcal.cameramodel('xxx.cameramodel')
     
         optimization_inputs = m.optimization_inputs()
     
-        x,J = mrcal.optimizer_callback(**optimization_inputs)[1:3]
+        x,J = drcal.optimizer_callback(**optimization_inputs)[1:3]
     
-        Nmeas   = mrcal.num_measurements(**optimization_inputs)
+        Nmeas   = drcal.num_measurements(**optimization_inputs)
     
         print(x.shape[0] - Nmeas)
         ===>
@@ -808,7 +808,7 @@ def num_measurements(*args, **kwargs):
     The optimization algorithm tries to minimize the norm of a "measurements" vector
     x. The optimizer doesn't know or care about the meaning of each element of this
     vector, but for later analysis, it is useful to know what's what. The
-    mrcal.num_measurements_...() functions report where particular items end up in
+    drcal.num_measurements_...() functions report where particular items end up in
     the vector of measurements.
     
     THIS function reports the total number of measurements we have. This corresponds
@@ -831,7 +831,7 @@ def num_measurements(*args, **kwargs):
     
     - lensmodel: string specifying the lensmodel we're using (this is always
       'LENSMODEL_...'). The full list of valid models is returned by
-      mrcal.supported_lensmodels(). This is required if we're not passing in the
+      drcal.supported_lensmodels(). This is required if we're not passing in the
       optimization inputs
     
     - do_optimize_intrinsics_core
@@ -842,7 +842,7 @@ def num_measurements(*args, **kwargs):
       do_apply_regularization
     
       optional booleans; default to True. These specify what we're optimizing. See
-      the documentation for mrcal.optimize() for details
+      the documentation for drcal.optimize() for details
     
     - Ncameras_intrinsics
       Ncameras_extrinsics
@@ -855,7 +855,7 @@ def num_measurements(*args, **kwargs):
       calibration_object_height_n
     
       optional integers; default to 0. These specify the sizes of various arrays in
-      the optimization. See the documentation for mrcal.optimize() for details
+      the optimization. See the documentation for drcal.optimize() for details
     
     RETURNED VALUE
     
@@ -869,21 +869,21 @@ def num_measurements_boards(*args, **kwargs):
     
     SYNOPSIS
     
-        m = mrcal.cameramodel('xxx.cameramodel')
+        m = drcal.cameramodel('xxx.cameramodel')
     
         optimization_inputs = m.optimization_inputs()
     
-        x = mrcal.optimizer_callback(**optimization_inputs)[1]
+        x = drcal.optimizer_callback(**optimization_inputs)[1]
     
-        Nmeas   = mrcal.num_measurements_boards (   **optimization_inputs)
-        i_meas0 = mrcal.measurement_index_boards(0, **optimization_inputs)
+        Nmeas   = drcal.num_measurements_boards (   **optimization_inputs)
+        i_meas0 = drcal.measurement_index_boards(0, **optimization_inputs)
     
         x_boards_all = x[i_meas0:i_meas0+Nmeas]
     
     The optimization algorithm tries to minimize the norm of a "measurements" vector
     x. The optimizer doesn't know or care about the meaning of each element of this
     vector, but for later analysis, it is useful to know what's what. The
-    mrcal.num_measurements_...() functions report how many measurements are produced
+    drcal.num_measurements_...() functions report how many measurements are produced
     by particular items.
     
     THIS function reports how many measurements come from the observations of the
@@ -906,7 +906,7 @@ def num_measurements_boards(*args, **kwargs):
     
     - lensmodel: string specifying the lensmodel we're using (this is always
       'LENSMODEL_...'). The full list of valid models is returned by
-      mrcal.supported_lensmodels(). This is required if we're not passing in the
+      drcal.supported_lensmodels(). This is required if we're not passing in the
       optimization inputs
     
     - do_optimize_intrinsics_core
@@ -917,7 +917,7 @@ def num_measurements_boards(*args, **kwargs):
       do_apply_regularization
     
       optional booleans; default to True. These specify what we're optimizing. See
-      the documentation for mrcal.optimize() for details
+      the documentation for drcal.optimize() for details
     
     - Ncameras_intrinsics
       Ncameras_extrinsics
@@ -930,7 +930,7 @@ def num_measurements_boards(*args, **kwargs):
       calibration_object_height_n
     
       optional integers; default to 0. These specify the sizes of various arrays in
-      the optimization. See the documentation for mrcal.optimize() for details
+      the optimization. See the documentation for drcal.optimize() for details
     
     RETURNED VALUE
     
@@ -945,21 +945,21 @@ def num_measurements_points(*args, **kwargs):
     
     SYNOPSIS
     
-        m = mrcal.cameramodel('xxx.cameramodel')
+        m = drcal.cameramodel('xxx.cameramodel')
     
         optimization_inputs = m.optimization_inputs()
     
-        x = mrcal.optimizer_callback(**optimization_inputs)[1]
+        x = drcal.optimizer_callback(**optimization_inputs)[1]
     
-        Nmeas   = mrcal.num_measurements_points(    **optimization_inputs)
-        i_meas0 = mrcal.measurement_index_points(0, **optimization_inputs)
+        Nmeas   = drcal.num_measurements_points(    **optimization_inputs)
+        i_meas0 = drcal.measurement_index_points(0, **optimization_inputs)
     
         x_points_all = x[i_meas0:i_meas0+Nmeas]
     
     The optimization algorithm tries to minimize the norm of a "measurements" vector
     x. The optimizer doesn't know or care about the meaning of each element of this
     vector, but for later analysis, it is useful to know what's what. The
-    mrcal.num_measurements_...() functions report how many measurements are produced
+    drcal.num_measurements_...() functions report how many measurements are produced
     by particular items.
     
     THIS function reports how many measurements come from the observations of
@@ -983,7 +983,7 @@ def num_measurements_points(*args, **kwargs):
     
     - lensmodel: string specifying the lensmodel we're using (this is always
       'LENSMODEL_...'). The full list of valid models is returned by
-      mrcal.supported_lensmodels(). This is required if we're not passing in the
+      drcal.supported_lensmodels(). This is required if we're not passing in the
       optimization inputs
     
     - do_optimize_intrinsics_core
@@ -994,7 +994,7 @@ def num_measurements_points(*args, **kwargs):
       do_apply_regularization
     
       optional booleans; default to True. These specify what we're optimizing. See
-      the documentation for mrcal.optimize() for details
+      the documentation for drcal.optimize() for details
     
     - Ncameras_intrinsics
       Ncameras_extrinsics
@@ -1007,7 +1007,7 @@ def num_measurements_points(*args, **kwargs):
       calibration_object_height_n
     
       optional integers; default to 0. These specify the sizes of various arrays in
-      the optimization. See the documentation for mrcal.optimize() for details
+      the optimization. See the documentation for drcal.optimize() for details
     
     RETURNED VALUE
     
@@ -1027,21 +1027,21 @@ def num_measurements_regularization(*args, **kwargs):
     
     SYNOPSIS
     
-        m = mrcal.cameramodel('xxx.cameramodel')
+        m = drcal.cameramodel('xxx.cameramodel')
     
         optimization_inputs = m.optimization_inputs()
     
-        x = mrcal.optimizer_callback(**optimization_inputs)[1]
+        x = drcal.optimizer_callback(**optimization_inputs)[1]
     
-        Nmeas   = mrcal.num_measurements_regularization( **optimization_inputs)
-        i_meas0 = mrcal.measurement_index_regularization(**optimization_inputs)
+        Nmeas   = drcal.num_measurements_regularization( **optimization_inputs)
+        i_meas0 = drcal.measurement_index_regularization(**optimization_inputs)
     
         x_regularization = x[i_meas0:i_meas0+Nmeas]
     
     The optimization algorithm tries to minimize the norm of a "measurements" vector
     x. The optimizer doesn't know or care about the meaning of each element of this
     vector, but for later analysis, it is useful to know what's what. The
-    mrcal.num_measurements_...() functions report where particular items end up in
+    drcal.num_measurements_...() functions report where particular items end up in
     the vector of measurements.
     
     THIS function reports how many measurements come from the regularization terms
@@ -1065,7 +1065,7 @@ def num_measurements_regularization(*args, **kwargs):
     
     - lensmodel: string specifying the lensmodel we're using (this is always
       'LENSMODEL_...'). The full list of valid models is returned by
-      mrcal.supported_lensmodels(). This is required if we're not passing in the
+      drcal.supported_lensmodels(). This is required if we're not passing in the
       optimization inputs
     
     - do_optimize_intrinsics_core
@@ -1076,7 +1076,7 @@ def num_measurements_regularization(*args, **kwargs):
       do_apply_regularization
     
       optional booleans; default to True. These specify what we're optimizing. See
-      the documentation for mrcal.optimize() for details
+      the documentation for drcal.optimize() for details
     
     - Ncameras_intrinsics
       Ncameras_extrinsics
@@ -1089,7 +1089,7 @@ def num_measurements_regularization(*args, **kwargs):
       calibration_object_height_n
     
       optional integers; default to 0. These specify the sizes of various arrays in
-      the optimization. See the documentation for mrcal.optimize() for details
+      the optimization. See the documentation for drcal.optimize() for details
     
     RETURNED VALUE
     
@@ -1104,7 +1104,7 @@ def num_states(*args, **kwargs):
     
     SYNOPSIS
     
-        m = mrcal.cameramodel('xxx.cameramodel')
+        m = drcal.cameramodel('xxx.cameramodel')
     
         f( m.optimization_inputs() )
     
@@ -1112,13 +1112,13 @@ def num_states(*args, **kwargs):
         ...
     
         def f(optimization_inputs):
-            Nstates  = mrcal.num_states (**optimization_inputs)
+            Nstates  = drcal.num_states (**optimization_inputs)
             ...
     
     The optimization algorithm sees its world described in one, big vector of state.
     The optimizer doesn't know or care about the meaning of each element of this
     vector, but for later analysis, it is useful to know what's what. The
-    mrcal.num_states_...() functions report how many variables in the optimization
+    drcal.num_states_...() functions report how many variables in the optimization
     vector are taken up by each particular kind of measurement.
     
     THIS function reports how many variables are used to represent the FULL state
@@ -1140,7 +1140,7 @@ def num_states(*args, **kwargs):
     
     - lensmodel: string specifying the lensmodel we're using (this is always
       'LENSMODEL_...'). The full list of valid models is returned by
-      mrcal.supported_lensmodels(). This is required if we're not passing in the
+      drcal.supported_lensmodels(). This is required if we're not passing in the
       optimization inputs
     
     - do_optimize_intrinsics_core
@@ -1150,7 +1150,7 @@ def num_states(*args, **kwargs):
       do_optimize_frames
     
       optional booleans; default to True. These specify what we're optimizing. See
-      the documentation for mrcal.optimize() for details
+      the documentation for drcal.optimize() for details
     
     - Ncameras_intrinsics
       Ncameras_extrinsics
@@ -1159,7 +1159,7 @@ def num_states(*args, **kwargs):
       Npoints_fixed
     
       optional integers; default to 0. These specify the sizes of various arrays in
-      the optimization. See the documentation for mrcal.optimize() for details
+      the optimization. See the documentation for drcal.optimize() for details
     
     RETURNED VALUE
     
@@ -1173,22 +1173,22 @@ def num_states_calobject_warp(*args, **kwargs):
     
     SYNOPSIS
     
-        m = mrcal.cameramodel('xxx.cameramodel')
+        m = drcal.cameramodel('xxx.cameramodel')
     
         optimization_inputs = m.optimization_inputs()
     
-        b = mrcal.optimizer_callback(**optimization_inputs)[0]
-        mrcal.unpack_state(b, **optimization_inputs)
+        b = drcal.optimizer_callback(**optimization_inputs)[0]
+        drcal.unpack_state(b, **optimization_inputs)
     
-        i_state0 = mrcal.state_index_calobject_warp(**optimization_inputs)
-        Nstates  = mrcal.num_states_calobject_warp (**optimization_inputs)
+        i_state0 = drcal.state_index_calobject_warp(**optimization_inputs)
+        Nstates  = drcal.num_states_calobject_warp (**optimization_inputs)
     
         calobject_warp = b[i_state0:i_state0+Nstates]
     
     The optimization algorithm sees its world described in one, big vector of state.
     The optimizer doesn't know or care about the meaning of each element of this
     vector, but for later analysis, it is useful to know what's what. The
-    mrcal.num_states_...() functions report how many variables in the optimization
+    drcal.num_states_...() functions report how many variables in the optimization
     vector are taken up by each particular kind of measurement.
     
     THIS function reports how many variables are used to represent the
@@ -1213,7 +1213,7 @@ def num_states_calobject_warp(*args, **kwargs):
     
     - lensmodel: string specifying the lensmodel we're using (this is always
       'LENSMODEL_...'). The full list of valid models is returned by
-      mrcal.supported_lensmodels(). This is required if we're not passing in the
+      drcal.supported_lensmodels(). This is required if we're not passing in the
       optimization inputs
     
     - do_optimize_intrinsics_core
@@ -1223,7 +1223,7 @@ def num_states_calobject_warp(*args, **kwargs):
       do_optimize_frames
     
       optional booleans; default to True. These specify what we're optimizing. See
-      the documentation for mrcal.optimize() for details
+      the documentation for drcal.optimize() for details
     
     - Ncameras_intrinsics
       Ncameras_extrinsics
@@ -1233,7 +1233,7 @@ def num_states_calobject_warp(*args, **kwargs):
       Nobservations_board
     
       optional integers; default to 0. These specify the sizes of various arrays in
-      the optimization. See the documentation for mrcal.optimize() for details
+      the optimization. See the documentation for drcal.optimize() for details
     
     RETURNED VALUE
     
@@ -1248,29 +1248,29 @@ def num_states_extrinsics(*args, **kwargs):
     
     SYNOPSIS
     
-        m = mrcal.cameramodel('xxx.cameramodel')
+        m = drcal.cameramodel('xxx.cameramodel')
     
         optimization_inputs = m.optimization_inputs()
     
-        b = mrcal.optimizer_callback(**optimization_inputs)[0]
-        mrcal.unpack_state(b, **optimization_inputs)
+        b = drcal.optimizer_callback(**optimization_inputs)[0]
+        drcal.unpack_state(b, **optimization_inputs)
     
-        i_state0 = mrcal.state_index_extrinsics(0, **optimization_inputs)
-        Nstates  = mrcal.num_states_extrinsics (   **optimization_inputs)
+        i_state0 = drcal.state_index_extrinsics(0, **optimization_inputs)
+        Nstates  = drcal.num_states_extrinsics (   **optimization_inputs)
     
         extrinsics_rt_fromref_all = b[i_state0:i_state0+Nstates]
     
     The optimization algorithm sees its world described in one, big vector of state.
     The optimizer doesn't know or care about the meaning of each element of this
     vector, but for later analysis, it is useful to know what's what. The
-    mrcal.num_states_...() functions report how many variables in the optimization
+    drcal.num_states_...() functions report how many variables in the optimization
     vector are taken up by each particular kind of measurement.
     
     THIS function reports how many variables are used to represent ALL the camera
     extrinsics. The extrinsics are stored contiguously as an "rt transformation": a
     3-element rotation represented as a Rodrigues vector followed by a 3-element
     translation. These transform points represented in the reference coordinate
-    system to the coordinate system of the specific camera. Note that mrcal allows
+    system to the coordinate system of the specific camera. Note that drcal allows
     the reference coordinate system to be tied to a particular camera. In this case
     the extrinsics of that camera do not appear in the state vector at all, and
     icam_extrinsics == -1 in the indices_frame_camintrinsics_camextrinsics
@@ -1292,7 +1292,7 @@ def num_states_extrinsics(*args, **kwargs):
     
     - lensmodel: string specifying the lensmodel we're using (this is always
       'LENSMODEL_...'). The full list of valid models is returned by
-      mrcal.supported_lensmodels(). This is required if we're not passing in the
+      drcal.supported_lensmodels(). This is required if we're not passing in the
       optimization inputs
     
     - do_optimize_intrinsics_core
@@ -1302,7 +1302,7 @@ def num_states_extrinsics(*args, **kwargs):
       do_optimize_frames
     
       optional booleans; default to True. These specify what we're optimizing. See
-      the documentation for mrcal.optimize() for details
+      the documentation for drcal.optimize() for details
     
     - Ncameras_intrinsics
       Ncameras_extrinsics
@@ -1311,7 +1311,7 @@ def num_states_extrinsics(*args, **kwargs):
       Npoints_fixed
     
       optional integers; default to 0. These specify the sizes of various arrays in
-      the optimization. See the documentation for mrcal.optimize() for details
+      the optimization. See the documentation for drcal.optimize() for details
     
     RETURNED VALUE
     
@@ -1325,22 +1325,22 @@ def num_states_frames(*args, **kwargs):
     
     SYNOPSIS
     
-        m = mrcal.cameramodel('xxx.cameramodel')
+        m = drcal.cameramodel('xxx.cameramodel')
     
         optimization_inputs = m.optimization_inputs()
     
-        b = mrcal.optimizer_callback(**optimization_inputs)[0]
-        mrcal.unpack_state(b, **optimization_inputs)
+        b = drcal.optimizer_callback(**optimization_inputs)[0]
+        drcal.unpack_state(b, **optimization_inputs)
     
-        i_state0 = mrcal.state_index_frames(0, **optimization_inputs)
-        Nstates  = mrcal.num_states_frames (   **optimization_inputs)
+        i_state0 = drcal.state_index_frames(0, **optimization_inputs)
+        Nstates  = drcal.num_states_frames (   **optimization_inputs)
     
         frames_rt_toref_all = b[i_state0:i_state0+Nstates]
     
     The optimization algorithm sees its world described in one, big vector of state.
     The optimizer doesn't know or care about the meaning of each element of this
     vector, but for later analysis, it is useful to know what's what. The
-    mrcal.num_states_...() functions report how many variables in the optimization
+    drcal.num_states_...() functions report how many variables in the optimization
     vector are taken up by each particular kind of measurement.
     
     THIS function reports how many variables are used to represent ALL the frame
@@ -1366,7 +1366,7 @@ def num_states_frames(*args, **kwargs):
     
     - lensmodel: string specifying the lensmodel we're using (this is always
       'LENSMODEL_...'). The full list of valid models is returned by
-      mrcal.supported_lensmodels(). This is required if we're not passing in the
+      drcal.supported_lensmodels(). This is required if we're not passing in the
       optimization inputs
     
     - do_optimize_intrinsics_core
@@ -1376,7 +1376,7 @@ def num_states_frames(*args, **kwargs):
       do_optimize_frames
     
       optional booleans; default to True. These specify what we're optimizing. See
-      the documentation for mrcal.optimize() for details
+      the documentation for drcal.optimize() for details
     
     - Ncameras_intrinsics
       Ncameras_extrinsics
@@ -1385,7 +1385,7 @@ def num_states_frames(*args, **kwargs):
       Npoints_fixed
     
       optional integers; default to 0. These specify the sizes of various arrays in
-      the optimization. See the documentation for mrcal.optimize() for details
+      the optimization. See the documentation for drcal.optimize() for details
     
     RETURNED VALUE
     
@@ -1399,37 +1399,37 @@ def num_states_intrinsics(*args, **kwargs):
     
     SYNOPSIS
     
-        m = mrcal.cameramodel('xxx.cameramodel')
+        m = drcal.cameramodel('xxx.cameramodel')
     
         optimization_inputs = m.optimization_inputs()
     
-        b = mrcal.optimizer_callback(**optimization_inputs)[0]
-        mrcal.unpack_state(b, **optimization_inputs)
+        b = drcal.optimizer_callback(**optimization_inputs)[0]
+        drcal.unpack_state(b, **optimization_inputs)
     
-        i_state0 = mrcal.state_index_intrinsics(0, **optimization_inputs)
-        Nstates  = mrcal.num_states_intrinsics (   **optimization_inputs)
+        i_state0 = drcal.state_index_intrinsics(0, **optimization_inputs)
+        Nstates  = drcal.num_states_intrinsics (   **optimization_inputs)
     
         intrinsics_all = b[i_state0:i_state0+Nstates]
     
     The optimization algorithm sees its world described in one, big vector of state.
     The optimizer doesn't know or care about the meaning of each element of this
     vector, but for later analysis, it is useful to know what's what. The
-    mrcal.num_states_...() functions report how many variables in the optimization
+    drcal.num_states_...() functions report how many variables in the optimization
     vector are taken up by each particular kind of measurement.
     
     THIS function reports how many optimization variables are used to represent ALL
     the camera intrinsics. The intrinsics are stored contiguously. They consist of a
     4-element "intrinsics core" (focallength-x, focallength-y, centerpixel-x,
     centerpixel-y) followed by a lensmodel-specific vector of "distortions". A
-    similar function mrcal.num_intrinsics_optimization_params() is available to
+    similar function drcal.num_intrinsics_optimization_params() is available to
     report the number of optimization variables used for just ONE camera. If all the
-    intrinsics are being optimized, then the mrcal.lensmodel_num_params() returns
+    intrinsics are being optimized, then the drcal.lensmodel_num_params() returns
     the same value: the number of values needed to describe the intrinsics of a
     single camera. It is possible to lock down some of the intrinsics during
     optimization (by setting the do_optimize_intrinsics_... variables
     appropriately). These variables control what
-    mrcal.num_intrinsics_optimization_params() and mrcal.num_states_intrinsics()
-    return, but not mrcal.lensmodel_num_params().
+    drcal.num_intrinsics_optimization_params() and drcal.num_states_intrinsics()
+    return, but not drcal.lensmodel_num_params().
     
     In order to determine the variable mapping, we need quite a bit of context. If
     we have the full set of inputs to the optimization function, we can pass in
@@ -1447,7 +1447,7 @@ def num_states_intrinsics(*args, **kwargs):
     
     - lensmodel: string specifying the lensmodel we're using (this is always
       'LENSMODEL_...'). The full list of valid models is returned by
-      mrcal.supported_lensmodels(). This is required if we're not passing in the
+      drcal.supported_lensmodels(). This is required if we're not passing in the
       optimization inputs
     
     - do_optimize_intrinsics_core
@@ -1457,7 +1457,7 @@ def num_states_intrinsics(*args, **kwargs):
       do_optimize_frames
     
       optional booleans; default to True. These specify what we're optimizing. See
-      the documentation for mrcal.optimize() for details
+      the documentation for drcal.optimize() for details
     
     - Ncameras_intrinsics
       Ncameras_extrinsics
@@ -1466,7 +1466,7 @@ def num_states_intrinsics(*args, **kwargs):
       Npoints_fixed
     
       optional integers; default to 0. These specify the sizes of various arrays in
-      the optimization. See the documentation for mrcal.optimize() for details
+      the optimization. See the documentation for drcal.optimize() for details
     
     RETURNED VALUE
     
@@ -1480,22 +1480,22 @@ def num_states_points(*args, **kwargs):
     
     SYNOPSIS
     
-        m = mrcal.cameramodel('xxx.cameramodel')
+        m = drcal.cameramodel('xxx.cameramodel')
     
         optimization_inputs = m.optimization_inputs()
     
-        b = mrcal.optimizer_callback(**optimization_inputs)[0]
-        mrcal.unpack_state(b, **optimization_inputs)
+        b = drcal.optimizer_callback(**optimization_inputs)[0]
+        drcal.unpack_state(b, **optimization_inputs)
     
-        i_state0 = mrcal.state_index_points(0, **optimization_inputs)
-        Nstates  = mrcal.num_states_points (   **optimization_inputs)
+        i_state0 = drcal.state_index_points(0, **optimization_inputs)
+        Nstates  = drcal.num_states_points (   **optimization_inputs)
     
         points_all = b[i_state0:i_state0+Nstates]
     
     The optimization algorithm sees its world described in one, big vector of state.
     The optimizer doesn't know or care about the meaning of each element of this
     vector, but for later analysis, it is useful to know what's what. The
-    mrcal.num_states_...() functions report how many variables in the optimization
+    drcal.num_states_...() functions report how many variables in the optimization
     vector are taken up by each particular kind of measurement.
     
     THIS function reports how many variables are used to represent ALL the points.
@@ -1518,7 +1518,7 @@ def num_states_points(*args, **kwargs):
     
     - lensmodel: string specifying the lensmodel we're using (this is always
       'LENSMODEL_...'). The full list of valid models is returned by
-      mrcal.supported_lensmodels(). This is required if we're not passing in the
+      drcal.supported_lensmodels(). This is required if we're not passing in the
       optimization inputs
     
     - do_optimize_intrinsics_core
@@ -1528,7 +1528,7 @@ def num_states_points(*args, **kwargs):
       do_optimize_frames
     
       optional booleans; default to True. These specify what we're optimizing. See
-      the documentation for mrcal.optimize() for details
+      the documentation for drcal.optimize() for details
     
     - Ncameras_intrinsics
       Ncameras_extrinsics
@@ -1537,7 +1537,7 @@ def num_states_points(*args, **kwargs):
       Npoints_fixed
     
       optional integers; default to 0. These specify the sizes of various arrays in
-      the optimization. See the documentation for mrcal.optimize() for details
+      the optimization. See the documentation for drcal.optimize() for details
     
     RETURNED VALUE
     
@@ -1551,7 +1551,7 @@ def optimize(*args, **kwargs):
     
     SYNOPSIS
     
-        stats = mrcal.optimize( intrinsics_data,
+        stats = drcal.optimize( intrinsics_data,
                                 extrinsics_rt_fromref,
                                 frames_rt_toref, points,
                                 observations_board, indices_frame_camintrinsics_camextrinsics,
@@ -1568,8 +1568,8 @@ def optimize(*args, **kwargs):
                                 do_apply_regularization           = True,
                                 verbose                           = False)
     
-    Please see the mrcal documentation at
-    https://mrcal.secretsauce.net/formulation.html for details.
+    Please see the drcal documentation at
+    https://drcal.secretsauce.net/formulation.html for details.
     
     This is a flexible implementation of a calibration system core that uses sparse
     Jacobians, performs outlier rejection and reports some metrics back to the user.
@@ -1786,21 +1786,21 @@ def optimizer_callback(*args, **kwargs):
     
     SYNOPSIS
     
-        model               = mrcal.cameramodel('xxx.cameramodel')
+        model               = drcal.cameramodel('xxx.cameramodel')
     
         optimization_inputs = model.optimization_inputs()
     
         b_packed,x,J_packed,factorization = \\
-          mrcal.optimizer_callback( **optimization_inputs )
+          drcal.optimizer_callback( **optimization_inputs )
     
-    Please see the mrcal documentation at
-    https://mrcal.secretsauce.net/formulation.html for details.
+    Please see the drcal documentation at
+    https://drcal.secretsauce.net/formulation.html for details.
     
-    The main optimization routine in mrcal.optimize() searches for optimal
+    The main optimization routine in drcal.optimize() searches for optimal
     parameters by repeatedly calling a function to evaluate each hypothethical
     parameter set. This evaluation function is available by itself here, separated
     from the optimization loop. The arguments are largely the same as those to
-    mrcal.optimize(), but the inputs are all read-only. Some arguments that have
+    drcal.optimize(), but the inputs are all read-only. Some arguments that have
     meaning in calls to optimize() have no meaning in calls to optimizer_callback().
     These are accepted, and effectively ignored. Currently these are:
     
@@ -1809,7 +1809,7 @@ def optimizer_callback(*args, **kwargs):
     ARGUMENTS
     
     This function accepts lots of arguments, but they're the same as the arguments
-    to mrcal.optimize() so please see that documentation for details. Arguments
+    to drcal.optimize() so please see that documentation for details. Arguments
     accepted by optimizer_callback() on top of those in optimize():
     
     - no_jacobian: optional boolean defaulting to False. If True, we do not compute
@@ -1833,8 +1833,8 @@ def optimizer_callback(*args, **kwargs):
       search for different parameters, trying to find those that minimize norm2(x).
       This packed state can be converted to the expanded representation like this:
     
-        b = mrcal.optimizer_callback(**optimization_inputs)[0
-        mrcal.unpack_state(b, **optimization_inputs)
+        b = drcal.optimizer_callback(**optimization_inputs)[0
+        drcal.unpack_state(b, **optimization_inputs)
     
     - x: a numpy array of shape (Nmeasurements,). This is the error vector. If the
       optimization routine was running, it would be testing different parameters,
@@ -1845,7 +1845,7 @@ def optimizer_callback(*args, **kwargs):
       of type scipy.sparse.csr_matrix. This object can be converted to a numpy array
       like this:
     
-        b,x,J_sparse = mrcal.optimizer_callback(...)[:3]
+        b,x,J_sparse = drcal.optimizer_callback(...)[:3]
         J_numpy      = J_sparse.toarray()
     
       Note that the numpy array is dense, so it is very inefficient for sparse data,
@@ -1855,15 +1855,15 @@ def optimizer_callback(*args, **kwargs):
       which uses packed, unitless state. To convert a densified packed jacobian to
       full units, one can do this:
     
-        J_sparse = mrcal.optimizer_callback(**optimization_inputs)[2]
+        J_sparse = drcal.optimizer_callback(**optimization_inputs)[2]
         J_numpy      = J_sparse.toarray()
-        mrcal.pack_state(J_numpy, **optimization_inputs)
+        drcal.pack_state(J_numpy, **optimization_inputs)
     
       Note that we're calling pack_state() instead of unpack_state() because the
       packed variables are in the denominator
     
     - factorization: a Cholesky factorization of JtJ in a
-      mrcal.CHOLMOD_factorization object. The core of the optimization algorithm is
+      drcal.CHOLMOD_factorization object. The core of the optimization algorithm is
       solving a linear system JtJ x = b. J is a large, sparse matrix, so we do this
       with a Cholesky factorization of J using the CHOLMOD library. This
       factorization is also useful in other contexts, such as uncertainty
@@ -1878,14 +1878,14 @@ def pack_state(*args, **kwargs):
     
     SYNOPSIS
     
-        m = mrcal.cameramodel('xxx.cameramodel')
+        m = drcal.cameramodel('xxx.cameramodel')
     
         optimization_inputs = m.optimization_inputs()
     
-        Jpacked = mrcal.optimizer_callback(**optimization_inputs)[2].toarray()
+        Jpacked = drcal.optimizer_callback(**optimization_inputs)[2].toarray()
     
         J = Jpacked.copy()
-        mrcal.pack_state(J, **optimization_inputs)
+        drcal.pack_state(J, **optimization_inputs)
     
     In order to make the optimization well-behaved, we scale all the variables in
     the state and the gradients before passing them to the optimizer. The internal
@@ -1922,7 +1922,7 @@ def pack_state(*args, **kwargs):
     
     - lensmodel: string specifying the lensmodel we're using (this is always
       'LENSMODEL_...'). The full list of valid models is returned by
-      mrcal.supported_lensmodels(). This is required if we're not passing in the
+      drcal.supported_lensmodels(). This is required if we're not passing in the
       optimization inputs
     
     - do_optimize_intrinsics_core
@@ -1932,7 +1932,7 @@ def pack_state(*args, **kwargs):
       do_optimize_frames
     
       optional booleans; default to True. These specify what we're optimizing. See
-      the documentation for mrcal.optimize() for details
+      the documentation for drcal.optimize() for details
     
     - Ncameras_intrinsics
       Ncameras_extrinsics
@@ -1941,7 +1941,7 @@ def pack_state(*args, **kwargs):
       Npoints_fixed
     
       optional integers; default to 0. These specify the sizes of various arrays in
-      the optimization. See the documentation for mrcal.optimize() for details
+      the optimization. See the documentation for drcal.optimize() for details
     
     RETURNED VALUE
     
@@ -1955,21 +1955,21 @@ def state_index_calobject_warp(*args, **kwargs):
     
     SYNOPSIS
     
-        m = mrcal.cameramodel('xxx.cameramodel')
+        m = drcal.cameramodel('xxx.cameramodel')
     
         optimization_inputs = m.optimization_inputs()
     
-        b = mrcal.optimizer_callback(**optimization_inputs)[0]
-        mrcal.unpack_state(b, **optimization_inputs)
+        b = drcal.optimizer_callback(**optimization_inputs)[0]
+        drcal.unpack_state(b, **optimization_inputs)
     
-        i_state = mrcal.state_index_calobject_warp(**optimization_inputs)
+        i_state = drcal.state_index_calobject_warp(**optimization_inputs)
     
         calobject_warp = b[i_state:i_state+2]
     
     The optimization algorithm sees its world described in one, big vector of state.
     The optimizer doesn't know or care about the meaning of each element of this
     vector, but for later analysis, it is useful to know what's what. The
-    mrcal.state_index_...() functions report where particular items end up in the
+    drcal.state_index_...() functions report where particular items end up in the
     state vector.
     
     THIS function reports the beginning of the calibration-object warping parameters
@@ -1994,7 +1994,7 @@ def state_index_calobject_warp(*args, **kwargs):
     
     - lensmodel: string specifying the lensmodel we're using (this is always
       'LENSMODEL_...'). The full list of valid models is returned by
-      mrcal.supported_lensmodels(). This is required if we're not passing in the
+      drcal.supported_lensmodels(). This is required if we're not passing in the
       optimization inputs
     
     - do_optimize_intrinsics_core
@@ -2004,7 +2004,7 @@ def state_index_calobject_warp(*args, **kwargs):
       do_optimize_frames
     
       optional booleans; default to True. These specify what we're optimizing. See
-      the documentation for mrcal.optimize() for details
+      the documentation for drcal.optimize() for details
     
     - Ncameras_intrinsics
       Ncameras_extrinsics
@@ -2014,7 +2014,7 @@ def state_index_calobject_warp(*args, **kwargs):
       Nobservations_board
     
       optional integers; default to 0. These specify the sizes of various arrays in
-      the optimization. See the documentation for mrcal.optimize() for details
+      the optimization. See the documentation for drcal.optimize() for details
     
     RETURNED VALUE
     
@@ -2030,15 +2030,15 @@ def state_index_extrinsics(*args, **kwargs):
     
     SYNOPSIS
     
-        m = mrcal.cameramodel('xxx.cameramodel')
+        m = drcal.cameramodel('xxx.cameramodel')
     
         optimization_inputs = m.optimization_inputs()
     
-        b = mrcal.optimizer_callback(**optimization_inputs)[0]
-        mrcal.unpack_state(b, **optimization_inputs)
+        b = drcal.optimizer_callback(**optimization_inputs)[0]
+        drcal.unpack_state(b, **optimization_inputs)
     
         icam_extrinsics = 1
-        i_state = mrcal.state_index_extrinsics(icam_extrinsics,
+        i_state = drcal.state_index_extrinsics(icam_extrinsics,
                                                **optimization_inputs)
     
         extrinsics_rt_fromref = b[i_state:i_state+6]
@@ -2046,14 +2046,14 @@ def state_index_extrinsics(*args, **kwargs):
     The optimization algorithm sees its world described in one, big vector of state.
     The optimizer doesn't know or care about the meaning of each element of this
     vector, but for later analysis, it is useful to know what's what. The
-    mrcal.state_index_...() functions report where particular items end up in the
+    drcal.state_index_...() functions report where particular items end up in the
     state vector.
     
     THIS function reports the beginning of the i-th camera extrinsics in the state
     vector. The extrinsics are stored contiguously as an "rt transformation": a
     3-element rotation represented as a Rodrigues vector followed by a 3-element
     translation. These transform points represented in the reference coordinate
-    system to the coordinate system of the specific camera. Note that mrcal allows
+    system to the coordinate system of the specific camera. Note that drcal allows
     the reference coordinate system to be tied to a particular camera. In this case
     the extrinsics of that camera do not appear in the state vector at all, and
     icam_extrinsics == -1 in the indices_frame_camintrinsics_camextrinsics
@@ -2077,7 +2077,7 @@ def state_index_extrinsics(*args, **kwargs):
     
     - lensmodel: string specifying the lensmodel we're using (this is always
       'LENSMODEL_...'). The full list of valid models is returned by
-      mrcal.supported_lensmodels(). This is required if we're not passing in the
+      drcal.supported_lensmodels(). This is required if we're not passing in the
       optimization inputs
     
     - do_optimize_intrinsics_core
@@ -2087,7 +2087,7 @@ def state_index_extrinsics(*args, **kwargs):
       do_optimize_frames
     
       optional booleans; default to True. These specify what we're optimizing. See
-      the documentation for mrcal.optimize() for details
+      the documentation for drcal.optimize() for details
     
     - Ncameras_intrinsics
       Ncameras_extrinsics
@@ -2097,7 +2097,7 @@ def state_index_extrinsics(*args, **kwargs):
       Nobservations_board
     
       optional integers; default to 0. These specify the sizes of various arrays in
-      the optimization. See the documentation for mrcal.optimize() for details
+      the optimization. See the documentation for drcal.optimize() for details
     
     RETURNED VALUE
     
@@ -2113,15 +2113,15 @@ def state_index_frames(*args, **kwargs):
     
     SYNOPSIS
     
-        m = mrcal.cameramodel('xxx.cameramodel')
+        m = drcal.cameramodel('xxx.cameramodel')
     
         optimization_inputs = m.optimization_inputs()
     
-        b = mrcal.optimizer_callback(**optimization_inputs)[0]
-        mrcal.unpack_state(b, **optimization_inputs)
+        b = drcal.optimizer_callback(**optimization_inputs)[0]
+        drcal.unpack_state(b, **optimization_inputs)
     
         iframe = 1
-        i_state = mrcal.state_index_frames(iframe,
+        i_state = drcal.state_index_frames(iframe,
                                            **optimization_inputs)
     
         frames_rt_toref = b[i_state:i_state+6]
@@ -2129,7 +2129,7 @@ def state_index_frames(*args, **kwargs):
     The optimization algorithm sees its world described in one, big vector of state.
     The optimizer doesn't know or care about the meaning of each element of this
     vector, but for later analysis, it is useful to know what's what. The
-    mrcal.state_index_...() functions report where particular items end up in the
+    drcal.state_index_...() functions report where particular items end up in the
     state vector.
     
     THIS function reports the beginning of the i-th frame pose in the state vector.
@@ -2157,7 +2157,7 @@ def state_index_frames(*args, **kwargs):
     
     - lensmodel: string specifying the lensmodel we're using (this is always
       'LENSMODEL_...'). The full list of valid models is returned by
-      mrcal.supported_lensmodels(). This is required if we're not passing in the
+      drcal.supported_lensmodels(). This is required if we're not passing in the
       optimization inputs
     
     - do_optimize_intrinsics_core
@@ -2167,7 +2167,7 @@ def state_index_frames(*args, **kwargs):
       do_optimize_frames
     
       optional booleans; default to True. These specify what we're optimizing. See
-      the documentation for mrcal.optimize() for details
+      the documentation for drcal.optimize() for details
     
     - Ncameras_intrinsics
       Ncameras_extrinsics
@@ -2177,7 +2177,7 @@ def state_index_frames(*args, **kwargs):
       Nobservations_board
     
       optional integers; default to 0. These specify the sizes of various arrays in
-      the optimization. See the documentation for mrcal.optimize() for details
+      the optimization. See the documentation for drcal.optimize() for details
     
     RETURNED VALUE
     
@@ -2193,24 +2193,24 @@ def state_index_intrinsics(*args, **kwargs):
     
     SYNOPSIS
     
-        m = mrcal.cameramodel('xxx.cameramodel')
+        m = drcal.cameramodel('xxx.cameramodel')
     
         optimization_inputs = m.optimization_inputs()
     
-        b = mrcal.optimizer_callback(**optimization_inputs)[0]
-        mrcal.unpack_state(b, **optimization_inputs)
+        b = drcal.optimizer_callback(**optimization_inputs)[0]
+        drcal.unpack_state(b, **optimization_inputs)
     
         icam_intrinsics = 1
-        i_state = mrcal.state_index_intrinsics(icam_intrinsics,
+        i_state = drcal.state_index_intrinsics(icam_intrinsics,
                                                **optimization_inputs)
     
-        Nintrinsics = mrcal.lensmodel_num_params(optimization_inputs['lensmodel'])
+        Nintrinsics = drcal.lensmodel_num_params(optimization_inputs['lensmodel'])
         intrinsics_data = b[i_state:i_state+Nintrinsics]
     
     The optimization algorithm sees its world described in one, big vector of state.
     The optimizer doesn't know or care about the meaning of each element of this
     vector, but for later analysis, it is useful to know what's what. The
-    mrcal.state_index_...() functions report where particular items end up in the
+    drcal.state_index_...() functions report where particular items end up in the
     state vector.
     
     THIS function reports the beginning of the i-th camera intrinsics in the state
@@ -2218,7 +2218,7 @@ def state_index_intrinsics(*args, **kwargs):
     "intrinsics core" (focallength-x, focallength-y, centerpixel-x, centerpixel-y)
     followed by a lensmodel-specific vector of "distortions". The number of
     intrinsics elements (including the core) for a particular lens model can be
-    queried with mrcal.lensmodel_num_params(lensmodel). Note that
+    queried with drcal.lensmodel_num_params(lensmodel). Note that
     do_optimize_intrinsics_core and do_optimize_intrinsics_distortions can be used
     to lock down one or both of those quantities, which would omit them from the
     optimization vector.
@@ -2241,7 +2241,7 @@ def state_index_intrinsics(*args, **kwargs):
     
     - lensmodel: string specifying the lensmodel we're using (this is always
       'LENSMODEL_...'). The full list of valid models is returned by
-      mrcal.supported_lensmodels(). This is required if we're not passing in the
+      drcal.supported_lensmodels(). This is required if we're not passing in the
       optimization inputs
     
     - do_optimize_intrinsics_core
@@ -2251,7 +2251,7 @@ def state_index_intrinsics(*args, **kwargs):
       do_optimize_frames
     
       optional booleans; default to True. These specify what we're optimizing. See
-      the documentation for mrcal.optimize() for details
+      the documentation for drcal.optimize() for details
     
     - Ncameras_intrinsics
       Ncameras_extrinsics
@@ -2261,7 +2261,7 @@ def state_index_intrinsics(*args, **kwargs):
       Nobservations_board
     
       optional integers; default to 0. These specify the sizes of various arrays in
-      the optimization. See the documentation for mrcal.optimize() for details
+      the optimization. See the documentation for drcal.optimize() for details
     
     RETURNED VALUE
     
@@ -2276,15 +2276,15 @@ def state_index_points(*args, **kwargs):
     
     SYNOPSIS
     
-        m = mrcal.cameramodel('xxx.cameramodel')
+        m = drcal.cameramodel('xxx.cameramodel')
     
         optimization_inputs = m.optimization_inputs()
     
-        b = mrcal.optimizer_callback(**optimization_inputs)[0]
-        mrcal.unpack_state(b, **optimization_inputs)
+        b = drcal.optimizer_callback(**optimization_inputs)[0]
+        drcal.unpack_state(b, **optimization_inputs)
     
         i_point = 1
-        i_state = mrcal.state_index_points(i_point,
+        i_state = drcal.state_index_points(i_point,
                                            **optimization_inputs)
     
         point = b[i_state:i_state+3]
@@ -2292,7 +2292,7 @@ def state_index_points(*args, **kwargs):
     The optimization algorithm sees its world described in one, big vector of state.
     The optimizer doesn't know or care about the meaning of each element of this
     vector, but for later analysis, it is useful to know what's what. The
-    mrcal.state_index_...() functions report where particular items end up in the
+    drcal.state_index_...() functions report where particular items end up in the
     state vector.
     
     THIS function reports the beginning of the i-th point in the state vector. The
@@ -2317,7 +2317,7 @@ def state_index_points(*args, **kwargs):
     
     - lensmodel: string specifying the lensmodel we're using (this is always
       'LENSMODEL_...'). The full list of valid models is returned by
-      mrcal.supported_lensmodels(). This is required if we're not passing in the
+      drcal.supported_lensmodels(). This is required if we're not passing in the
       optimization inputs
     
     - do_optimize_intrinsics_core
@@ -2327,7 +2327,7 @@ def state_index_points(*args, **kwargs):
       do_optimize_frames
     
       optional booleans; default to True. These specify what we're optimizing. See
-      the documentation for mrcal.optimize() for details
+      the documentation for drcal.optimize() for details
     
     - Ncameras_intrinsics
       Ncameras_extrinsics
@@ -2337,7 +2337,7 @@ def state_index_points(*args, **kwargs):
       Nobservations_board
     
       optional integers; default to 0. These specify the sizes of various arrays in
-      the optimization. See the documentation for mrcal.optimize() for details
+      the optimization. See the documentation for drcal.optimize() for details
     
     RETURNED VALUE
     
@@ -2353,7 +2353,7 @@ def supported_lensmodels():
     
     SYNOPSIS
     
-        print(mrcal.supported_lensmodels())
+        print(drcal.supported_lensmodels())
     
         ('LENSMODEL_PINHOLE',
          'LENSMODEL_STEREOGRAPHIC',
@@ -2365,7 +2365,7 @@ def supported_lensmodels():
          'LENSMODEL_CAHVOR',
          'LENSMODEL_CAHVORE_linearity=...')
     
-    mrcal knows about some set of lens models, which can be queried here. The above
+    drcal knows about some set of lens models, which can be queried here. The above
     list is correct as of this writing, but more models could be added with time.
     
     The returned lens models are all supported, with possible gaps in capabilities.
@@ -2398,7 +2398,7 @@ def traverse_sensor_links(*args, **kwargs):
                                         ( 0, 0, 5, 0, 0),),
                                        dtype=np.uint16)
     
-        mrcal.traverse_sensor_links( \\
+        drcal.traverse_sensor_links( \\
             connectivity_matrix  = connectivity_matrix,
             callback_sensor_link = lambda idx_to, idx_from: \\
                                           print(f"{idx_from}-{idx_to}") )
@@ -2453,14 +2453,14 @@ def unpack_state(*args, **kwargs):
     
     SYNOPSIS
     
-        m = mrcal.cameramodel('xxx.cameramodel')
+        m = drcal.cameramodel('xxx.cameramodel')
     
         optimization_inputs = m.optimization_inputs()
     
-        b_packed = mrcal.optimizer_callback(**optimization_inputs)[0]
+        b_packed = drcal.optimizer_callback(**optimization_inputs)[0]
     
         b = b_packed.copy()
-        mrcal.unpack_state(b, **optimization_inputs)
+        drcal.unpack_state(b, **optimization_inputs)
     
     In order to make the optimization well-behaved, we scale all the variables in
     the state and the gradients before passing them to the optimizer. The internal
@@ -2497,7 +2497,7 @@ def unpack_state(*args, **kwargs):
     
     - lensmodel: string specifying the lensmodel we're using (this is always
       'LENSMODEL_...'). The full list of valid models is returned by
-      mrcal.supported_lensmodels(). This is required if we're not passing in the
+      drcal.supported_lensmodels(). This is required if we're not passing in the
       optimization inputs
     
     - do_optimize_intrinsics_core
@@ -2507,7 +2507,7 @@ def unpack_state(*args, **kwargs):
       do_optimize_frames
     
       optional booleans; default to True. These specify what we're optimizing. See
-      the documentation for mrcal.optimize() for details
+      the documentation for drcal.optimize() for details
     
     - Ncameras_intrinsics
       Ncameras_extrinsics
@@ -2516,7 +2516,7 @@ def unpack_state(*args, **kwargs):
       Npoints_fixed
     
       optional integers; default to 0. These specify the sizes of various arrays in
-      the optimization. See the documentation for mrcal.optimize() for details
+      the optimization. See the documentation for drcal.optimize() for details
     
     RETURNED VALUE
     

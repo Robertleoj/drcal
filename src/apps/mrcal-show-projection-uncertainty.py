@@ -12,12 +12,12 @@ r"""Visualize the expected projection error due to noise in calibration-time inp
 
 SYNOPSIS
 
-  $ mrcal-show-projection-uncertainty left.cameramodel
+  $ drcal-show-projection-uncertainty left.cameramodel
   ... a plot pops up showing the projection uncertainty of the intrinsics in
   ... this model
 
 The operation of this tool is documented at
-https://mrcal.secretsauce.net/uncertainty.html
+https://drcal.secretsauce.net/uncertainty.html
 
 A calibration process produces the best-fitting camera parameters. To be able to
 use these parameters we must know how trustworthy they are. This tool examines
@@ -40,7 +40,7 @@ There are several modes of operation:
   mapping to a single pixel. We show the uncertainty vs distances from the
   camera along this ray
 
-See https://mrcal.secretsauce.net/uncertainty.html for a full description of
+See https://drcal.secretsauce.net/uncertainty.html for a full description of
 the computation performed here
 
 """
@@ -175,7 +175,7 @@ if args.title is not None and args.extratitle is not None:
 # arg-parsing is done before the imports so that --help works without building
 # stuff, so that I can generate the manpages and README
 import numpy as np
-import mrcal
+import drcal
 
 
 if args.vs_distance_at is not None:
@@ -213,7 +213,7 @@ if args.extratitle is not None:
     plotkwargs_extra["extratitle"] = args.extratitle
 
 try:
-    model = mrcal.cameramodel(args.model)
+    model = drcal.cameramodel(args.model)
 except Exception as e:
     print(f"Couldn't load camera model '{args.model}': {e}", file=sys.stderr)
     sys.exit(1)
@@ -226,7 +226,7 @@ if model.optimization_inputs() is None:
     sys.exit()
 
 if args.vs_distance_at is not None:
-    plot = mrcal.show_projection_uncertainty_vs_distance(
+    plot = drcal.show_projection_uncertainty_vs_distance(
         model,
         where=args.vs_distance_at,
         isotropic=args.isotropic,
@@ -236,7 +236,7 @@ if args.vs_distance_at is not None:
         **plotkwargs_extra,
     )
 else:
-    plot = mrcal.show_projection_uncertainty(
+    plot = drcal.show_projection_uncertainty(
         model,
         gridn_width=args.gridn[0],
         gridn_height=args.gridn[1],

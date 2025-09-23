@@ -1,13 +1,13 @@
 """
-Low-level routines for core mrcal operations
+Low-level routines for core drcal operations
 
 This is the written-in-C Python extension module that underlies the core
 (un)project routines, and several low-level operations. Most of the functions in
 this module (those prefixed with "_") are not meant to be called directly, but
 have Python wrappers that should be used instead.
 
-All functions are exported into the mrcal module. So you can call these via
-mrcal._mrcal_npsp.fff() or mrcal.fff(). The latter is preferred.
+All functions are exported into the drcal module. So you can call these via
+drcal._drcal_npsp.fff() or drcal.fff(). The latter is preferred.
 
 """
 from __future__ import annotations
@@ -52,7 +52,7 @@ def _Jt_x(*args, **kwargs):
     SYNOPSIS
     
         Jt_x = np.zeros( (J.shape[-1],), dtype=float)
-        mrcal._mrcal_npsp._Jt_x(J.indptr,
+        drcal._drcal_npsp._Jt_x(J.indptr,
                                 J.indices,
                                 J.data,
                                 x,
@@ -81,7 +81,7 @@ def _project(*args, **kwargs):
     """
     Internal point-projection routine
     
-    This is the internals for mrcal.project(). As a user, please call THAT function,
+    This is the internals for drcal.project(). As a user, please call THAT function,
     and see the docs for that function. The differences:
     
     - This is just the no-gradients function. The internal function that reports the
@@ -91,8 +91,8 @@ def _project(*args, **kwargs):
       different. numpysane_pywrap broadcasts the leading arguments, so this function
       takes the lensmodel (the one argument that does not broadcast) last
     
-    - To speed things up, this function doesn't call the C mrcal_project(), but uses
-      the _mrcal_project_internal...() functions instead. That allows as much as
+    - To speed things up, this function doesn't call the C drcal_project(), but uses
+      the _drcal_project_internal...() functions instead. That allows as much as
       possible of the outer init stuff to be moved outside of the slice computation
       loop
     
@@ -100,15 +100,15 @@ def _project(*args, **kwargs):
     broadcast as expected
     
     The outer logic (outside the loop-over-N-points) is duplicated in
-    mrcal_project() and in the python wrapper definition in _project() and
-    _project_withgrad() in mrcal-genpywrap.py. Please keep them in sync
+    drcal_project() and in the python wrapper definition in _project() and
+    _project_withgrad() in drcal-genpywrap.py. Please keep them in sync
     
     """
 def _project_latlon(*args, **kwargs):
     """
     Internal projection routine
     
-    This is the internals for mrcal.project_latlon(). As a user, please call
+    This is the internals for drcal.project_latlon(). As a user, please call
     THAT function, and see the docs for that function. The differences:
     
     - This is just the no-gradients function. The internal function that reports the
@@ -122,7 +122,7 @@ def _project_latlon_withgrad(*args, **kwargs):
     """
     Internal projection routine with gradients
     
-    This is the internals for mrcal.project_latlon(). As a user, please call
+    This is the internals for drcal.project_latlon(). As a user, please call
     THAT function, and see the docs for that function. The differences:
     
     - This is just the gradient-reporting function. The internal function that
@@ -136,7 +136,7 @@ def _project_lonlat(*args, **kwargs):
     """
     Internal projection routine
     
-    This is the internals for mrcal.project_lonlat(). As a user, please call
+    This is the internals for drcal.project_lonlat(). As a user, please call
     THAT function, and see the docs for that function. The differences:
     
     - This is just the no-gradients function. The internal function that reports the
@@ -150,7 +150,7 @@ def _project_lonlat_withgrad(*args, **kwargs):
     """
     Internal projection routine with gradients
     
-    This is the internals for mrcal.project_lonlat(). As a user, please call
+    This is the internals for drcal.project_lonlat(). As a user, please call
     THAT function, and see the docs for that function. The differences:
     
     - This is just the gradient-reporting function. The internal function that
@@ -164,7 +164,7 @@ def _project_pinhole(*args, **kwargs):
     """
     Internal projection routine
     
-    This is the internals for mrcal.project_pinhole(). As a user, please call
+    This is the internals for drcal.project_pinhole(). As a user, please call
     THAT function, and see the docs for that function. The differences:
     
     - This is just the no-gradients function. The internal function that reports the
@@ -178,7 +178,7 @@ def _project_pinhole_withgrad(*args, **kwargs):
     """
     Internal projection routine with gradients
     
-    This is the internals for mrcal.project_pinhole(). As a user, please call
+    This is the internals for drcal.project_pinhole(). As a user, please call
     THAT function, and see the docs for that function. The differences:
     
     - This is just the gradient-reporting function. The internal function that
@@ -192,7 +192,7 @@ def _project_stereographic(*args, **kwargs):
     """
     Internal projection routine
     
-    This is the internals for mrcal.project_stereographic(). As a user, please call
+    This is the internals for drcal.project_stereographic(). As a user, please call
     THAT function, and see the docs for that function. The differences:
     
     - This is just the no-gradients function. The internal function that reports the
@@ -206,7 +206,7 @@ def _project_stereographic_withgrad(*args, **kwargs):
     """
     Internal projection routine with gradients
     
-    This is the internals for mrcal.project_stereographic(). As a user, please call
+    This is the internals for drcal.project_stereographic(). As a user, please call
     THAT function, and see the docs for that function. The differences:
     
     - This is just the gradient-reporting function. The internal function that
@@ -220,7 +220,7 @@ def _project_withgrad(*args, **kwargs):
     """
     Internal point-projection routine
     
-    This is the internals for mrcal.project(). As a user, please call THAT function,
+    This is the internals for drcal.project(). As a user, please call THAT function,
     and see the docs for that function. The differences:
     
     - This is just the gradients-returning function. The internal function that
@@ -230,8 +230,8 @@ def _project_withgrad(*args, **kwargs):
       different. numpysane_pywrap broadcasts the leading arguments, so this function
       takes the lensmodel (the one argument that does not broadcast) last
     
-    - To speed things up, this function doesn't call the C mrcal_project(), but uses
-      the _mrcal_project_internal...() functions instead. That allows as much as
+    - To speed things up, this function doesn't call the C drcal_project(), but uses
+      the _drcal_project_internal...() functions instead. That allows as much as
       possible of the outer init stuff to be moved outside of the slice computation
       loop
     
@@ -239,19 +239,19 @@ def _project_withgrad(*args, **kwargs):
     broadcast as expected
     
     The outer logic (outside the loop-over-N-points) is duplicated in
-    mrcal_project() and in the python wrapper definition in _project() and
-    _project_withgrad() in mrcal-genpywrap.py. Please keep them in sync
+    drcal_project() and in the python wrapper definition in _project() and
+    _project_withgrad() in drcal-genpywrap.py. Please keep them in sync
     
     """
 def _stereo_range_sparse(*args, **kwargs):
     """
-    Internal wrapper of mrcal_stereo_range_sparse()
+    Internal wrapper of drcal_stereo_range_sparse()
     """
 def _unproject(*args, **kwargs):
     """
     Internal point-unprojection routine
     
-    This is the internals for mrcal.unproject(). As a user, please call THAT
+    This is the internals for drcal.unproject(). As a user, please call THAT
     function, and see the docs for that function. The differences:
     
     - To make the broadcasting work, the argument order in this function is
@@ -261,8 +261,8 @@ def _unproject(*args, **kwargs):
     - This function requires gradients, so it does not support some lens models;
       CAHVORE for instance
     
-    - To speed things up, this function doesn't call the C mrcal_unproject(), but
-      uses the _mrcal_unproject_internal...() functions instead. That allows as much
+    - To speed things up, this function doesn't call the C drcal_unproject(), but
+      uses the _drcal_unproject_internal...() functions instead. That allows as much
       as possible of the outer init stuff to be moved outside of the slice
       computation loop
     
@@ -270,14 +270,14 @@ def _unproject(*args, **kwargs):
     broadcast as expected
     
     The outer logic (outside the loop-over-N-points) is duplicated in
-    mrcal_unproject() and in the python wrapper definition in _unproject()
-    mrcal-genpywrap.py. Please keep them in sync 
+    drcal_unproject() and in the python wrapper definition in _unproject()
+    drcal-genpywrap.py. Please keep them in sync 
     """
 def _unproject_latlon(*args, **kwargs):
     """
     Internal unprojection routine
     
-    This is the internals for mrcal.unproject_latlon(). As a user, please
+    This is the internals for drcal.unproject_latlon(). As a user, please
     call THAT function, and see the docs for that function. The differences:
     
     - This is just the no-gradients function. The internal function that reports the
@@ -291,7 +291,7 @@ def _unproject_latlon_withgrad(*args, **kwargs):
     """
     Internal unprojection routine
     
-    This is the internals for mrcal.unproject_latlon(). As a user, please
+    This is the internals for drcal.unproject_latlon(). As a user, please
     call THAT function, and see the docs for that function. The differences:
     
     - This is just the gradient-reporting function. The internal function that does
@@ -305,7 +305,7 @@ def _unproject_lonlat(*args, **kwargs):
     """
     Internal unprojection routine
     
-    This is the internals for mrcal.unproject_lonlat(). As a user, please
+    This is the internals for drcal.unproject_lonlat(). As a user, please
     call THAT function, and see the docs for that function. The differences:
     
     - This is just the no-gradients function. The internal function that reports the
@@ -319,7 +319,7 @@ def _unproject_lonlat_withgrad(*args, **kwargs):
     """
     Internal unprojection routine
     
-    This is the internals for mrcal.unproject_lonlat(). As a user, please
+    This is the internals for drcal.unproject_lonlat(). As a user, please
     call THAT function, and see the docs for that function. The differences:
     
     - This is just the gradient-reporting function. The internal function that does
@@ -333,7 +333,7 @@ def _unproject_pinhole(*args, **kwargs):
     """
     Internal unprojection routine
     
-    This is the internals for mrcal.unproject_pinhole(). As a user, please
+    This is the internals for drcal.unproject_pinhole(). As a user, please
     call THAT function, and see the docs for that function. The differences:
     
     - This is just the no-gradients function. The internal function that reports the
@@ -347,7 +347,7 @@ def _unproject_pinhole_withgrad(*args, **kwargs):
     """
     Internal unprojection routine
     
-    This is the internals for mrcal.unproject_pinhole(). As a user, please
+    This is the internals for drcal.unproject_pinhole(). As a user, please
     call THAT function, and see the docs for that function. The differences:
     
     - This is just the gradient-reporting function. The internal function that does
@@ -361,7 +361,7 @@ def _unproject_stereographic(*args, **kwargs):
     """
     Internal unprojection routine
     
-    This is the internals for mrcal.unproject_stereographic(). As a user, please
+    This is the internals for drcal.unproject_stereographic(). As a user, please
     call THAT function, and see the docs for that function. The differences:
     
     - This is just the no-gradients function. The internal function that reports the
@@ -375,7 +375,7 @@ def _unproject_stereographic_withgrad(*args, **kwargs):
     """
     Internal unprojection routine
     
-    This is the internals for mrcal.unproject_stereographic(). As a user, please
+    This is the internals for drcal.unproject_stereographic(). As a user, please
     call THAT function, and see the docs for that function. The differences:
     
     - This is just the gradient-reporting function. The internal function that does
@@ -397,7 +397,7 @@ def apply_homography(*args, **kwargs):
         print( q0.shape )
         ===> (100, 2)
     
-        q1 = mrcal.apply_homography(H10, q0)
+        q1 = drcal.apply_homography(H10, q0)
     
         print( q1.shape )
         ===> (100, 2)

@@ -1,7 +1,7 @@
 """Visualization routines
 
-All functions are exported into the mrcal module. So you can call these via
-mrcal.visualization.fff() or mrcal.fff(). The latter is preferred.
+All functions are exported into the drcal module. So you can call these via
+drcal.visualization.fff() or drcal.fff(). The latter is preferred.
 
 """
 
@@ -81,19 +81,19 @@ def show_geometry(
 SYNOPSIS
 
     # Visualize the geometry from some models on disk
-    models = [mrcal.cameramodel(m) for m in model_filenames]
-    plot1 = mrcal.show_geometry(models)
+    models = [drcal.cameramodel(m) for m in model_filenames]
+    plot1 = drcal.show_geometry(models)
 
     # Solve a calibration problem. Visualize the resulting geometry AND the
     # observed calibration objects and points
     ...
-    mrcal.optimize(intrinsics            = intrinsics,
+    drcal.optimize(intrinsics            = intrinsics,
                    extrinsics_rt_fromref = extrinsics_rt_fromref,
                    frames_rt_toref       = frames_rt_toref,
                    points                = points,
                    ...)
     plot2 = \
-      mrcal.show_geometry(extrinsics_rt_fromref,
+      drcal.show_geometry(extrinsics_rt_fromref,
                           frames_rt_toref = frames_rt_toref,
                           points          = points,
                           xlabel          = 'Northing (m)',
@@ -122,10 +122,10 @@ The geometry is shown only if requested and available
   have both, we use the frames_rt_toref/points
 
 This function can also be used to visualize the output (or input) of
-mrcal.optimize(); the relevant parameters are all identical to those
-mrcal.optimize() takes.
+drcal.optimize(); the relevant parameters are all identical to those
+drcal.optimize() takes.
 
-This function is the core of the mrcal-show-geometry tool.
+This function is the core of the drcal-show-geometry tool.
 
 All arguments except models_or_extrinsics_rt_fromref are optional.
 
@@ -133,9 +133,9 @@ Extra **kwargs are passed directly to gnuplotlib to control the plot.
 
 ARGUMENTS
 
-- models_or_extrinsics_rt_fromref: an iterable of mrcal.cameramodel objects or
+- models_or_extrinsics_rt_fromref: an iterable of drcal.cameramodel objects or
   (6,) rt arrays. A array of shape (N,6) works to represent N cameras. If
-  mrcal.cameramodel objects are given here and frames_rt_toref (or points) are
+  drcal.cameramodel objects are given here and frames_rt_toref (or points) are
   omitted, we get the frames_rt_toref (or points) from the first model that
   provides optimization_inputs().
 
@@ -174,7 +174,7 @@ ARGUMENTS
 
 - calobject_warp: optional (2,) array describing the calibration board warping.
   None means "no warping": the object is flat. Used only if frames_rt_toref is
-  not None. See the docs for mrcal.ref_calibration_object() for a description.
+  not None. See the docs for drcal.ref_calibration_object() for a description.
 
 - points: optional array of shape (N,3). If omitted, we don't plot the observed
   points. If given, each row of shape (3,) is a point in the reference
@@ -310,7 +310,7 @@ plot
     extrinsics_Rt_toref = nps.clump(extrinsics_Rt_toref, n=extrinsics_Rt_toref.ndim - 3)
 
     if axis_scale is None:
-        # This is intended to work with the behavior in the mrcal-stereo
+        # This is intended to work with the behavior in the drcal-stereo
         # tool. That tool sets the fov-indicating hair lengths to
         # baseline/4. Here I default to a bit more: baseline/3
 
@@ -680,7 +680,7 @@ plot
         #     calobject_cam = nps.transform_point_Rt( models[icam_highlight].extrinsics_Rt_fromref(), calobject_ref )
 
         #     print("double-check this. I don't broadcast over the intrinsics anymore")
-        #     err = observations[i_observations, ...] - mrcal.project(calobject_cam, *models[icam_highlight].intrinsics())
+        #     err = observations[i_observations, ...] - drcal.project(calobject_cam, *models[icam_highlight].intrinsics())
         #     err = nps.clump(err, n=-3)
         #     rms = np.mag(err) / (object_height_n*object_width_n))
         #     # igood = rms <  0.4
@@ -868,7 +868,7 @@ SYNOPSIS
     binwidth = 0.01
 
     equation = \
-        mrcal.fitted_gaussian_equation(x        = x,
+        drcal.fitted_gaussian_equation(x        = x,
                                        binwidth = binwidth)
 
     gp.plot(x,
@@ -989,7 +989,7 @@ def _append_observation_visualizations(
     optimization_inputs = model.optimization_inputs()
     if optimization_inputs is None:
         raise Exception(
-            "mrcal.show_...(observations=True) requires optimization_inputs to be available"
+            "drcal.show_...(observations=True) requires optimization_inputs to be available"
         )
 
     q_cam_boards_inliers = None
@@ -1093,17 +1093,17 @@ def show_projection_diff(
 
     SYNOPSIS
 
-        models = ( mrcal.cameramodel('cam0-dance0.cameramodel'),
-                   mrcal.cameramodel('cam0-dance1.cameramodel') )
+        models = ( drcal.cameramodel('cam0-dance0.cameramodel'),
+                   drcal.cameramodel('cam0-dance1.cameramodel') )
 
-        mrcal.show_projection_diff(models)
+        drcal.show_projection_diff(models)
 
         # A plot pops up displaying the projection difference between the two models
 
     The operation of this tool is documented at
-    https://mrcal.secretsauce.net/differencing.html
+    https://drcal.secretsauce.net/differencing.html
 
-    This function visualizes the results of mrcal.projection_diff()
+    This function visualizes the results of drcal.projection_diff()
 
     It is often useful to compare the projection behavior of two camera models. For
     instance, one may want to validate a calibration by comparing the results of two
@@ -1138,11 +1138,11 @@ def show_projection_diff(
               Rt10 = implied_Rt10__from_unprojections()
 
     The details of how the comparison is computed, and the meaning of the arguments
-    controlling this, are in the docstring of mrcal.projection_diff().
+    controlling this, are in the docstring of drcal.projection_diff().
 
     ARGUMENTS
 
-    - models: iterable of mrcal.cameramodel objects we're comparing. Usually there
+    - models: iterable of drcal.cameramodel objects we're comparing. Usually there
       will be 2 of these, but more than 2 is possible. The intrinsics are used; the
       extrinsics are NOT.
 
@@ -1363,7 +1363,7 @@ def show_projection_diff(
     color[~np.isfinite(color)] = 1e6
 
     if vectorfield:
-        # The mrcal.projection_diff() call made sure they're the same for all
+        # The drcal.projection_diff() call made sure they're the same for all
         # the models
         W, H = models[0].imagersize()
 
@@ -1519,17 +1519,17 @@ def show_stereo_pair_diff(
 
     SYNOPSIS
 
-        models = ( mrcal.cameramodel('cam0-dance0.cameramodel'),
-                   mrcal.cameramodel('cam0-dance1.cameramodel') )
+        models = ( drcal.cameramodel('cam0-dance0.cameramodel'),
+                   drcal.cameramodel('cam0-dance1.cameramodel') )
 
-        mrcal.show_stereo_pair_diff(models)
+        drcal.show_stereo_pair_diff(models)
 
         # A plot pops up displaying the projection difference between the two models
 
     The operation of this tool is documented at
-    https://mrcal.secretsauce.net/differencing.html
+    https://drcal.secretsauce.net/differencing.html
 
-    This function visualizes the results of mrcal.stereo_pair_diff()
+    This function visualizes the results of drcal.stereo_pair_diff()
 
     It is often useful to compare the projection behavior of two camera models. For
     instance, one may want to validate a calibration by comparing the results of two
@@ -1552,11 +1552,11 @@ def show_stereo_pair_diff(
     - Look at the resulting pixel difference in the reprojection
 
     The details of how the comparison is computed, and the meaning of the arguments
-    controlling this, are in the docstring of mrcal.stereo_pair_diff().
+    controlling this, are in the docstring of drcal.stereo_pair_diff().
 
     ARGUMENTS
 
-    - models: iterable of mrcal.cameramodel objects we're comparing. Usually there
+    - models: iterable of drcal.cameramodel objects we're comparing. Usually there
       will be 2 of these, but more than 2 is possible. The intrinsics are used; the
       extrinsics are NOT.
 
@@ -1679,7 +1679,7 @@ def show_stereo_pair_diff(
     color[~np.isfinite(color)] = 1e6
 
     if vectorfield:
-        # The mrcal.stereo_pair_diff() call made sure they're the same for all
+        # The drcal.stereo_pair_diff() call made sure they're the same for all
         # the model_pairs
         W, H = model_pairs[0][0].imagersize()
 
@@ -1826,9 +1826,9 @@ def show_projection_uncertainty(
 
     SYNOPSIS
 
-        model = mrcal.cameramodel('xxx.cameramodel')
+        model = drcal.cameramodel('xxx.cameramodel')
 
-        mrcal.show_projection_uncertainty(model)
+        drcal.show_projection_uncertainty(model)
 
         ... A plot pops up displaying the expected projection uncertainty across the
         ... imager
@@ -1846,7 +1846,7 @@ def show_projection_uncertainty(
     All the coordinate systems move around, and all 3 of these sets of data have
     some uncertainty. This tool takes into account all the uncertainties to report
     an estimated uncertainty metric. See
-    https://mrcal.secretsauce.net/uncertainty.html for a detailed description of
+    https://drcal.secretsauce.net/uncertainty.html for a detailed description of
     the computation.
 
     This function grids the imager, and reports an uncertainty for each point on the
@@ -1869,7 +1869,7 @@ def show_projection_uncertainty(
 
     ARGUMENTS
 
-    - model: the mrcal.cameramodel object being evaluated
+    - model: the drcal.cameramodel object being evaluated
 
     - gridn_width: optional value, defaulting to 60. How many points along the
       horizontal gridding dimension
@@ -2108,9 +2108,9 @@ def show_projection_uncertainty_vs_distance(
 
     SYNOPSIS
 
-        model = mrcal.cameramodel('xxx.cameramodel')
+        model = drcal.cameramodel('xxx.cameramodel')
 
-        mrcal.show_projection_uncertainty_vs_distance(model)
+        drcal.show_projection_uncertainty_vs_distance(model)
 
         ... A plot pops up displaying the expected projection uncertainty along an
         ... observation ray at different distances from the camera
@@ -2133,7 +2133,7 @@ def show_projection_uncertainty_vs_distance(
     All the coordinate systems move around, and all 3 of these sets of data have
     some uncertainty. This tool takes into account all the uncertainties to report
     an estimated uncertainty metric. See
-    https://mrcal.secretsauce.net/uncertainty.html for a detailed description of
+    https://drcal.secretsauce.net/uncertainty.html for a detailed description of
     the computation.
 
     The curve produced by this function has a characteristic shape:
@@ -2149,7 +2149,7 @@ def show_projection_uncertainty_vs_distance(
 
     ARGUMENTS
 
-    - model: the mrcal.cameramodel object being evaluated
+    - model: the drcal.cameramodel object being evaluated
 
     - where: optional value, defaulting to "centroid". Indicates the point on the
       imager we're examining. May be one of
@@ -2297,9 +2297,9 @@ def show_distortion_off_pinhole_radial(
 
     SYNOPSIS
 
-        model = mrcal.cameramodel('xxx.cameramodel')
+        model = drcal.cameramodel('xxx.cameramodel')
 
-        mrcal.show_distortion_off_pinhole_radial(model)
+        drcal.show_distortion_off_pinhole_radial(model)
 
         ... A plot pops up displaying how much this model deviates from a pinhole
         ... model across the imager in the radial direction
@@ -2313,7 +2313,7 @@ def show_distortion_off_pinhole_radial(
 
     ARGUMENTS
 
-    - model: the mrcal.cameramodel object being evaluated
+    - model: the drcal.cameramodel object being evaluated
 
     - show_fisheye_projections: optional boolean defaulting to False. If
       show_fisheye_projections: the radial plots include the behavior of common
@@ -2513,9 +2513,9 @@ def show_distortion_off_pinhole(
 
     SYNOPSIS
 
-        model = mrcal.cameramodel('xxx.cameramodel')
+        model = drcal.cameramodel('xxx.cameramodel')
 
-        mrcal.show_distortion_off_pinhole( model )
+        drcal.show_distortion_off_pinhole( model )
 
         ... A plot pops up displaying how much this model deviates from a pinhole
         ... model across the imager
@@ -2526,7 +2526,7 @@ def show_distortion_off_pinhole(
 
     ARGUMENTS
 
-    - model: the mrcal.cameramodel object being evaluated
+    - model: the drcal.cameramodel object being evaluated
 
     - vectorfield: optional boolean, defaulting to False. By default we produce a
       heat map of the differences. If vectorfield: we produce a vector field
@@ -2703,9 +2703,9 @@ def show_valid_intrinsics_region(
         filenames = ('cam0-dance0.cameramodel',
                      'cam0-dance1.cameramodel')
 
-        models = [ mrcal.cameramodel(f) for f in filenames ]
+        models = [ drcal.cameramodel(f) for f in filenames ]
 
-        mrcal.show_valid_intrinsics_region( models,
+        drcal.show_valid_intrinsics_region( models,
                                             cameranames = filenames,
                                             image       = 'image.jpg' )
 
@@ -2725,7 +2725,7 @@ def show_valid_intrinsics_region(
 
     ARGUMENTS
 
-    - models: an iterable of mrcal.cameramodel objects we're visualizing. If we're
+    - models: an iterable of drcal.cameramodel objects we're visualizing. If we're
       looking at just a single model, it can be passed directly in this argument,
       instead of wrapping it into a list.
 
@@ -2849,9 +2849,9 @@ def show_splined_model_correction(
 
     SYNOPSIS
 
-        model = mrcal.cameramodel(model_filename)
+        model = drcal.cameramodel(model_filename)
 
-        mrcal.show_splined_model_correction(model)
+        drcal.show_splined_model_correction(model)
 
         # A plot pops up displaying the spline knots, the magnitude of the
         # corrections defined by the spline surfaces, the spline-in-bounds
@@ -2862,9 +2862,9 @@ def show_splined_model_correction(
     useful for understanding the projection behavior. Details of these models are
     described in the documentation:
 
-      https://mrcal.secretsauce.net/lensmodels.html#splined-stereographic-lens-model
+      https://drcal.secretsauce.net/lensmodels.html#splined-stereographic-lens-model
 
-    At this time LENSMODEL_SPLINED_STEREOGRAPHIC is the only splined model mrcal
+    At this time LENSMODEL_SPLINED_STEREOGRAPHIC is the only splined model drcal
     has, so the baseline model is always LENSMODEL_STEREOGRAPHIC. In spots, the
     below documentation assumes a stereographic baseline model.
 
@@ -2930,7 +2930,7 @@ def show_splined_model_correction(
 
     ARGUMENTS
 
-    - model: the mrcal.cameramodel object being evaluated
+    - model: the drcal.cameramodel object being evaluated
 
     - vectorfield: optional boolean defaults to False. if vectorfield: we plot the
       stereographic correction deltau as vectors. if not vectorfield (the default):
@@ -3262,13 +3262,13 @@ def annotate_image__valid_intrinsics_region(image, model, *, color=(0, 255, 0)):
 
     SYNOPSIS
 
-        model = mrcal.cameramodel('cam0.cameramodel')
+        model = drcal.cameramodel('cam0.cameramodel')
 
-        image = mrcal.load_image('image.jpg')
+        image = drcal.load_image('image.jpg')
 
-        mrcal.annotate_image__valid_intrinsics_region(image, model)
+        drcal.annotate_image__valid_intrinsics_region(image, model)
 
-        mrcal.save_image('image-annotated.jpg', image)
+        drcal.save_image('image-annotated.jpg', image)
 
     This function reads a valid-intrinsics region from a given camera model, and
     draws it on top of a given image. This is useful to see what parts of a captured
@@ -3281,11 +3281,11 @@ def annotate_image__valid_intrinsics_region(image, model, *, color=(0, 255, 0)):
     center.
 
     If we want an interactive plot instead of an annotated image, call
-    mrcal.show_valid_intrinsics_region() instead.
+    drcal.show_valid_intrinsics_region() instead.
 
     ARGUMENTS
 
-    - model: the mrcal.cameramodel object that contains the valid-intrinsics region
+    - model: the drcal.cameramodel object that contains the valid-intrinsics region
       contour
 
     - image: the numpy array containing the image we're annotating. This is both an
@@ -3325,7 +3325,7 @@ SYNOPSIS
 
     import gnuplotlib as gp
     import numpy as np
-    import mrcal
+    import drcal
 
     ...
 
@@ -3334,7 +3334,7 @@ SYNOPSIS
 
     # shape (Nheight,Nwidth,3)
     v,_ = \
-        mrcal.sample_imager_unproject(Nw, Nh,
+        drcal.sample_imager_unproject(Nw, Nh,
                                       *model.imagersize(),
                                       *model.intrinsics())
 
@@ -3344,7 +3344,7 @@ SYNOPSIS
     gp.plot(f,
             tuplesize = 3,
             ascii     = True,
-            using     = mrcal.imagergrid_using(model.imagersize, Nw, Nh),
+            using     = drcal.imagergrid_using(model.imagersize, Nw, Nh),
             square    = True,
             _with     = 'image')
 
@@ -3361,7 +3361,7 @@ function can only be used in plots using ascii data commands (i.e. pass
 ARGUMENTS
 
 - imagersize: a (width,height) tuple for the size of the imager. With a
-  mrcal.cameramodel object this is model.imagersize()
+  drcal.cameramodel object this is model.imagersize()
 
 - gridn_width: how many points along the horizontal gridding dimension
 
@@ -3407,9 +3407,9 @@ def show_residuals_board_observation(
 
     SYNOPSIS
 
-        model = mrcal.cameramodel(model_filename)
+        model = drcal.cameramodel(model_filename)
 
-        mrcal.show_residuals_board_observation( model.optimization_inputs(),
+        drcal.show_residuals_board_observation( model.optimization_inputs(),
                                                 0,
                                                 from_worst = True )
 
@@ -3425,7 +3425,7 @@ def show_residuals_board_observation(
     ARGUMENTS
 
     - optimization_inputs: the optimization inputs dict passed into and returned
-      from mrcal.optimize(). This describes the solved optimization problem that
+      from drcal.optimize(). This describes the solved optimization problem that
       we're visualizing
 
     - i_observation: integer that selects the chessboard observation. If not
@@ -3451,8 +3451,8 @@ def show_residuals_board_observation(
     - x: optional numpy array of shape (Nmeasurements,) containing the optimization
       measurements (the residual weighted reprojection errors). If omitted or None,
       this will be recomputed. To use a cached value, pass the result of
-      mrcal.optimize(**optimization_inputs)['x'] or
-      mrcal.optimizer_callback(**optimization_inputs)[1]
+      drcal.optimize(**optimization_inputs)['x'] or
+      drcal.optimizer_callback(**optimization_inputs)[1]
 
     - residuals: backwards-compatibility synonym for x. At most one of these may be
       non-None
@@ -3653,9 +3653,9 @@ def show_residuals_histogram(
 
     SYNOPSIS
 
-        model = mrcal.cameramodel(model_filename)
+        model = drcal.cameramodel(model_filename)
 
-        mrcal.show_residuals_histogram( model.optimization_inputs() )
+        drcal.show_residuals_histogram( model.optimization_inputs() )
 
         ... A plot pops up showing the empirical distribution of fit errors
         ... in this solve. For ALL the cameras
@@ -3667,7 +3667,7 @@ def show_residuals_histogram(
     ARGUMENTS
 
     - optimization_inputs: the optimization inputs dict passed into and returned
-      from mrcal.optimize(). This describes the solved optimization problem that
+      from drcal.optimize(). This describes the solved optimization problem that
       we're visualizing
 
     - icam_intrinsics: optional integer to select the camera whose residuals we're
@@ -3677,8 +3677,8 @@ def show_residuals_histogram(
     - x: optional numpy array of shape (Nmeasurements,) containing the optimization
       measurements (the residual weighted reprojection errors). If omitted or None,
       this will be recomputed. To use a cached value, pass the result of
-      mrcal.optimize(**optimization_inputs)['x'] or
-      mrcal.optimizer_callback(**optimization_inputs)[1]
+      drcal.optimize(**optimization_inputs)['x'] or
+      drcal.optimizer_callback(**optimization_inputs)[1]
 
     - residuals: backwards-compatibility synonym for x. At most one of these may be
       non-None
@@ -3883,9 +3883,9 @@ def show_residuals_vectorfield(
 
     SYNOPSIS
 
-        model = mrcal.cameramodel(model_filename)
+        model = drcal.cameramodel(model_filename)
 
-        mrcal.show_residuals_vectorfield( model )
+        drcal.show_residuals_vectorfield( model )
 
         ... A plot pops up showing each observation from this camera used to
         ... compute this calibration as a vector field. Each vector shows the
@@ -3897,14 +3897,14 @@ def show_residuals_vectorfield(
 
     ARGUMENTS
 
-    - model: the mrcal.cameramodel object representing the camera model we're
+    - model: the drcal.cameramodel object representing the camera model we're
       investigating. This cameramodel MUST contain the optimization_inputs data
 
     - x: optional numpy array of shape (Nmeasurements,) containing the optimization
       measurements (the residual weighted reprojection errors). If omitted or None,
       this will be recomputed. To use a cached value, pass the result of
-      mrcal.optimize(**optimization_inputs)['x'] or
-      mrcal.optimizer_callback(**optimization_inputs)[1]
+      drcal.optimize(**optimization_inputs)['x'] or
+      drcal.optimizer_callback(**optimization_inputs)[1]
 
     - residuals: backwards-compatibility synonym for x. At most one of these may be
       non-None
@@ -4015,9 +4015,9 @@ def show_residuals_magnitudes(
 
     SYNOPSIS
 
-        model = mrcal.cameramodel(model_filename)
+        model = drcal.cameramodel(model_filename)
 
-        mrcal.show_residuals_magnitudes( model )
+        drcal.show_residuals_magnitudes( model )
 
         ... A plot pops up showing each observation from this camera used to
         ... compute this calibration. Each displayed point represents an
@@ -4029,14 +4029,14 @@ def show_residuals_magnitudes(
 
     ARGUMENTS
 
-    - model: the mrcal.cameramodel object representing the camera model we're
+    - model: the drcal.cameramodel object representing the camera model we're
       investigating. This cameramodel MUST contain the optimization_inputs data
 
     - x: optional numpy array of shape (Nmeasurements,) containing the optimization
       measurements (the residual weighted reprojection errors). If omitted or None,
       this will be recomputed. To use a cached value, pass the result of
-      mrcal.optimize(**optimization_inputs)['x'] or
-      mrcal.optimizer_callback(**optimization_inputs)[1]
+      drcal.optimize(**optimization_inputs)['x'] or
+      drcal.optimizer_callback(**optimization_inputs)[1]
 
     - residuals: backwards-compatibility synonym for x. At most one of these may be
       non-None
@@ -4139,9 +4139,9 @@ def show_residuals_directions(
 
     SYNOPSIS
 
-        model = mrcal.cameramodel(model_filename)
+        model = drcal.cameramodel(model_filename)
 
-        mrcal.show_residuals_directions( model )
+        drcal.show_residuals_directions( model )
 
         ... A plot pops up showing each observation from this camera used to
         ... compute this calibration. Each displayed point represents an
@@ -4156,14 +4156,14 @@ def show_residuals_directions(
 
     ARGUMENTS
 
-    - model: the mrcal.cameramodel object representing the camera model we're
+    - model: the drcal.cameramodel object representing the camera model we're
       investigating. This cameramodel MUST contain the optimization_inputs data
 
     - x: optional numpy array of shape (Nmeasurements,) containing the optimization
       measurements (the residual weighted reprojection errors). If omitted or None,
       this will be recomputed. To use a cached value, pass the result of
-      mrcal.optimize(**optimization_inputs)['x'] or
-      mrcal.optimizer_callback(**optimization_inputs)[1]
+      drcal.optimize(**optimization_inputs)['x'] or
+      drcal.optimizer_callback(**optimization_inputs)[1]
 
     - residuals: backwards-compatibility synonym for x. At most one of these may be
       non-None
@@ -4272,9 +4272,9 @@ def show_residuals_regional(
 
     SYNOPSIS
 
-        model = mrcal.cameramodel(model_filename)
+        model = drcal.cameramodel(model_filename)
 
-        mrcal.show_residuals_regional( model )
+        drcal.show_residuals_regional( model )
 
         ... Three plots pop up, showing the mean, standard deviation and the count
         ... of residuals in each region in the imager
@@ -4287,14 +4287,14 @@ def show_residuals_regional(
     separately. We can then clearly see areas of insufficient data (observation
     counts will be low). And we can clearly see lens-model-induced biases (non-zero
     mean) and we can see heteroscedasticity (uneven standard deviation). The
-    mrcal-calibrate-cameras tool uses these metrics to construct a valid-intrinsics
+    drcal-calibrate-cameras tool uses these metrics to construct a valid-intrinsics
     region for the models it computes. This serves as a quick/dirty method of
     modeling projection reliability, which can be used even if projection
     uncertainty cannot be computed.
 
     ARGUMENTS
 
-    - model: the mrcal.cameramodel object representing the camera model we're
+    - model: the drcal.cameramodel object representing the camera model we're
       investigating. This cameramodel MUST contain the optimization_inputs data
 
     - gridn_width: optional value, defaulting to 20. How many bins along the
@@ -4307,8 +4307,8 @@ def show_residuals_regional(
     - x: optional numpy array of shape (Nmeasurements,) containing the optimization
       measurements (the residual weighted reprojection errors). If omitted or None,
       this will be recomputed. To use a cached value, pass the result of
-      mrcal.optimize(**optimization_inputs)['x'] or
-      mrcal.optimizer_callback(**optimization_inputs)[1]
+      drcal.optimize(**optimization_inputs)['x'] or
+      drcal.optimizer_callback(**optimization_inputs)[1]
 
     - residuals: backwards-compatibility synonym for x. At most one of these may be
       non-None
@@ -4417,7 +4417,7 @@ def _report_regional_statistics(model, gridn_width=20, gridn_height=None):
 SYNOPSIS
 
     mean, stdev, count, using = \
-        mrcal._report_regional_statistics(model,
+        drcal._report_regional_statistics(model,
                                           gridn_width = 30)
 
     import gnuplotlib as gp
@@ -4429,8 +4429,8 @@ SYNOPSIS
              square    = True,
              using     = using)
 
-This is an internal function used by mrcal._compute_valid_intrinsics_region()
-and mrcal.show_residuals_regional(). The mrcal solver optimizes reprojection
+This is an internal function used by drcal._compute_valid_intrinsics_region()
+and drcal.show_residuals_regional(). The drcal solver optimizes reprojection
 errors for ALL the observations in ALL cameras at the same time. It is useful to
 evaluate the optimal solution by examining reprojection errors in subregions of
 the imager, which is accomplished by this function. All the observations and
@@ -4448,7 +4448,7 @@ gridn_width, gridn_height arguments). The residual statistics are then computed
 for each bin separately. We can then clearly see areas of insufficient data
 (observation counts will be low). And we can clearly see lens-model-induced
 biases (non-zero mean) and we can see heteroscedasticity (uneven standard
-deviation). The mrcal-calibrate-cameras tool uses these metrics to construct a
+deviation). The drcal-calibrate-cameras tool uses these metrics to construct a
 valid-intrinsics region for the models it computes. This serves as a quick/dirty
 method of modeling projection reliability, which can be used even if projection
 uncertainty cannot be computed.

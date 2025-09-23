@@ -13,9 +13,9 @@ import os
 
 testdir = os.path.dirname(os.path.realpath(__file__))
 
-# I import the LOCAL mrcal since that's what I'm testing
+# I import the LOCAL drcal since that's what I'm testing
 sys.path[:0] = (f"{testdir}/..",)
-import mrcal
+import drcal
 import testutils
 
 
@@ -424,9 +424,9 @@ p = np.array(((1.0, 2.0, 10.0), (-1.1, 0.3, 1.0), (-0.9, -1.5, 1.0)))
 delta = 1e-6
 
 for i in intrinsics:
-    q, dq_dp, dq_di = mrcal.project(p, *i, get_gradients=True)
+    q, dq_dp, dq_di = drcal.project(p, *i, get_gradients=True)
 
-    Nintrinsics = mrcal.lensmodel_num_params(i[0])
+    Nintrinsics = drcal.lensmodel_num_params(i[0])
     testutils.confirm_equal(
         dq_di.shape[-1], Nintrinsics, msg=f"{i[0]}: Nintrinsics match for {i[0]}"
     )
@@ -437,9 +437,9 @@ for i in intrinsics:
         # center differences
         p1 = p.copy()
         p1[..., ivar] = p[..., ivar] - delta / 2
-        q1 = mrcal.project(p1, *i, get_gradients=False)
+        q1 = drcal.project(p1, *i, get_gradients=False)
         p1[..., ivar] += delta
-        q2 = mrcal.project(p1, *i, get_gradients=False)
+        q2 = drcal.project(p1, *i, get_gradients=False)
 
         dq_dp_observed = (q2 - q1) / delta
         dq_dp_reported = dq_dp[..., ivar]
@@ -455,9 +455,9 @@ for i in intrinsics:
         # center differences
         i1 = i[1].copy()
         i1[..., ivar] = i[1][..., ivar] - delta / 2
-        q1 = mrcal.project(p, i[0], i1, get_gradients=False)
+        q1 = drcal.project(p, i[0], i1, get_gradients=False)
         i1[..., ivar] += delta
-        q2 = mrcal.project(p, i[0], i1, get_gradients=False)
+        q2 = drcal.project(p, i[0], i1, get_gradients=False)
 
         dq_di_observed = (q2 - q1) / delta
         dq_di_reported = dq_di[..., ivar]

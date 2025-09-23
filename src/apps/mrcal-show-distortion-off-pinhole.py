@@ -12,7 +12,7 @@ r"""Visualize the behavior or a lens model
 
 SYNOPSIS
 
-  $ mrcal-show-distortion-off-pinhole --vectorfield left.cameramodel
+  $ drcal-show-distortion-off-pinhole --vectorfield left.cameramodel
 
   ... a plot pops up showing the vector field of the difference from a pinhole
   projection
@@ -136,11 +136,11 @@ if args.title is not None and args.extratitle is not None:
 # stuff, so that I can generate the manpages and README
 
 
-import mrcal
+import drcal
 
 
 try:
-    model = mrcal.cameramodel(args.model)
+    model = drcal.cameramodel(args.model)
 except Exception as e:
     print(f"Couldn't load camera model '{args.model}': {e}", file=sys.stderr)
     sys.exit(1)
@@ -164,7 +164,7 @@ if args.extratitle is not None:
 
 if args.radial:
     try:
-        plot = mrcal.show_distortion_off_pinhole_radial(
+        plot = drcal.show_distortion_off_pinhole_radial(
             model,
             show_fisheye_projections=args.show_fisheye_projections,
             hardcopy=args.hardcopy,
@@ -175,7 +175,7 @@ if args.radial:
         print(f"Error: {e}", file=sys.stderr)
         sys.exit(1)
 else:
-    plot = mrcal.show_distortion_off_pinhole(
+    plot = drcal.show_distortion_off_pinhole(
         model,
         vectorfield=args.vectorfield,
         vectorscale=args.vectorscale,

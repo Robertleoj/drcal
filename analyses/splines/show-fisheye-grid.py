@@ -18,7 +18,7 @@ fisheye projections described at
 
   https://en.wikipedia.org/wiki/Fisheye_lens
 
-mrcal-show-distortion-off-pinhole --radial also compares a given model with fisheye
+drcal-show-distortion-off-pinhole --radial also compares a given model with fisheye
 projections
 
 """
@@ -66,9 +66,9 @@ import gnuplotlib as gp
 
 testdir = os.path.dirname(os.path.realpath(__file__))
 
-# I import the LOCAL mrcal since that's what I'm testing
+# I import the LOCAL drcal since that's what I'm testing
 sys.path[:0] = (f"{testdir}/../..",)
-import mrcal
+import drcal
 
 
 @nps.broadcast_define(((3,),), (2,))
@@ -115,7 +115,7 @@ def project_radial_numdenom(v, d):
 
 
 try:
-    m = mrcal.cameramodel(args.model)
+    m = drcal.cameramodel(args.model)
 except:
     print(f"Couldn't read '{args.model}' as a camera model", file=sys.stderr)
     sys.exit(1)
@@ -132,8 +132,8 @@ fxy = m.intrinsics()[1][0:2]
 cxy = m.intrinsics()[1][2:4]
 
 # shape (Nh,Nw,2)
-v = mrcal.unproject(np.ascontiguousarray(xy), *m.intrinsics())
-v0 = mrcal.unproject(cxy, *m.intrinsics())
+v = drcal.unproject(np.ascontiguousarray(xy), *m.intrinsics())
+v0 = drcal.unproject(cxy, *m.intrinsics())
 
 # shape (Nh,Nw)
 costh = nps.inner(v, v0) / (nps.mag(v) * nps.mag(v0))

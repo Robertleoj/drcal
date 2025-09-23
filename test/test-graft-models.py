@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-r"""Test of the mrcal-graft-models tool
+r"""Test of the drcal-graft-models tool
 
 The basic usage of the tool is simple, but it also supports a non-trivial mode
 where it applies an implied transformation. I make sure to test that here
@@ -15,9 +15,9 @@ import subprocess
 
 testdir = os.path.dirname(os.path.realpath(__file__))
 
-# I import the LOCAL mrcal since that's what I'm testing
+# I import the LOCAL drcal since that's what I'm testing
 sys.path[:0] = (f"{testdir}/..",)
-import mrcal
+import drcal
 import testutils
 
 
@@ -53,13 +53,13 @@ cxy_pitched = cxy_center + np.array((0.0, pitch_y))
 fxycxy0 = nps.glue(np.array((50000.0, 50000.0)), cxy_pitched, axis=-1)
 fxycxy1 = nps.glue(np.array((50000.0, 50000.0)), cxy_center, axis=-1)
 
-model0 = mrcal.cameramodel(
+model0 = drcal.cameramodel(
     intrinsics=("LENSMODEL_PINHOLE", fxycxy0),
     imagersize=imagersize,
     extrinsics_rt_fromref=rt_0r,
 )
 
-model1 = mrcal.cameramodel(
+model1 = drcal.cameramodel(
     intrinsics=("LENSMODEL_PINHOLE", fxycxy1),
     imagersize=imagersize,
     extrinsics_rt_fromref=rt_1r,
@@ -74,7 +74,7 @@ model1.write(filename1)
 # Basic test. Combine intrinsics and extrinsics without fitting any extra
 # transform
 out = subprocess.check_output(
-    (f"{testdir}/../mrcal-graft-models", filename0, filename1),
+    (f"{testdir}/../drcal-graft-models", filename0, filename1),
     encoding="ascii",
     stderr=subprocess.DEVNULL,
 )
@@ -83,7 +83,7 @@ filename01 = f"{workdir}/model01.cameramodel"
 with open(filename01, "w") as f:
     print(out, file=f)
 
-model01 = mrcal.cameramodel(filename01)
+model01 = drcal.cameramodel(filename01)
 
 testutils.confirm_equal(
     model01.intrinsics()[1],
@@ -103,7 +103,7 @@ testutils.confirm_equal(
 # modified extrinsics such that the old-intrinsics and new-intrinsics project
 # world points to the same place
 out = subprocess.check_output(
-    (f"{testdir}/../mrcal-graft-models", "--radius", "-1", filename0, filename1),
+    (f"{testdir}/../drcal-graft-models", "--radius", "-1", filename0, filename1),
     encoding="ascii",
     stderr=subprocess.DEVNULL,
 )
@@ -112,16 +112,16 @@ filename01_compensated = f"{workdir}/model01_compensated.cameramodel"
 with open(filename01_compensated, "w") as f:
     print(out, file=f)
 
-model01_compensated = mrcal.cameramodel(filename01_compensated)
+model01_compensated = drcal.cameramodel(filename01_compensated)
 
 p1 = np.array((11.0, 17.0, 10000.0))
-pref = mrcal.transform_point_rt(model1.extrinsics_rt_toref(), p1)
+pref = drcal.transform_point_rt(model1.extrinsics_rt_toref(), p1)
 
-q = mrcal.project(
-    mrcal.transform_point_rt(model1.extrinsics_rt_fromref(), pref), *model1.intrinsics()
+q = drcal.project(
+    drcal.transform_point_rt(model1.extrinsics_rt_fromref(), pref), *model1.intrinsics()
 )
-q_compensated = mrcal.project(
-    mrcal.transform_point_rt(model01_compensated.extrinsics_rt_fromref(), pref),
+q_compensated = drcal.project(
+    drcal.transform_point_rt(model01_compensated.extrinsics_rt_fromref(), pref),
     *model01_compensated.intrinsics(),
 )
 

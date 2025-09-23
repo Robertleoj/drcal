@@ -10,10 +10,10 @@
 //
 // Can be visualized like this:
 //
-//   b0,x0,J0 = mrcal.optimizer_callback(**optimization_inputs)[:3]
+//   b0,x0,J0 = drcal.optimizer_callback(**optimization_inputs)[:3]
 //   J0 = J0.toarray()
 //   ss = np.sum(np.abs(J0), axis=-2)
-//   gp.plot(ss, _set=mrcal.plotoptions_state_boundaries(**optimization_inputs))
+//   gp.plot(ss, _set=drcal.plotoptions_state_boundaries(**optimization_inputs))
 //
 // This visualizes the overall effect of each variable. If the scales aren't
 // tuned properly, some variables will have orders of magnitude stronger

@@ -7,9 +7,9 @@ import os
 
 testdir = os.path.dirname(os.path.realpath(__file__))
 
-# I import the LOCAL mrcal since that's what I'm testing
+# I import the LOCAL drcal since that's what I'm testing
 sys.path[:0] = (f"{testdir}/..",)
-import mrcal
+import drcal
 
 from testutils import *
 from test_calibration_helpers import grad, grad__r_from_R
@@ -126,7 +126,7 @@ for axis in axes:
 
             ######### R_from_r, r_from_R
             if True:
-                R, dR_dr = mrcal.R_from_r(r, get_gradients=True)
+                R, dR_dr = drcal.R_from_r(r, get_gradients=True)
 
                 R_ref = R_from_r(r)
                 dR_dr__ref = grad(R_from_r, r)
@@ -143,17 +143,17 @@ for axis in axes:
                 )
 
                 # I check R_roundtrip. The dr/dR computation assumes this
-                r_roundtrip, dr_dR = mrcal.r_from_R(R, get_gradients=True)
-                R_roundtrip, dR_dr = mrcal.R_from_r(r_roundtrip, get_gradients=True)
+                r_roundtrip, dr_dR = drcal.r_from_R(R, get_gradients=True)
+                R_roundtrip, dR_dr = drcal.R_from_r(r_roundtrip, get_gradients=True)
 
                 confirm_equal(
-                    mrcal.compose_r(r_roundtrip, -r),
+                    drcal.compose_r(r_roundtrip, -r),
                     0,
                     eps=1e-8,
                     msg=f"roundtrip r result near a singularity. axis={axis}, th0={th0:.2f}, dth={dth}",
                 )
                 confirm_equal(
-                    nps.matmult(R_roundtrip, mrcal.invert_R(R)) - np.eye(3),
+                    nps.matmult(R_roundtrip, drcal.invert_R(R)) - np.eye(3),
                     0,
                     eps=1e-8,
                     msg=f"roundtrip R result near a singularity. axis={axis}, th0={th0:.2f}, dth={dth}",
@@ -177,13 +177,13 @@ for axis in axes:
                     (-0.02, -1.2, 0.4),
                 )
 
-                inv_r1_simple_r = mrcal.compose_r(-r1_simple, r)
+                inv_r1_simple_r = drcal.compose_r(-r1_simple, r)
 
                 # it isn't possible to correctly decide if we should or should
                 # not wrap the result for ALL cases (some cases have mag(r)=pi
                 # exactly, up to machine precision). So I try both, and pick the
                 # closer one
-                r_roundtrip = mrcal.compose_r(r1_simple, inv_r1_simple_r)
+                r_roundtrip = drcal.compose_r(r1_simple, inv_r1_simple_r)
                 r_wrapped = wrap_r_unconditional(r)
                 confirm_equal(
                     r_roundtrip,
@@ -202,7 +202,7 @@ for axis in axes:
                     (r1_simple, inv_r1_simple_r),
                 ):
                     ###### r01
-                    r01, dr01_dr0, dr01_dr1 = mrcal.compose_r(
+                    r01, dr01_dr0, dr01_dr1 = drcal.compose_r(
                         r0, r1, get_gradients=True
                     )
                     r01_ref = compose_r(r0, r1)
@@ -251,7 +251,7 @@ for axis in axes:
                         continue
 
                     ###### r10
-                    r10, dr10_dr1, dr10_dr0 = mrcal.compose_r(
+                    r10, dr10_dr1, dr10_dr0 = drcal.compose_r(
                         r1, r0, get_gradients=True
                     )
                     r10_ref = compose_r(r1, r0)
@@ -308,7 +308,7 @@ for axis in axes:
                     (3.0, -0.2, -0.9),
                 )
 
-                pt, dpt_dr, dpt_dp = mrcal.rotate_point_r(r, p, get_gradients=True)
+                pt, dpt_dr, dpt_dp = drcal.rotate_point_r(r, p, get_gradients=True)
                 pt_ref = rotate_point_r(r, p)
 
                 dpt_dr__ref = grad(lambda r: rotate_point_r(r, p), r)

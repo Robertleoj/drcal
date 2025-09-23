@@ -449,10 +449,10 @@ import gnuplotlib as gp
 import copy
 import os.path
 
-# I import the LOCAL mrcal
+# I import the LOCAL drcal
 scriptdir = os.path.dirname(os.path.realpath(__file__))
 sys.path[:0] = (f"{scriptdir}/../..",)
-import mrcal
+import drcal
 
 
 def split_list(s, t):
@@ -586,7 +586,7 @@ uncertainty_at_range_samples = np.logspace(
 # I want the RNG to be deterministic
 np.random.seed(0)
 
-model_intrinsics = mrcal.cameramodel(args.model)
+model_intrinsics = drcal.cameramodel(args.model)
 
 calobject_warp_true_ref = np.array(args.calobject_warp)
 
@@ -692,7 +692,7 @@ def solve(
 
     optimization_inputs = dict(  # intrinsics filled in later
         extrinsics_rt_fromref=extrinsics,
-        frames_rt_toref=mrcal.rt_from_Rt(Rt_ref_board_true),
+        frames_rt_toref=drcal.rt_from_Rt(Rt_ref_board_true),
         points=None,
         observations_board=observations,
         indices_frame_camintrinsics_camextrinsics=indices_frame_camintrinsics_camextrinsics,
@@ -716,7 +716,7 @@ def solve(
         lensmodel = model_intrinsics.intrinsics()[0]
     else:
         lensmodel = args.lensmodel
-    Nintrinsics = mrcal.lensmodel_num_params(lensmodel)
+    Nintrinsics = drcal.lensmodel_num_params(lensmodel)
 
     if re.search("SPLINED", lensmodel):
         # These are already mostly right, So I lock them down while I seed the
@@ -728,7 +728,7 @@ def solve(
         optimization_inputs["intrinsics"] = intrinsics[:, :4].copy()
         optimization_inputs["do_optimize_intrinsics_core"] = True
 
-        stats = mrcal.optimize(**optimization_inputs)
+        stats = drcal.optimize(**optimization_inputs)
         print(
             f"## optimized. rms = {stats['rms_reproj_error__pixels']}", file=sys.stderr
         )
@@ -744,7 +744,7 @@ def solve(
             ),
             axis=-1,
         )
-        stats = mrcal.optimize(**optimization_inputs)
+        stats = drcal.optimize(**optimization_inputs)
         print(
             f"## optimized. rms = {stats['rms_reproj_error__pixels']}", file=sys.stderr
         )
@@ -757,8 +757,8 @@ def solve(
     else:
         optimization_inputs["lensmodel"] = lensmodel
         if (
-            not mrcal.lensmodel_metadata_and_config(lensmodel)["has_core"]
-            or not mrcal.lensmodel_metadata_and_config(
+            not drcal.lensmodel_metadata_and_config(lensmodel)["has_core"]
+            or not drcal.lensmodel_metadata_and_config(
                 model_intrinsics.intrinsics()[0]
             )["has_core"]
         ):
@@ -783,12 +783,12 @@ def solve(
         if not fixed_frames:
             optimization_inputs["do_optimize_frames"] = True
 
-    stats = mrcal.optimize(**optimization_inputs)
+    stats = drcal.optimize(**optimization_inputs)
     print(f"## optimized. rms = {stats['rms_reproj_error__pixels']}", file=sys.stderr)
 
     if not args.skip_calobject_warp_solve:
         optimization_inputs["do_optimize_calobject_warp"] = True
-        stats = mrcal.optimize(**optimization_inputs)
+        stats = drcal.optimize(**optimization_inputs)
         print(
             f"## optimized. rms = {stats['rms_reproj_error__pixels']}", file=sys.stderr
         )
@@ -843,7 +843,7 @@ def eval_one_rangenear_tilt(
 
     # shapes (Nframes, Ncameras, Nh, Nw, 2),
     #        (Nframes, 4,3)
-    q_true_near, Rt_ref_board_true_near = mrcal.synthesize_board_observations(
+    q_true_near, Rt_ref_board_true_near = drcal.synthesize_board_observations(
         models_true,
         object_width_n=object_width_n,
         object_height_n=object_height_n,
@@ -873,7 +873,7 @@ def eval_one_rangenear_tilt(
         which=args.which,
     )
     if range_far is not None:
-        q_true_far, Rt_ref_board_true_far = mrcal.synthesize_board_observations(
+        q_true_far, Rt_ref_board_true_far = drcal.synthesize_board_observations(
             models_true,
             object_width_n=object_width_n,
             object_height_n=object_height_n,
@@ -923,7 +923,7 @@ def eval_one_rangenear_tilt(
         )
 
         models_out = [
-            mrcal.cameramodel(
+            drcal.cameramodel(
                 optimization_inputs=optimization_inputs, icam_intrinsics=icam
             )
             for icam in range(Ncameras)
@@ -932,10 +932,10 @@ def eval_one_rangenear_tilt(
         model = models_out[args.icam_uncertainty]
 
         if args.show_geometry_first_solve:
-            mrcal.show_geometry(models_out, show_calobjects=True, wait=True)
+            drcal.show_geometry(models_out, show_calobjects=True, wait=True)
             sys.exit()
         if args.show_uncertainty_first_solve:
-            mrcal.show_projection_uncertainty(
+            drcal.show_projection_uncertainty(
                 model, method=args.method, observations=True, wait=True
             )
             sys.exit()
@@ -952,13 +952,13 @@ def eval_one_rangenear_tilt(
 
         # shape (N,3)
         # I sample the center of the imager
-        pcam_samples = mrcal.unproject(
+        pcam_samples = drcal.unproject(
             observation_centroid(optimization_inputs, args.icam_uncertainty),
             *model.intrinsics(),
             normalize=True,
         ) * nps.dummy(uncertainty_at_range_samples, -1)
 
-        uncertainties[i_Nframes_far] = mrcal.projection_uncertainty(
+        uncertainties[i_Nframes_far] = drcal.projection_uncertainty(
             pcam_samples, model, method=args.method, what="worstdirection-stdev"
         )
 
@@ -1000,7 +1000,7 @@ if re.match("num_far_constant_Nframes_", args.scan):
         Nframes_near_samples = args.Nframes_all - Nframes_far_samples
 
     models_true = [
-        mrcal.cameramodel(
+        drcal.cameramodel(
             intrinsics=model_intrinsics.intrinsics(),
             imagersize=model_intrinsics.imagersize(),
             extrinsics_rt_toref=np.array(
@@ -1056,7 +1056,7 @@ elif args.scan == "range":
     Nframes_far_samples = np.array((0,), dtype=int)
 
     models_true = [
-        mrcal.cameramodel(
+        drcal.cameramodel(
             intrinsics=model_intrinsics.intrinsics(),
             imagersize=model_intrinsics.imagersize(),
             extrinsics_rt_toref=np.array(
@@ -1113,7 +1113,7 @@ elif args.scan == "tilt_radius":
     Nframes_far_samples = np.array((0,), dtype=int)
 
     models_true = [
-        mrcal.cameramodel(
+        drcal.cameramodel(
             intrinsics=model_intrinsics.intrinsics(),
             imagersize=model_intrinsics.imagersize(),
             extrinsics_rt_toref=np.array(
@@ -1178,7 +1178,7 @@ elif args.scan == "Ncameras":
     for i_Ncameras in range(N_Ncameras_samples):
         Ncameras = Ncameras_samples[i_Ncameras]
         models_true = [
-            mrcal.cameramodel(
+            drcal.cameramodel(
                 intrinsics=model_intrinsics.intrinsics(),
                 imagersize=model_intrinsics.imagersize(),
                 extrinsics_rt_toref=np.array(
@@ -1229,7 +1229,7 @@ elif args.scan == "Nframes":
     Nframes_far_samples = np.array((0,), dtype=int)
 
     models_true = [
-        mrcal.cameramodel(
+        drcal.cameramodel(
             intrinsics=model_intrinsics.intrinsics(),
             imagersize=model_intrinsics.imagersize(),
             extrinsics_rt_toref=np.array(
@@ -1291,7 +1291,7 @@ elif args.scan == "object_width_n":
     Nframes_far_samples = np.array((0,), dtype=int)
 
     models_true = [
-        mrcal.cameramodel(
+        drcal.cameramodel(
             intrinsics=model_intrinsics.intrinsics(),
             imagersize=model_intrinsics.imagersize(),
             extrinsics_rt_toref=np.array(
@@ -1355,7 +1355,7 @@ elif args.scan == "object_spacing":
     Nframes_far_samples = np.array((0,), dtype=int)
 
     models_true = [
-        mrcal.cameramodel(
+        drcal.cameramodel(
             intrinsics=model_intrinsics.intrinsics(),
             imagersize=model_intrinsics.imagersize(),
             extrinsics_rt_toref=np.array(
@@ -1426,7 +1426,7 @@ else:
     Nframes_far_samples = np.array((0,), dtype=int)
 
     models_true = [
-        mrcal.cameramodel(
+        drcal.cameramodel(
             intrinsics=model_intrinsics.intrinsics(),
             imagersize=model_intrinsics.imagersize(),
             extrinsics_rt_toref=np.array(

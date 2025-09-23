@@ -8,14 +8,14 @@ import os
 
 testdir = os.path.dirname(os.path.realpath(__file__))
 
-# I import the LOCAL mrcal since that's what I'm testing
+# I import the LOCAL drcal since that's what I'm testing
 sys.path[:0] = (f"{testdir}/..",)
-import mrcal
+import drcal
 import testutils
 
 
-model_splined = mrcal.cameramodel(f"{testdir}/data/cam0.splined.cameramodel")
-ux, uy = mrcal.knots_for_splined_models(model_splined.intrinsics()[0])
+model_splined = drcal.cameramodel(f"{testdir}/data/cam0.splined.cameramodel")
+ux, uy = drcal.knots_for_splined_models(model_splined.intrinsics()[0])
 testutils.confirm_equal(
     ux,
     np.array(
@@ -61,7 +61,7 @@ testutils.confirm_equal(
 )
 
 
-meta = mrcal.lensmodel_metadata_and_config(model_splined.intrinsics()[0])
+meta = drcal.lensmodel_metadata_and_config(model_splined.intrinsics()[0])
 meta_ref = {
     "has_core": 1,
     "has_gradients": 1,

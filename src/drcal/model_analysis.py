@@ -2,8 +2,8 @@
 
 This is largely dealing with uncertainty and projection diff operations.
 
-All functions are exported into the mrcal module. So you can call these via
-mrcal.model_analysis.fff() or mrcal.fff(). The latter is preferred.
+All functions are exported into the drcal module. So you can call these via
+drcal.model_analysis.fff() or drcal.fff(). The latter is preferred.
 
 """
 
@@ -66,8 +66,8 @@ def implied_Rt10__from_unprojections(
 
 SYNOPSIS
 
-    models = ( mrcal.cameramodel('cam0-dance0.cameramodel'),
-               mrcal.cameramodel('cam0-dance1.cameramodel') )
+    models = ( drcal.cameramodel('cam0-dance0.cameramodel'),
+               drcal.cameramodel('cam0-dance1.cameramodel') )
 
     lensmodels      = [model.intrinsics()[0] for model in models]
     intrinsics_data = [model.intrinsics()[1] for model in models]
@@ -75,14 +75,14 @@ SYNOPSIS
     # v  shape (...,Ncameras,Nheight,Nwidth,...)
     # q0 shape (...,         Nheight,Nwidth,...)
     v,q0 = \
-        mrcal.sample_imager_unproject(60, None,
+        drcal.sample_imager_unproject(60, None,
                                       *models[0].imagersize(),
                                       lensmodels, intrinsics_data,
                                       normalize = True)
     implied_Rt10 = \
-        mrcal.implied_Rt10__from_unprojections(q0, v[0,...], v[1,...])
+        drcal.implied_Rt10__from_unprojections(q0, v[0,...], v[1,...])
 
-    q1 = mrcal.project( mrcal.transform_point_Rt(implied_Rt10, v[0,...]),
+    q1 = drcal.project( drcal.transform_point_Rt(implied_Rt10, v[0,...]),
                         *models[1].intrinsics())
 
     projection_diff = q1 - q0
@@ -90,8 +90,8 @@ SYNOPSIS
 When comparing projections from two lens models, it is usually necessary to
 align the geometry of the two cameras, to cancel out any transformations implied
 by the intrinsics of the lenses. This transformation is computed by this
-function, used primarily by mrcal.show_projection_diff() and the
-mrcal-show-projection-diff tool.
+function, used primarily by drcal.show_projection_diff() and the
+drcal-show-projection-diff tool.
 
 What are we comparing? We project the same world point into the two cameras, and
 report the difference in projection. Usually, the lens intrinsics differ a bit,
@@ -104,7 +104,7 @@ the imager: the "right" transformation would result in apparent low projection
 diffs in a wide area.
 
 The primary inputs are unprojected gridded samples of the two imagers, obtained
-with something like mrcal.sample_imager_unproject(). We grid the two imagers,
+with something like drcal.sample_imager_unproject(). We grid the two imagers,
 and produce normalized observation vectors for each grid point. We pass the
 pixel grid from camera0 in q0, and the two unprojections in p0, v1. This
 function then tries to find a transformation to minimize
@@ -347,7 +347,7 @@ report a full Rt transformation with the t component set to 0
     # f_scale_deg it should be equivalent to loss='linear', but I was seeing
     # large diffs when comparing a model to itself:
     #
-    #   ./mrcal-show-projection-diff --gridn 50 28 test/data/cam0.splined.cameramodel{,} --distance 3
+    #   ./drcal-show-projection-diff --gridn 50 28 test/data/cam0.splined.cameramodel{,} --distance 3
     #
     # f_scale_deg needs to be > 0.1 to make test-projection-diff.py pass, so
     # there was an uncomfortably-small usable gap for f_scale_deg. loss='huber'
@@ -440,7 +440,7 @@ def worst_direction_stdev(cov):
         1.1102510878087053
 
         # The predicted worst-direction standard deviation
-        print(mrcal.worst_direction_stdev(cov))
+        print(drcal.worst_direction_stdev(cov))
         ===> 1.105304960905736
 
     The covariance of a (N,) random vector can be described by a (N,N)
@@ -609,7 +609,7 @@ the multiplication by D in the expressions below. It's usually sparse, but
 stored densely.
 
 The uncertainty computation in
-https://mrcal.secretsauce.net/uncertainty.html concludes that
+https://drcal.secretsauce.net/uncertainty.html concludes that
 
   Var(b*) = observed_pixel_uncertainty^2 inv(J*tJ*) J*[observations]t J*[observations] inv(J*tJ*)
 
@@ -780,7 +780,7 @@ In the regularized case:
             # No regularization. Use the simplified expression
 
             # The expression I had earlier. Works properly, but is slow:
-            # # time ./mrcal-show-projection-uncertainty --gridn 120 90 --hardcopy /tmp/tst.gp **/*.cameramodel(OL[1])
+            # # time ./drcal-show-projection-uncertainty --gridn 120 90 --hardcopy /tmp/tst.gp **/*.cameramodel(OL[1])
             # # 21.48s user 0.27s system 99% cpu 21.750 total
             #
             # # shape (N,Nstate) where N=2 usually
@@ -809,7 +809,7 @@ In the regularized case:
             # need to handle this extra D in some way.
 
             # Slowest; two different solves.
-            # time ./mrcal-show-projection-uncertainty --gridn 120 90 --hardcopy /tmp/tst.gp **/*.cameramodel(OL[1])
+            # time ./drcal-show-projection-uncertainty --gridn 120 90 --hardcopy /tmp/tst.gp **/*.cameramodel(OL[1])
             # 20.64s user 1.30s system 99% cpu 21.938 total
             #
             # A1 = factorization.solve_xt_JtJ_bt( dF_dbpacked, sys='P' )
@@ -821,10 +821,10 @@ In the regularized case:
             # Fastest, but works only if I have an LLt factorization. Can be
             # requested with this patch:
             #
-            #   diff --git a/mrcal-pywrap.c b/mrcal-pywrap.c
+            #   diff --git a/drcal-pywrap.c b/drcal-pywrap.c
             #   index b0d45fcc..b7c87090 100644
-            #   --- a/mrcal-pywrap.c
-            #   +++ b/mrcal-pywrap.c
+            #   --- a/drcal-pywrap.c
+            #   +++ b/drcal-pywrap.c
             #   @@ -290,3 +290,5 @@
             #            self->common.supernodal = 0;
             #
@@ -834,7 +834,7 @@ In the regularized case:
             #
             # I don't know if there are downsides to this, so I don't do this.
             #
-            # time ./mrcal-show-projection-uncertainty --gridn 120 90 --hardcopy /tmp/tst.gp **/*.cameramodel(OL[1])
+            # time ./drcal-show-projection-uncertainty --gridn 120 90 --hardcopy /tmp/tst.gp **/*.cameramodel(OL[1])
             # 11.80s user 0.38s system 99% cpu 12.187 total
             #
             # A1 = factorization.solve_xt_JtJ_bt( dF_dbpacked, sys='P' )
@@ -844,7 +844,7 @@ In the regularized case:
             # A bit slower, uses more memory, but works with LDLt. This is what I
             # use
             #
-            # time ./mrcal-show-projection-uncertainty --gridn 120 90 --hardcopy /tmp/tst.gp **/*.cameramodel(OL[1])
+            # time ./drcal-show-projection-uncertainty --gridn 120 90 --hardcopy /tmp/tst.gp **/*.cameramodel(OL[1])
             # 12.29s user 0.96s system 99% cpu 13.253 total
             A1 = factorization.solve_xt_JtJ_bt(dF_dbpacked, sys="P")
             del dF_dbpacked
@@ -912,7 +912,7 @@ def _dq_db__Kunpacked_rrp(  ## write output here
     # atinfinity = rotation-only
     # K is drt_ref_refperturbed/db
 
-    # From https://mrcal.secretsauce.net/docs-3.0/uncertainty-cross-reprojection.html:
+    # From https://drcal.secretsauce.net/docs-3.0/uncertainty-cross-reprojection.html:
     #   q*    = project( pcam*, intrinsics* )
     #   pcam* = Tc*r* pref*
     #   pref* = Tr*r  pref
@@ -994,8 +994,8 @@ def _dq_db__projection_uncertainty(  # shape (...,3)
 
     The underlying math is documented here:
 
-    - https://mrcal.secretsauce.net/docs-3.0/uncertainty-mean-pcam.html
-    - https://mrcal.secretsauce.net/docs-3.0/uncertainty-cross-reprojection.html
+    - https://drcal.secretsauce.net/docs-3.0/uncertainty-mean-pcam.html
+    - https://drcal.secretsauce.net/docs-3.0/uncertainty-cross-reprojection.html
 
     The end result for method == "mean-pcam":
 
@@ -1353,18 +1353,18 @@ def projection_uncertainty(
     r"""Compute the projection uncertainty of a camera-referenced point
 
     This is the interface to the uncertainty computations described in
-    https://mrcal.secretsauce.net/uncertainty.html
+    https://drcal.secretsauce.net/uncertainty.html
 
     SYNOPSIS
 
-        model = mrcal.cameramodel("xxx.cameramodel")
+        model = drcal.cameramodel("xxx.cameramodel")
 
         q        = np.array((123., 443.))
         distance = 10.0
 
-        pcam = distance * mrcal.unproject(q, *model.intrinsics(), normalize=True)
+        pcam = distance * drcal.unproject(q, *model.intrinsics(), normalize=True)
 
-        print(mrcal.projection_uncertainty(pcam,
+        print(drcal.projection_uncertainty(pcam,
                                            model = model,
                                            what  = 'worstdirection-stdev'))
         ===> 0.5
@@ -1392,12 +1392,12 @@ def projection_uncertainty(
     optimization parameters. And then we propagate this parameter noise through
     projection to produce the projected pixel uncertainty.
 
-    As noted in the docs (https://mrcal.secretsauce.net/uncertainty.html), this
+    As noted in the docs (https://drcal.secretsauce.net/uncertainty.html), this
     measures the SAMPLING error, which is a direct function of the quality of the
     gathered calibration data. It does NOT measure model errors, which arise from
     inappropriate lens models, for instance.
 
-    The uncertainties can be visualized with the mrcal-show-projection-uncertainty
+    The uncertainties can be visualized with the drcal-show-projection-uncertainty
     tool.
 
     ARGUMENTS
@@ -1411,7 +1411,7 @@ def projection_uncertainty(
       coordinates of p_cam are significant, even distance to the camera. if
       atinfinity: the distance to the camera is ignored.
 
-    - model: a mrcal.cameramodel object that contains optimization_inputs, which are
+    - model: a drcal.cameramodel object that contains optimization_inputs, which are
       used to propagate the uncertainty
 
     - atinfinity: optional boolean, defaults to False. If True, we want to know the
@@ -1445,7 +1445,7 @@ def projection_uncertainty(
 
     # The math implemented here is documented in
     #
-    #   https://mrcal.secretsauce.net/uncertainty.html
+    #   https://drcal.secretsauce.net/uncertainty.html
 
     # Non-None if this:
     # - exists
@@ -1610,10 +1610,10 @@ def projection_diff(
 
     SYNOPSIS
 
-        models = ( mrcal.cameramodel('cam0-dance0.cameramodel'),
-                   mrcal.cameramodel('cam0-dance1.cameramodel') )
+        models = ( drcal.cameramodel('cam0-dance0.cameramodel'),
+                   drcal.cameramodel('cam0-dance1.cameramodel') )
 
-        difference,_,q0,_ = mrcal.projection_diff(models)
+        difference,_,q0,_ = drcal.projection_diff(models)
 
         print(q0.shape)
         ==> (40,60)
@@ -1626,14 +1626,14 @@ def projection_diff(
         # models at each cell
 
     The operation of this tool is documented at
-    https://mrcal.secretsauce.net/differencing.html
+    https://drcal.secretsauce.net/differencing.html
 
     It is often useful to compare the projection behavior of two camera models. For
     instance, one may want to validate a calibration by comparing the results of two
     different chessboard dances. Or one may want to evaluate the stability of the
     intrinsics in response to mechanical or thermal stresses. This function makes
     these comparisons, and returns the results. A visualization wrapper is
-    available: mrcal.show_projection_diff() and the mrcal-show-projection-diff tool.
+    available: drcal.show_projection_diff() and the drcal-show-projection-diff tool.
 
     In the most common case we're given exactly 2 models to compare, and we compute
     the differences in projection of each point. If we're given more than 2 models,
@@ -1726,7 +1726,7 @@ def projection_diff(
 
     ARGUMENTS
 
-    - models: iterable of mrcal.cameramodel objects we're comparing. Usually there
+    - models: iterable of drcal.cameramodel objects we're comparing. Usually there
       will be 2 of these, but more than 2 is allowed. The intrinsics are always
       used; the extrinsics are used only if not intrinsics_only and focus_radius==0
 
@@ -2050,10 +2050,10 @@ def stereo_pair_diff(model_pairs, *, gridn_width=60, gridn_height=None, distance
 
     SYNOPSIS
 
-        model_pairs = ( mrcal.cameramodel('cam0-dance0.cameramodel'),
-                   mrcal.cameramodel('cam0-dance1.cameramodel') )
+        model_pairs = ( drcal.cameramodel('cam0-dance0.cameramodel'),
+                   drcal.cameramodel('cam0-dance1.cameramodel') )
 
-        difference,_,q0,_ = mrcal.stereo_pair_diff(model_pairs)
+        difference,_,q0,_ = drcal.stereo_pair_diff(model_pairs)
 
         print(q0.shape)
         ==> (40,60)
@@ -2066,14 +2066,14 @@ def stereo_pair_diff(model_pairs, *, gridn_width=60, gridn_height=None, distance
         # model_pairs at each cell
 
     The operation of this tool is documented at
-    https://mrcal.secretsauce.net/differencing.html
+    https://drcal.secretsauce.net/differencing.html
 
     It is often useful to compare the projection behavior of two camera model_pairs. For
     instance, one may want to validate a calibration by comparing the results of two
     different chessboard dances. Or one may want to evaluate the stability of the
     intrinsics in response to mechanical or thermal stresses. This function makes
     these comparisons, and returns the results. A visualization wrapper is
-    available: mrcal.show_projection_diff() and the mrcal-show-projection-diff tool.
+    available: drcal.show_projection_diff() and the drcal-show-projection-diff tool.
 
     In the most common case we're given exactly 2 model_pairs to compare, and we compute
     the differences in projection of each point. If we're given more than 2 model_pairs,
@@ -2151,7 +2151,7 @@ def stereo_pair_diff(model_pairs, *, gridn_width=60, gridn_height=None, distance
 
     ARGUMENTS
 
-    - model_pairs: iterable of mrcal.cameramodel objects we're comparing. Exactly
+    - model_pairs: iterable of drcal.cameramodel objects we're comparing. Exactly
       two pairs are expected. The intrinsics are always used; the extrinsics are
       used only if not intrinsics_only and focus_radius==0
 
@@ -2321,10 +2321,10 @@ def is_within_valid_intrinsics_region(q, model):
 
     SYNOPSIS
 
-        mask = mrcal.is_within_valid_intrinsics_region(q, model)
+        mask = drcal.is_within_valid_intrinsics_region(q, model)
         q_trustworthy = q[mask]
 
-    mrcal camera models may have an estimate of the region of the imager where the
+    drcal camera models may have an estimate of the region of the imager where the
     intrinsics are trustworthy (originally computed with a low-enough error and
     uncertainty). When using a model, we may want to process points that fall
     outside of this region differently from points that fall within this region.

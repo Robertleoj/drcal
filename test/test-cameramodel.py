@@ -8,9 +8,9 @@ import os
 
 testdir = os.path.dirname(os.path.realpath(__file__))
 
-# I import the LOCAL mrcal since that's what I'm testing
+# I import the LOCAL drcal since that's what I'm testing
 sys.path[:0] = (f"{testdir}/..",)
-import mrcal
+import drcal
 import testutils
 
 
@@ -43,7 +43,7 @@ atexit.register(cleanup)
 #   modify with setter
 #   call getter and compare
 
-m = mrcal.cameramodel(f"{testdir}/data/cam0.opencv8.cameramodel")
+m = drcal.cameramodel(f"{testdir}/data/cam0.opencv8.cameramodel")
 
 testutils.confirm_equal(
     m.extrinsics_rt_fromref(),
@@ -78,7 +78,7 @@ testutils.confirm_equal(
 m.write(f"{workdir}/out.cameramodel")
 m.write(f"{workdir}/out.cahvor")
 
-m1 = mrcal.cameramodel(f"{workdir}/out.cameramodel")
+m1 = drcal.cameramodel(f"{workdir}/out.cameramodel")
 testutils.confirm_equal(
     m1.extrinsics_rt_fromref(),
     [
@@ -109,7 +109,7 @@ testutils.confirm_equal(
     ],
 )
 
-m2 = mrcal.cameramodel(f"{workdir}/out.cahvor")
+m2 = drcal.cameramodel(f"{workdir}/out.cahvor")
 testutils.confirm_equal(
     m2.extrinsics_rt_fromref(),
     [
@@ -150,13 +150,13 @@ rt_0r = np.array(
         -5.0,
     ]
 )
-Rt_r0 = mrcal.invert_Rt(mrcal.Rt_from_rt(rt_0r))
+Rt_r0 = drcal.invert_Rt(drcal.Rt_from_rt(rt_0r))
 m.extrinsics_Rt_toref(Rt_r0)
 testutils.confirm_equal(m.extrinsics_rt_fromref(), rt_0r)
 
 # Let's make sure I can read and write empty and non-empty valid-intrinsics
 # regions
-m = mrcal.cameramodel(f"{testdir}/data/cam0.opencv8.cameramodel")
+m = drcal.cameramodel(f"{testdir}/data/cam0.opencv8.cameramodel")
 testutils.confirm_equal(
     m.valid_intrinsics_region(),
     None,
@@ -174,7 +174,7 @@ testutils.confirm_equal(
     msg="was able to set an open valid_intrinsics_region and to see it be closed",
 )
 m.write(f"{workdir}/out.cameramodel")
-m1 = mrcal.cameramodel(f"{workdir}/out.cameramodel")
+m1 = drcal.cameramodel(f"{workdir}/out.cameramodel")
 testutils.confirm_equal(
     m1.valid_intrinsics_region(),
     r_closed,
@@ -188,7 +188,7 @@ testutils.confirm_equal(
     msg="was able to set an empty valid_intrinsics_region",
 )
 m.write(f"{workdir}/out.cameramodel")
-m1 = mrcal.cameramodel(f"{workdir}/out.cameramodel")
+m1 = drcal.cameramodel(f"{workdir}/out.cameramodel")
 testutils.confirm_equal(
     m1.valid_intrinsics_region(),
     r_empty,
@@ -218,7 +218,7 @@ string = r"""
 import io
 
 with io.StringIO(string) as f:
-    m = mrcal.cameramodel(f)
+    m = drcal.cameramodel(f)
 
     testutils.confirm_equal(
         m.intrinsics()[1],

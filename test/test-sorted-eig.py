@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-r"""Tests mrcal.sorted_eig
+r"""Tests drcal.sorted_eig
 
 This has complex logic to support broadcasting, and I validate it here
 """
@@ -12,9 +12,9 @@ import os
 
 testdir = os.path.dirname(os.path.realpath(__file__))
 
-# I import the LOCAL mrcal since that's what I'm testing
+# I import the LOCAL drcal since that's what I'm testing
 sys.path[:0] = (f"{testdir}/..",)
-import mrcal
+import drcal
 import testutils
 
 
@@ -179,7 +179,7 @@ def diag(d):
 X = nps.matmult(v_ref, diag(l_ref), np.linalg.inv(v_ref))
 
 ####### First, the simple non-broadcasted case
-l, v = mrcal.sorted_eig(X[1, 2])
+l, v = drcal.sorted_eig(X[1, 2])
 
 testutils.confirm_equal(l.shape, (3,), msg="Single matrix: l.shape")
 testutils.confirm_equal(
@@ -207,7 +207,7 @@ for i in range(len(isorted)):
 
 
 ####### Full, broadcasted case
-l, v = mrcal.sorted_eig(X)
+l, v = drcal.sorted_eig(X)
 
 all_shapes_passed = all(
     (

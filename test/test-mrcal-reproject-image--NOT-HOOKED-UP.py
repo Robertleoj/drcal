@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-r"""Tests mrcal-reproject-image tool
+r"""Tests drcal-reproject-image tool
 
 THIS IS NOT ENABLED IN THE MAIN SET OF TESTS
 The data is not checked-in. I don't remember if this works at all
@@ -12,9 +12,9 @@ import os
 
 testdir = os.path.dirname(os.path.realpath(__file__))
 
-# I import the LOCAL mrcal since that's what I'm testing
+# I import the LOCAL drcal since that's what I'm testing
 sys.path[:0] = (f"{testdir}/..",)
-import mrcal
+import drcal
 import testutils
 import subprocess
 import cv2
@@ -46,13 +46,13 @@ def _check(cmd, filenames_output_ref):
 
     for filename_output, filename_ref in filenames_output_ref:
         try:
-            image_output = mrcal.load_image(filename_output)
+            image_output = drcal.load_image(filename_output)
         except:
             testutils.confirm(False, msg=f"Reading output file failed: {image_output}")
             continue
 
         try:
-            image_ref = mrcal.load_image(filename_ref)
+            image_ref = drcal.load_image(filename_ref)
             kernel = np.ones((11, 11), dtype=np.uint8)
             d = np.abs(image_ref - image_output, dtype=np.int8).astype(np.uint8)
             worst_err = np.max(cv2.erode(d, kernel))
@@ -79,7 +79,7 @@ def check(cmd, filenames_output_ref):
 
 check(
     (
-        f"{testdir}/../mrcal-reproject-image",
+        f"{testdir}/../drcal-reproject-image",
         "--to-pinhole",
         "--scale-image",
         "0.25",
@@ -96,7 +96,7 @@ check(
 
 check(
     (
-        f"{testdir}/../mrcal-reproject-image",
+        f"{testdir}/../drcal-reproject-image",
         "--to-pinhole",
         "--scale-image",
         "0.25",
@@ -115,7 +115,7 @@ check(
 
 check(
     (
-        f"{testdir}/../mrcal-reproject-image",
+        f"{testdir}/../drcal-reproject-image",
         "--to-pinhole",
         "--scale-image",
         "0.25",
@@ -138,7 +138,7 @@ check(
 
 check(
     (
-        f"{testdir}/../mrcal-reproject-image",
+        f"{testdir}/../drcal-reproject-image",
         "--to-pinhole",
         "--scale-image",
         "0.25",
@@ -163,7 +163,7 @@ check(
 # non-pinhole reprojection. SLOW
 check(
     (
-        f"{testdir}/../mrcal-reproject-image",
+        f"{testdir}/../drcal-reproject-image",
         f"{testdir}/data/reprojection-test/cam0.cameramodel",
         f"{testdir}/data/reprojection-test/cam1.cameramodel",
         f"{testdir}/data/reprojection-test/cam0.jpg",
@@ -178,7 +178,7 @@ check(
 
 check(
     (
-        f"{testdir}/../mrcal-reproject-image",
+        f"{testdir}/../drcal-reproject-image",
         "--to-pinhole",
         "--scale-image",
         "0.25",

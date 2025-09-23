@@ -5,15 +5,15 @@ import os
 
 testdir = os.path.dirname(os.path.realpath(__file__))
 
-# I import the LOCAL mrcal since that's what I'm testing
+# I import the LOCAL drcal since that's what I'm testing
 sys.path[:0] = (f"{testdir}/..",)
-import mrcal
+import drcal
 
 
 ############# Set up my world, and compute all the perfect positions, pixel
 ############# observations of everything
 def generate_world(Npoints_fixed=None):
-    model = mrcal.cameramodel(f"{testdir}/data/cam0.opencv8.cameramodel")
+    model = drcal.cameramodel(f"{testdir}/data/cam0.opencv8.cameramodel")
     imagersize = model.imagersize()
     lensmodel, intrinsics_data = model.intrinsics()
 
@@ -41,10 +41,10 @@ def generate_world(Npoints_fixed=None):
     )
 
     # shape (Ncamposes, Npoints, 3)
-    pcam_true = mrcal.transform_point_rt(nps.mv(rt_cam_ref_true, -2, -3), pref_true)
+    pcam_true = drcal.transform_point_rt(nps.mv(rt_cam_ref_true, -2, -3), pref_true)
 
     # shape (Ncamposes, Npoints, 2)
-    qcam_true = mrcal.project(pcam_true, lensmodel, intrinsics_data)
+    qcam_true = drcal.project(pcam_true, lensmodel, intrinsics_data)
 
     # print(repr(np.random.randn(*qcam_true.shape) * 1.0))
     qcam_noise = (

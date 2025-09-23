@@ -12,18 +12,18 @@ r"""Converts cameramodel(s) to the file format used by kalibr
 
 SYNOPSIS
 
-  $ mrcal-to-kalibr model1.cameramodel model2.cameramodel > model.yaml
+  $ drcal-to-kalibr model1.cameramodel model2.cameramodel > model.yaml
 
   [model.yaml is now a kalibr model describing the two cameras]
 
-File formats supported by mrcal are described at
-https://mrcal.secretsauce.net/cameramodels.html#cameramodel-file-formats
+File formats supported by drcal are described at
+https://drcal.secretsauce.net/cameramodels.html#cameramodel-file-formats
 
 This tool converts the given model(s) to the .yaml format used by kalibr. No
 changes to the content are made; this is purely a format converter (the
-mrcal-convert-lensmodel tool fits different lens models instead).
+drcal-convert-lensmodel tool fits different lens models instead).
 
-Unlike mrcal .cameramodel files where one camera is described by one file, the
+Unlike drcal .cameramodel files where one camera is described by one file, the
 .yaml files used by kalibr are intended to describe multiple cameras. This
 format conversion tool will write out a single kalibr .yaml model containing ALL
 the given models. The names of the models in the kalibr data will be "cam0",
@@ -95,8 +95,8 @@ if Nstdin > 1:
     )
     sys.exit(1)
 
-import mrcal
-import mrcal.cahvor
+import drcal
+import drcal.cahvor
 import numpy as np
 import numpysane as nps
 
@@ -104,7 +104,7 @@ import numpysane as nps
 Rt_ref_camprev = None
 
 
-# stolen from mrcal-to-kalibr. Please consolidate
+# stolen from drcal-to-kalibr. Please consolidate
 def Rt_is_identity(Rt):
     cos_th = (np.trace(Rt[:3, :]) - 1.0) / 2.0
     # cos_th ~ 1 - x^2/2
@@ -116,7 +116,7 @@ def Rt_is_identity(Rt):
 def convert_one(i, model_filename):
     global Rt_ref_camprev
 
-    model = mrcal.cameramodel(model_filename)
+    model = drcal.cameramodel(model_filename)
 
     lensmodel, intrinsics = model.intrinsics()
     lensmodel_type = re.match("LENSMODEL_[^_]*", lensmodel).group(0)
@@ -125,16 +125,16 @@ def convert_one(i, model_filename):
     Rt_cam_ref = model.extrinsics_Rt_fromref()
 
     if Rt_ref_camprev is not None:
-        Rt_cam_camprev = mrcal.compose_Rt(Rt_cam_ref, Rt_ref_camprev)
+        Rt_cam_camprev = drcal.compose_Rt(Rt_cam_ref, Rt_ref_camprev)
     else:
         # This is the first camera. What do we use as our reference?
         if args.cam0_at_reference:
-            Rt_cam_camprev = mrcal.identity_Rt()
+            Rt_cam_camprev = drcal.identity_Rt()
         else:
             # By default the "prev cam" from cam0 is the reference
             Rt_cam_camprev = Rt_cam_ref
 
-    Rt_ref_camprev = mrcal.invert_Rt(Rt_cam_ref)  # for the next one
+    Rt_ref_camprev = drcal.invert_Rt(Rt_cam_ref)  # for the next one
 
     lensmodel_known = set(
         (
@@ -169,9 +169,9 @@ def convert_one(i, model_filename):
         distortion_model = None
         distortion_coeffs = None
 
-        model_identity_extrinsics = mrcal.cameramodel(model)
-        model_identity_extrinsics.extrinsics_Rt_fromref(mrcal.identity_Rt())
-        x = mrcal.cahvor._deconstruct_model(model_identity_extrinsics)
+        model_identity_extrinsics = drcal.cameramodel(model)
+        model_identity_extrinsics.extrinsics_Rt_fromref(drcal.identity_Rt())
+        x = drcal.cahvor._deconstruct_model(model_identity_extrinsics)
 
         if lensmodel_type == "LENSMODEL_CAHVOR":
             camera_model = "cahvor"
@@ -196,7 +196,7 @@ def convert_one(i, model_filename):
                 + list(x["R"])
                 + list(x["E"])
             )
-            cahvore_linearity = mrcal.lensmodel_metadata_and_config(lensmodel)[
+            cahvore_linearity = drcal.lensmodel_metadata_and_config(lensmodel)[
                 "linearity"
             ]
         else:

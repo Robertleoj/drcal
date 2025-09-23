@@ -16,17 +16,17 @@ import numpysane as nps
 
 testdir = os.path.dirname(os.path.realpath(__file__))
 
-# I import the LOCAL mrcal since that's what I'm testing
+# I import the LOCAL drcal since that's what I'm testing
 sys.path[:0] = (f"{testdir}/..",)
-import mrcal
+import drcal
 
 import testutils
 
-m = mrcal.cameramodel(
+m = drcal.cameramodel(
     f"{testdir}/../doc/data/figueroa-overpass-looking-S/opencv8-0.cameramodel"
 )
 optimization_inputs = m.optimization_inputs()
-Nstate = mrcal.num_states(**optimization_inputs)
+Nstate = drcal.num_states(**optimization_inputs)
 
 
 @nps.broadcast_define(
@@ -72,7 +72,7 @@ for shape in ((2, 3, 5), (3, 5), (5,), (3, 2), (2,), (1,), ()):
     # test-projection-uncertainty.py does that. So here I assume that
     # the covariances are reported correctly, and I make sure that
     # everything else is self-consistent
-    Var = mrcal.model_analysis._propagate_calibration_uncertainty(
+    Var = drcal.model_analysis._propagate_calibration_uncertainty(
         what="covariance",
         dF_dbpacked=dF_dbpacked,
         optimization_inputs=optimization_inputs,
@@ -82,7 +82,7 @@ for shape in ((2, 3, 5), (3, 5), (5,), (3, 2), (2,), (1,), ()):
         Var.shape, Var_shape_ref, msg=f"Checking covariance.shape for shape {shape}"
     )
 
-    worstdirection_stdev = mrcal.model_analysis._propagate_calibration_uncertainty(
+    worstdirection_stdev = drcal.model_analysis._propagate_calibration_uncertainty(
         what="worstdirection-stdev",
         dF_dbpacked=dF_dbpacked,
         optimization_inputs=optimization_inputs,
@@ -98,7 +98,7 @@ for shape in ((2, 3, 5), (3, 5), (5,), (3, 2), (2,), (1,), ()):
         msg=f"Checking worstdirection_stdev for shape {shape}",
     )
 
-    rms_stdev = mrcal.model_analysis._propagate_calibration_uncertainty(
+    rms_stdev = drcal.model_analysis._propagate_calibration_uncertainty(
         what="rms-stdev",
         dF_dbpacked=dF_dbpacked,
         optimization_inputs=optimization_inputs,

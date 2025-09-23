@@ -12,14 +12,14 @@ r"""Visualize the difference in projection between N models
 
 SYNOPSIS
 
-  $ mrcal-show-projection-diff before.cameramodel after.cameramodel
+  $ drcal-show-projection-diff before.cameramodel after.cameramodel
   ... a plot pops up showing how these two models differ in their projections
 
 The operation of this tool is documented at
 
-  https://mrcal.secretsauce.net/differencing.html
+  https://drcal.secretsauce.net/differencing.html
 
-This tool visualizes the results of mrcal.projection_diff()
+This tool visualizes the results of drcal.projection_diff()
 
 It is often useful to compare the projection behavior of two camera models. For
 instance, one may want to validate a calibration by comparing the results of two
@@ -53,7 +53,7 @@ Several arguments control how we obtain the transformation. Top-level logic:
           Rt10 = implied_Rt10__from_unprojections()
 
 The details of how the comparison is computed, and the meaning of the arguments
-controlling this, are in the docstring of mrcal.projection_diff().
+controlling this, are in the docstring of drcal.projection_diff().
 
 """
 
@@ -287,7 +287,7 @@ if args.same_dance and (args.where is not None or args.radius >= 0):
     sys.exit(1)
 
 
-import mrcal
+import drcal
 import numpy as np
 import numpysane as nps
 
@@ -306,7 +306,7 @@ if args.extratitle is not None:
 
 def openmodel(f):
     try:
-        return mrcal.cameramodel(f)
+        return drcal.cameramodel(f)
     except Exception as e:
         print(f"Couldn't load camera model '{f}': {e}", file=sys.stderr)
         sys.exit(1)
@@ -347,7 +347,7 @@ if args.same_dance:
         idx_inliers = [obs[i][..., 2] > 0 for i in range(len(models))]
 
         calobjects = [
-            mrcal.hypothesis_board_corner_positions(
+            drcal.hypothesis_board_corner_positions(
                 model.icam_intrinsics(),
                 **model.optimization_inputs(),
                 idx_inliers=idx_inliers[0] * idx_inliers[1],
@@ -355,7 +355,7 @@ if args.same_dance:
             for model in models
         ]
 
-        Rt10 = mrcal.align_procrustes_points_Rt01(calobjects[1], calobjects[0])
+        Rt10 = drcal.align_procrustes_points_Rt01(calobjects[1], calobjects[0])
 
     elif 1:
         # new method being tested. Fit the corners in the ref coordinate
@@ -371,13 +371,13 @@ if args.same_dance:
         calobject_spacing = optimization_inputs0["calibration_object_spacing"]
 
         # shape (Nh, Nw, 3)
-        calibration_object0 = mrcal.ref_calibration_object(
+        calibration_object0 = drcal.ref_calibration_object(
             calobject_width,
             calobject_height,
             calobject_spacing,
             calobject_warp=optimization_inputs0["calobject_warp"],
         )
-        calibration_object1 = mrcal.ref_calibration_object(
+        calibration_object1 = drcal.ref_calibration_object(
             calobject_width,
             calobject_height,
             calobject_spacing,
@@ -385,15 +385,15 @@ if args.same_dance:
         )
 
         # shape (Nframes, Nh, Nw, 3)
-        pcorners_ref0 = mrcal.transform_point_rt(
+        pcorners_ref0 = drcal.transform_point_rt(
             nps.mv(optimization_inputs0["frames_rt_toref"], -2, -4), calibration_object0
         )
-        pcorners_ref1 = mrcal.transform_point_rt(
+        pcorners_ref1 = drcal.transform_point_rt(
             nps.mv(optimization_inputs1["frames_rt_toref"], -2, -4), calibration_object1
         )
 
         # shape (4,3)
-        Rt_ref10 = mrcal.align_procrustes_points_Rt01(  # shape (N,3)
+        Rt_ref10 = drcal.align_procrustes_points_Rt01(  # shape (N,3)
             nps.clump(pcorners_ref1, n=3),
             # shape (N,3)
             nps.clump(pcorners_ref0, n=3),
@@ -401,27 +401,27 @@ if args.same_dance:
 
         # I have the ref-ref transform. I convert to a cam-cam transform
 
-        icam_extrinsics0 = mrcal.corresponding_icam_extrinsics(
+        icam_extrinsics0 = drcal.corresponding_icam_extrinsics(
             models[0].icam_intrinsics(), **optimization_inputs0
         )
-        icam_extrinsics1 = mrcal.corresponding_icam_extrinsics(
+        icam_extrinsics1 = drcal.corresponding_icam_extrinsics(
             models[1].icam_intrinsics(), **optimization_inputs1
         )
 
         if icam_extrinsics0 >= 0:
-            Rt_cr0 = mrcal.Rt_from_rt(
+            Rt_cr0 = drcal.Rt_from_rt(
                 optimization_inputs0["extrinsics_rt_fromref"][icam_extrinsics0]
             )
         else:
-            Rt_cr0 = mrcal.identity_Rt()
+            Rt_cr0 = drcal.identity_Rt()
         if icam_extrinsics1 >= 0:
-            Rt_cr1 = mrcal.Rt_from_rt(
+            Rt_cr1 = drcal.Rt_from_rt(
                 optimization_inputs1["extrinsics_rt_fromref"][icam_extrinsics1]
             )
         else:
-            Rt_cr1 = mrcal.identity_Rt()
+            Rt_cr1 = drcal.identity_Rt()
 
-        Rt10 = mrcal.compose_Rt(Rt_cr1, Rt_ref10, mrcal.invert_Rt(Rt_cr0))
+        Rt10 = drcal.compose_Rt(Rt_cr1, Rt_ref10, drcal.invert_Rt(Rt_cr0))
 
     else:
         # default method used in the uncertainty computation. compute the mean
@@ -429,41 +429,41 @@ if args.same_dance:
 
         optimization_inputs0 = models[0].optimization_inputs()
         icam_intrinsics0 = models[0].icam_intrinsics()
-        icam_extrinsics0 = mrcal.corresponding_icam_extrinsics(
+        icam_extrinsics0 = drcal.corresponding_icam_extrinsics(
             icam_intrinsics0, **optimization_inputs0
         )
         if icam_extrinsics0 >= 0:
-            Rt_rc0 = mrcal.invert_Rt(
-                mrcal.Rt_from_rt(
+            Rt_rc0 = drcal.invert_Rt(
+                drcal.Rt_from_rt(
                     optimization_inputs0["extrinsics_rt_fromref"][icam_extrinsics0]
                 )
             )
         else:
-            Rt_rc0 = mrcal.identity_Rt()
-        Rt_fr0 = mrcal.invert_Rt(
-            mrcal.Rt_from_rt(optimization_inputs0["frames_rt_toref"])
+            Rt_rc0 = drcal.identity_Rt()
+        Rt_fr0 = drcal.invert_Rt(
+            drcal.Rt_from_rt(optimization_inputs0["frames_rt_toref"])
         )
 
         optimization_inputs1 = models[1].optimization_inputs()
         icam_intrinsics1 = models[1].icam_intrinsics()
-        icam_extrinsics1 = mrcal.corresponding_icam_extrinsics(
+        icam_extrinsics1 = drcal.corresponding_icam_extrinsics(
             icam_intrinsics1, **optimization_inputs1
         )
         if icam_extrinsics1 >= 0:
-            Rt_cr1 = mrcal.Rt_from_rt(
+            Rt_cr1 = drcal.Rt_from_rt(
                 optimization_inputs1["extrinsics_rt_fromref"][icam_extrinsics1]
             )
         else:
-            Rt_cr1 = mrcal.identity_Rt()
-        Rt_rf1 = mrcal.Rt_from_rt(optimization_inputs1["frames_rt_toref"])
+            Rt_cr1 = drcal.identity_Rt()
+        Rt_rf1 = drcal.Rt_from_rt(optimization_inputs1["frames_rt_toref"])
 
         # not a geometric transformation: the R is not in SO3
-        Rt_r1r0 = np.mean(mrcal.compose_Rt(Rt_rf1, Rt_fr0), axis=-3)
+        Rt_r1r0 = np.mean(drcal.compose_Rt(Rt_rf1, Rt_fr0), axis=-3)
 
-        Rt_c1c0 = mrcal.compose_Rt(Rt_cr1, Rt_r1r0, Rt_rc0)
+        Rt_c1c0 = drcal.compose_Rt(Rt_cr1, Rt_r1r0, Rt_rc0)
 
         q0 = models[0].imagersize() * 2.0 / 5.0
-        v0_cam = mrcal.unproject(
+        v0_cam = drcal.unproject(
             q0,
             optimization_inputs0["lensmodel"],
             optimization_inputs0["intrinsics"][icam_intrinsics0],
@@ -472,14 +472,14 @@ if args.same_dance:
         p0_cam = v0_cam * (1e5 if distance is None else distance)
 
         # print(f"v0_cam = {v0_cam}")
-        # print(f"reprojected = {mrcal.project(v0_cam, optimization_inputs0['lensmodel'], optimization_inputs0['intrinsics'][icam_intrinsics0])}")
-        # print(f"reprojected other = {mrcal.project(np.array([-0.2471004,-0.21598248,0.9446126 ]), optimization_inputs0['lensmodel'], optimization_inputs0['intrinsics'][icam_intrinsics0])}")
-        # print(f"reprojected other = {mrcal.project(np.array([-0.2471004,-0.21598248,0.9446126 ]), *models[0].intrinsics())}")
+        # print(f"reprojected = {drcal.project(v0_cam, optimization_inputs0['lensmodel'], optimization_inputs0['intrinsics'][icam_intrinsics0])}")
+        # print(f"reprojected other = {drcal.project(np.array([-0.2471004,-0.21598248,0.9446126 ]), optimization_inputs0['lensmodel'], optimization_inputs0['intrinsics'][icam_intrinsics0])}")
+        # print(f"reprojected other = {drcal.project(np.array([-0.2471004,-0.21598248,0.9446126 ]), *models[0].intrinsics())}")
         # print(f"p0_cam = {p0_cam}")
 
-        p0_ref = mrcal.transform_point_Rt(Rt_rc0, p0_cam)
-        p0_frame = mrcal.transform_point_Rt(Rt_fr0, p0_ref)
-        p1_refall = mrcal.transform_point_Rt(Rt_rf1, p0_frame)
+        p0_ref = drcal.transform_point_Rt(Rt_rc0, p0_cam)
+        p0_frame = drcal.transform_point_Rt(Rt_fr0, p0_ref)
+        p1_refall = drcal.transform_point_Rt(Rt_rf1, p0_frame)
         p1_ref = np.mean(p1_refall, axis=0)
 
         # print(f"p0_ref = {p0_ref}")
@@ -489,8 +489,8 @@ if args.same_dance:
         # print(f"p1_refall = {p1_refall}")
         # print(f"p1_ref = {p1_ref}")
 
-        p1_cam = mrcal.transform_point_Rt(Rt_cr1, p1_ref)
-        q1 = mrcal.project(p1_cam, *models[1].intrinsics())
+        p1_cam = drcal.transform_point_Rt(Rt_cr1, p1_ref)
+        q1 = drcal.project(p1_cam, *models[1].intrinsics())
 
         # print(f"p1_cam = {p1_cam}")
         # print(f"q1 = {q1}")
@@ -515,12 +515,12 @@ if args.observations:
     optimization_inputs = [m.optimization_inputs() for m in models]
     if any(oi is None for oi in optimization_inputs):
         print(
-            "mrcal-show-projection-diff --observations requires optimization_inputs to be available for all models, but this is missing for some models",
+            "drcal-show-projection-diff --observations requires optimization_inputs to be available for all models, but this is missing for some models",
             file=sys.stderr,
         )
         sys.exit(1)
 
-plot, Rt10 = mrcal.show_projection_diff(
+plot, Rt10 = drcal.show_projection_diff(
     models,
     gridn_width=args.gridn[0],
     gridn_height=args.gridn[1],
@@ -546,7 +546,7 @@ if (
     and Rt10 is not None
     and Rt10.shape == (4, 3)
 ):
-    rt10 = mrcal.rt_from_Rt(Rt10)
+    rt10 = drcal.rt_from_Rt(Rt10)
 
     print(
         f"Transformation cam1 <-- cam0:  rotation: {nps.mag(rt10[:3]) * 180.0 / np.pi:.03f} degrees, translation: {rt10[3:]} m"
@@ -554,7 +554,7 @@ if (
 
     dist_shift = nps.mag(rt10[3:])
     if dist_shift > 0.01:
-        msg = f"## WARNING: fitted camera moved by {dist_shift:.03f}m. This is probably aphysically high, and something is wrong. Pass both a high and a low --distance? See the docs at https://mrcal.secretsauce.net/differencing.html"
+        msg = f"## WARNING: fitted camera moved by {dist_shift:.03f}m. This is probably aphysically high, and something is wrong. Pass both a high and a low --distance? See the docs at https://drcal.secretsauce.net/differencing.html"
         print(msg, file=sys.stderr)
 
 if args.hardcopy is None:

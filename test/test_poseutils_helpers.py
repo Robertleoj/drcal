@@ -1,7 +1,7 @@
 r"""
 Simple reference implementations of poseutils functions
 
-I compare the mrcal results against these
+I compare the drcal results against these
 """
 
 import sys
@@ -11,9 +11,9 @@ import os
 
 testdir = os.path.dirname(os.path.realpath(__file__))
 
-# I import the LOCAL mrcal since that's what I'm testing
+# I import the LOCAL drcal since that's what I'm testing
 sys.path[:0] = (f"{testdir}/..",)
-import mrcal
+import drcal
 
 import scipy
 
@@ -86,12 +86,12 @@ def r_from_R(R):
 
     # I need to set rcond because grad() might cause this function to be called
     # with not-quite-rotation matrices
-    axis = scipy.linalg.null_space(R - mrcal.identity_R(), rcond=1e-6).ravel()
+    axis = scipy.linalg.null_space(R - drcal.identity_R(), rcond=1e-6).ravel()
     if axis.size != 3:
         raise Exception("Reference r_from_R implementation did something wrong...")
 
     # r_from_R_core() has comments. I use this:   R - Rt = 2 sin(th) V
-    V = mrcal.skew_symmetric(axis).ravel()
+    V = drcal.skew_symmetric(axis).ravel()
     i = np.abs(V) > 0.1
     V[~i] = 1.0  # to avoid warnings
     sinth = np.mean(((R - R.T).ravel() / V / 2.0)[i])

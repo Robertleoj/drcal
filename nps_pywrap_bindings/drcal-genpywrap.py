@@ -1,18 +1,18 @@
-r"""Python-wrap the mrcal routines that can be done with numpysane_pywrap"""
+r"""Python-wrap the drcal routines that can be done with numpysane_pywrap"""
 
 import numpy as np
 import numpysane_pywrap as npsp
 
 
-docstring_module = """Low-level routines for core mrcal operations
+docstring_module = """Low-level routines for core drcal operations
 
 This is the written-in-C Python extension module that underlies the core
 (un)project routines, and several low-level operations. Most of the functions in
 this module (those prefixed with "_") are not meant to be called directly, but
 have Python wrappers that should be used instead.
 
-All functions are exported into the mrcal module. So you can call these via
-mrcal._mrcal_npsp.fff() or mrcal.fff(). The latter is preferred.
+All functions are exported into the drcal module. So you can call these via
+drcal._drcal_npsp.fff() or drcal.fff(). The latter is preferred.
 
 """
 
@@ -20,12 +20,12 @@ m = npsp.module(
     name="bindings_npsp",
     docstring=docstring_module,
     header=r"""
-#include "mrcal.h"
+#include "drcal.h"
 #include <float.h>
 
 static
 bool validate_lensmodel_un_project(// out; valid if we returned true
-                        mrcal_lensmodel_t* lensmodel,
+                        drcal_lensmodel_t* lensmodel,
 
                         // in
                         const char* lensmodel_str,
@@ -38,23 +38,23 @@ bool validate_lensmodel_un_project(// out; valid if we returned true
         return false;
     }
 
-    mrcal_lensmodel_from_name(lensmodel, lensmodel_str);
-    if( !mrcal_lensmodel_type_is_valid(lensmodel->type) )
+    drcal_lensmodel_from_name(lensmodel, lensmodel_str);
+    if( !drcal_lensmodel_type_is_valid(lensmodel->type) )
     {
         PyErr_Format(PyExc_RuntimeError,
                      "Couldn't parse 'lensmodel' argument '%s'", lensmodel_str);
         return false;
     }
 
-    mrcal_lensmodel_metadata_t meta = mrcal_lensmodel_metadata(lensmodel);
+    drcal_lensmodel_metadata_t meta = drcal_lensmodel_metadata(lensmodel);
     if( !is_project && !meta.has_gradients )
     {
         PyErr_Format(PyExc_RuntimeError,
-                     "The internal _unproject() routine requires lens models that have gradients implemented. Use the Python mrcal.unproject() as a workaround");
+                     "The internal _unproject() routine requires lens models that have gradients implemented. Use the Python drcal.unproject() as a workaround");
         return false;
     }
 
-    int NlensParams = mrcal_lensmodel_num_params(lensmodel);
+    int NlensParams = drcal_lensmodel_num_params(lensmodel);
     if( NlensParams != Nintrinsics_in_arg )
     {
         PyErr_Format(PyExc_RuntimeError,
@@ -76,21 +76,21 @@ bool validate_lensmodel_un_project(// out; valid if we returned true
 # of python works to benchmark:
 r"""
 import numpy as np
-import mrcal
+import drcal
 import time
-m = mrcal.cameramodel('test/data/cam0.splined.cameramodel')
+m = drcal.cameramodel('test/data/cam0.splined.cameramodel')
 v = np.random.random((2000,3000,3))
 v[..., 2] += 10.
 t0 = time.time()
-mapxy = mrcal.project( v, *m.intrinsics() )
+mapxy = drcal.project( v, *m.intrinsics() )
 print(time.time()-t0)
 """
-# To test the broadcast-using-the-mrcal-loop, apply this patch:
+# To test the broadcast-using-the-drcal-loop, apply this patch:
 r"""
-diff --git a/mrcal-genpywrap.py b/mrcal-genpywrap.py
+diff --git a/drcal-genpywrap.py b/drcal-genpywrap.py
 index 666f48e..2a4edff 100644
---- a/mrcal-genpywrap.py
-+++ b/mrcal-genpywrap.py
+--- a/drcal-genpywrap.py
++++ b/drcal-genpywrap.py
 @@ -89,7 +93,7 @@
  
              args_input       = ('points', 'intrinsics'),
@@ -101,15 +101,15 @@ index 666f48e..2a4edff 100644
  
              extra_args = (("const char*", "lensmodel", "NULL", "s"),),
  
-@@ -113,7 +117,7 @@ _project_withgrad() in mrcal-genpywrap.py. Please keep them in sync
+@@ -113,7 +117,7 @@ _project_withgrad() in drcal-genpywrap.py. Please keep them in sync
              Ccode_slice_eval = \
                  {np.float64:
                   r'''
 -                 const int N = 1;
 +                 const int N = dims_slice__points[0];
  
-                  if(cookie->lensmodel.type == MRCAL_LENSMODEL_CAHVORE)
-                      return _mrcal_project_internal_cahvore(
+                  if(cookie->lensmodel.type == drcal_LENSMODEL_CAHVORE)
+                      return _drcal_project_internal_cahvore(
 """
 # I see 0.9 sec with the code as is, and 0.8 sec with the patch. Or before I
 # moved on to this whole npsp thing in 482728c. As it stands, the patch is not
@@ -120,7 +120,7 @@ m.function(
     "_project",
     """Internal point-projection routine
 
-This is the internals for mrcal.project(). As a user, please call THAT function,
+This is the internals for drcal.project(). As a user, please call THAT function,
 and see the docs for that function. The differences:
 
 - This is just the no-gradients function. The internal function that reports the
@@ -130,8 +130,8 @@ and see the docs for that function. The differences:
   different. numpysane_pywrap broadcasts the leading arguments, so this function
   takes the lensmodel (the one argument that does not broadcast) last
 
-- To speed things up, this function doesn't call the C mrcal_project(), but uses
-  the _mrcal_project_internal...() functions instead. That allows as much as
+- To speed things up, this function doesn't call the C drcal_project(), but uses
+  the _drcal_project_internal...() functions instead. That allows as much as
   possible of the outer init stuff to be moved outside of the slice computation
   loop
 
@@ -139,8 +139,8 @@ This function is wrapped with numpysane_pywrap, so the points and the intrinsics
 broadcast as expected
 
 The outer logic (outside the loop-over-N-points) is duplicated in
-mrcal_project() and in the python wrapper definition in _project() and
-_project_withgrad() in mrcal-genpywrap.py. Please keep them in sync
+drcal_project() and in the python wrapper definition in _project() and
+_project_withgrad() in drcal-genpywrap.py. Please keep them in sync
 
 """,
     args_input=("points", "intrinsics"),
@@ -148,9 +148,9 @@ _project_withgrad() in mrcal-genpywrap.py. Please keep them in sync
     prototype_output=(2,),
     extra_args=(("const char*", "lensmodel", "NULL", "s"),),
     Ccode_cookie_struct="""
-              mrcal_lensmodel_t              lensmodel;
+              drcal_lensmodel_t              lensmodel;
               int                            Nintrinsics;
-              mrcal_projection_precomputed_t precomputed;
+              drcal_projection_precomputed_t precomputed;
             """,
     Ccode_validate=r"""
               if( !( validate_lensmodel_un_project(&cookie->lensmodel,
@@ -158,21 +158,21 @@ _project_withgrad() in mrcal-genpywrap.py. Please keep them in sync
                      CHECK_CONTIGUOUS_AND_SETERROR_ALL()))
                   return false;
 
-              cookie->Nintrinsics = mrcal_lensmodel_num_params(&cookie->lensmodel);
-              _mrcal_precompute_lensmodel_data(&cookie->precomputed, &cookie->lensmodel);
+              cookie->Nintrinsics = drcal_lensmodel_num_params(&cookie->lensmodel);
+              _drcal_precompute_lensmodel_data(&cookie->precomputed, &cookie->lensmodel);
               return true;
 """,
     Ccode_slice_eval={
         np.float64: r"""
                  const int N = 1;
 
-                 if(MRCAL_LENSMODEL_IS_OPENCV(cookie->lensmodel.type) ||
-                    cookie->lensmodel.type == MRCAL_LENSMODEL_PINHOLE)
+                 if(drcal_LENSMODEL_IS_OPENCV(cookie->lensmodel.type) ||
+                    cookie->lensmodel.type == drcal_LENSMODEL_PINHOLE)
                  {
-                     _mrcal_project_internal_opencv(
-                                (mrcal_point2_t*)data_slice__output,
+                     _drcal_project_internal_opencv(
+                                (drcal_point2_t*)data_slice__output,
                                 NULL, NULL,
-                                (const mrcal_point3_t*)data_slice__points,
+                                (const drcal_point3_t*)data_slice__points,
                                 N,
                                 (const double*)data_slice__intrinsics,
                                 cookie->Nintrinsics);
@@ -180,9 +180,9 @@ _project_withgrad() in mrcal-genpywrap.py. Please keep them in sync
                  }
 
                  return
-                     _mrcal_project_internal((mrcal_point2_t*)data_slice__output,
+                     _drcal_project_internal((drcal_point2_t*)data_slice__output,
                                              NULL, NULL,
-                                             (const mrcal_point3_t*)data_slice__points,
+                                             (const drcal_point3_t*)data_slice__points,
                                              N,
                                              &cookie->lensmodel,
                                              // core, distortions concatenated
@@ -196,7 +196,7 @@ m.function(
     "_project_withgrad",
     """Internal point-projection routine
 
-This is the internals for mrcal.project(). As a user, please call THAT function,
+This is the internals for drcal.project(). As a user, please call THAT function,
 and see the docs for that function. The differences:
 
 - This is just the gradients-returning function. The internal function that
@@ -206,8 +206,8 @@ and see the docs for that function. The differences:
   different. numpysane_pywrap broadcasts the leading arguments, so this function
   takes the lensmodel (the one argument that does not broadcast) last
 
-- To speed things up, this function doesn't call the C mrcal_project(), but uses
-  the _mrcal_project_internal...() functions instead. That allows as much as
+- To speed things up, this function doesn't call the C drcal_project(), but uses
+  the _drcal_project_internal...() functions instead. That allows as much as
   possible of the outer init stuff to be moved outside of the slice computation
   loop
 
@@ -215,8 +215,8 @@ This function is wrapped with numpysane_pywrap, so the points and the intrinsics
 broadcast as expected
 
 The outer logic (outside the loop-over-N-points) is duplicated in
-mrcal_project() and in the python wrapper definition in _project() and
-_project_withgrad() in mrcal-genpywrap.py. Please keep them in sync
+drcal_project() and in the python wrapper definition in _project() and
+_project_withgrad() in drcal-genpywrap.py. Please keep them in sync
 
 """,
     args_input=("points", "intrinsics"),
@@ -224,9 +224,9 @@ _project_withgrad() in mrcal-genpywrap.py. Please keep them in sync
     prototype_output=((2,), (2, 3), (2, "Nintrinsics")),
     extra_args=(("const char*", "lensmodel", "NULL", "s"),),
     Ccode_cookie_struct="""
-              mrcal_lensmodel_t              lensmodel;
+              drcal_lensmodel_t              lensmodel;
               int                            Nintrinsics;
-              mrcal_projection_precomputed_t precomputed;
+              drcal_projection_precomputed_t precomputed;
             """,
     Ccode_validate=r"""
               if( !( validate_lensmodel_un_project(&cookie->lensmodel,
@@ -234,15 +234,15 @@ _project_withgrad() in mrcal-genpywrap.py. Please keep them in sync
                      CHECK_CONTIGUOUS_AND_SETERROR_ALL()))
                   return false;
 
-              mrcal_lensmodel_metadata_t meta = mrcal_lensmodel_metadata(&cookie->lensmodel);
+              drcal_lensmodel_metadata_t meta = drcal_lensmodel_metadata(&cookie->lensmodel);
               if(!meta.has_gradients)
               {
                   PyErr_Format(PyExc_RuntimeError,
                                "_project(get_gradients=True) requires a lens model that has gradient support");
                   return false;
               }
-              cookie->Nintrinsics = mrcal_lensmodel_num_params(&cookie->lensmodel);
-              _mrcal_precompute_lensmodel_data(&cookie->precomputed, &cookie->lensmodel);
+              cookie->Nintrinsics = drcal_lensmodel_num_params(&cookie->lensmodel);
+              _drcal_precompute_lensmodel_data(&cookie->precomputed, &cookie->lensmodel);
               return true;
 """,
     Ccode_slice_eval={
@@ -250,10 +250,10 @@ _project_withgrad() in mrcal-genpywrap.py. Please keep them in sync
                  const int N = 1;
 
                  return
-                     _mrcal_project_internal((mrcal_point2_t*)data_slice__output0,
-                                             (mrcal_point3_t*)data_slice__output1,
+                     _drcal_project_internal((drcal_point2_t*)data_slice__output0,
+                                             (drcal_point3_t*)data_slice__output1,
                                              (double*)  data_slice__output2,
-                                             (const mrcal_point3_t*)data_slice__points,
+                                             (const drcal_point3_t*)data_slice__points,
                                              N,
                                              &cookie->lensmodel,
                                              // core, distortions concatenated
@@ -267,7 +267,7 @@ m.function(
     "_unproject",
     """Internal point-unprojection routine
 
-This is the internals for mrcal.unproject(). As a user, please call THAT
+This is the internals for drcal.unproject(). As a user, please call THAT
 function, and see the docs for that function. The differences:
 
 - To make the broadcasting work, the argument order in this function is
@@ -277,8 +277,8 @@ function, and see the docs for that function. The differences:
 - This function requires gradients, so it does not support some lens models;
   CAHVORE for instance
 
-- To speed things up, this function doesn't call the C mrcal_unproject(), but
-  uses the _mrcal_unproject_internal...() functions instead. That allows as much
+- To speed things up, this function doesn't call the C drcal_unproject(), but
+  uses the _drcal_unproject_internal...() functions instead. That allows as much
   as possible of the outer init stuff to be moved outside of the slice
   computation loop
 
@@ -286,15 +286,15 @@ This function is wrapped with numpysane_pywrap, so the points and the intrinsics
 broadcast as expected
 
 The outer logic (outside the loop-over-N-points) is duplicated in
-mrcal_unproject() and in the python wrapper definition in _unproject()
-mrcal-genpywrap.py. Please keep them in sync """,
+drcal_unproject() and in the python wrapper definition in _unproject()
+drcal-genpywrap.py. Please keep them in sync """,
     args_input=("points", "intrinsics"),
     prototype_input=((2,), ("Nintrinsics",)),
     prototype_output=(3,),
     extra_args=(("const char*", "lensmodel", "NULL", "s"),),
     Ccode_cookie_struct="""
-              mrcal_lensmodel_t lensmodel;
-              mrcal_projection_precomputed_t precomputed;
+              drcal_lensmodel_t lensmodel;
+              drcal_projection_precomputed_t precomputed;
             """,
     Ccode_validate=r"""
               if( !( validate_lensmodel_un_project(&cookie->lensmodel,
@@ -302,15 +302,15 @@ mrcal-genpywrap.py. Please keep them in sync """,
                      CHECK_CONTIGUOUS_AND_SETERROR_ALL()))
                   return false;
 
-              _mrcal_precompute_lensmodel_data(&cookie->precomputed, &cookie->lensmodel);
+              _drcal_precompute_lensmodel_data(&cookie->precomputed, &cookie->lensmodel);
               return true;
 """,
     Ccode_slice_eval={
         np.float64: r"""
                  const int N = 1;
                  return
-                     _mrcal_unproject_internal((mrcal_point3_t*)data_slice__output,
-                                               (const mrcal_point2_t*)data_slice__points,
+                     _drcal_unproject_internal((drcal_point3_t*)data_slice__output,
+                                               (const drcal_point2_t*)data_slice__points,
                                                N,
                                                &cookie->lensmodel,
                                                // core, distortions concatenated
@@ -322,7 +322,7 @@ mrcal-genpywrap.py. Please keep them in sync """,
 
 project_simple_doc = """Internal projection routine
 
-This is the internals for mrcal.project_{what}(). As a user, please call
+This is the internals for drcal.project_{what}(). As a user, please call
 THAT function, and see the docs for that function. The differences:
 
 - This is just the no-gradients function. The internal function that reports the
@@ -335,7 +335,7 @@ expected
 
 project_withgrad_simple_doc = """Internal projection routine with gradients
 
-This is the internals for mrcal.project_{what}(). As a user, please call
+This is the internals for drcal.project_{what}(). As a user, please call
 THAT function, and see the docs for that function. The differences:
 
 - This is just the gradient-reporting function. The internal function that
@@ -348,7 +348,7 @@ expected
 
 unproject_simple_doc = """Internal unprojection routine
 
-This is the internals for mrcal.unproject_{what}(). As a user, please
+This is the internals for drcal.unproject_{what}(). As a user, please
 call THAT function, and see the docs for that function. The differences:
 
 - This is just the no-gradients function. The internal function that reports the
@@ -361,7 +361,7 @@ expected
 
 unproject_withgrad_simple_doc = """Internal unprojection routine
 
-This is the internals for mrcal.unproject_{what}(). As a user, please
+This is the internals for drcal.unproject_{what}(). As a user, please
 call THAT function, and see the docs for that function. The differences:
 
 - This is just the gradient-reporting function. The internal function that does
@@ -387,33 +387,33 @@ unproject_withgrad_simple_kwargs = dict(
 
 project_simple_code = """
             const double* fxycxy = (const double*)data_slice__fxycxy;
-            mrcal_project_{what}((mrcal_point2_t*)data_slice__output,
+            drcal_project_{what}((drcal_point2_t*)data_slice__output,
                                         NULL,
-                                        (const mrcal_point3_t*)data_slice__points,
+                                        (const drcal_point3_t*)data_slice__points,
                                         1,
                                         fxycxy);
             return true;"""
 project_withgrad_simple_code = """
             const double* fxycxy = (const double*)data_slice__fxycxy;
-            mrcal_project_{what}((mrcal_point2_t*)data_slice__output0,
-                                        (mrcal_point3_t*)data_slice__output1,
-                                        (const mrcal_point3_t*)data_slice__points,
+            drcal_project_{what}((drcal_point2_t*)data_slice__output0,
+                                        (drcal_point3_t*)data_slice__output1,
+                                        (const drcal_point3_t*)data_slice__points,
                                         1,
                                         fxycxy);
             return true;"""
 unproject_simple_code = """
             const double* fxycxy = (const double*)data_slice__fxycxy;
-            mrcal_unproject_{what}((mrcal_point3_t*)data_slice__output,
+            drcal_unproject_{what}((drcal_point3_t*)data_slice__output,
                                         NULL,
-                                        (const mrcal_point2_t*)data_slice__points,
+                                        (const drcal_point2_t*)data_slice__points,
                                         1,
                                         fxycxy);
             return true;"""
 unproject_withgrad_simple_code = """
             const double* fxycxy = (const double*)data_slice__fxycxy;
-            mrcal_unproject_{what}((mrcal_point3_t*)data_slice__output0,
-                                        (mrcal_point2_t*)data_slice__output1,
-                                        (const mrcal_point2_t*)data_slice__points,
+            drcal_unproject_{what}((drcal_point3_t*)data_slice__output0,
+                                        (drcal_point2_t*)data_slice__output1,
+                                        (const drcal_point2_t*)data_slice__points,
                                         1,
                                         fxycxy);
             return true;"""
@@ -612,7 +612,7 @@ m.function(
 SYNOPSIS
 
     Jt_x = np.zeros( (J.shape[-1],), dtype=float)
-    mrcal._mrcal_npsp._Jt_x(J.indptr,
+    drcal._drcal_npsp._Jt_x(J.indptr,
                             J.indices,
                             J.data,
                             x,
@@ -712,7 +712,7 @@ SYNOPSIS
     print( q0.shape )
     ===> (100, 2)
 
-    q1 = mrcal.apply_homography(H10, q0)
+    q1 = drcal.apply_homography(H10, q0)
 
     print( q1.shape )
     ===> (100, 2)
@@ -753,7 +753,7 @@ applied
 
 m.function(
     "_stereo_range_sparse",
-    """Internal wrapper of mrcal_stereo_range_sparse()
+    """Internal wrapper of drcal_stereo_range_sparse()
 """,
     args_input=(
         "disparity",
@@ -777,12 +777,12 @@ m.function(
     prototype_output=("N",),
     extra_args=(("const char*", "rectification_model_type", "NULL", "s"),),
     Ccode_cookie_struct="""
-              mrcal_lensmodel_type_t type;
+              drcal_lensmodel_type_t type;
             """,
     Ccode_validate=r"""
 
-              cookie->type = mrcal_lensmodel_type_from_name(rectification_model_type);
-              // the mrcal_stereo_range_...() functions will check to make sure
+              cookie->type = drcal_lensmodel_type_from_name(rectification_model_type);
+              // the drcal_stereo_range_...() functions will check to make sure
               // the type is valid
 
               return CHECK_CONTIGUOUS_AND_SETERROR_ALL();""",
@@ -791,12 +791,12 @@ m.function(
 
                  const int N = dims_slice__output[0];
 
-                 return mrcal_stereo_range_sparse(// output
+                 return drcal_stereo_range_sparse(// output
                    (double*)data_slice__output,
 
                    // input
                    (double*)data_slice__disparity,
-                   (const mrcal_point2_t*)data_slice__qrect0,
+                   (const drcal_point2_t*)data_slice__qrect0,
                    N,
 
                    *(double*)data_slice__disparity_min,

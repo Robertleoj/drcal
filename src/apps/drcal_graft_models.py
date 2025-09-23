@@ -6,7 +6,7 @@ SYNOPSIS
   # calibration, and extrinsics.cameramodel that has the old intrinsics, but the
   # right extrinsics
 
-  $ mrcal-graft-models
+  $ drcal-graft-models
       intrinsics.cameramodel
       extrinsics.cameramodel
       > joint.cameramodel
@@ -16,7 +16,7 @@ SYNOPSIS
   Extrinsics from 'exrinsics.cameramodel'
 
 
-  $ mrcal-show-projection-diff
+  $ drcal-show-projection-diff
       joint.cameramodel
       extrinsics.cameramodel
 
@@ -25,7 +25,7 @@ SYNOPSIS
   difference, but the diff tool computed and applised the implied
   transformation]
 
-  $ mrcal-show-projection-diff
+  $ drcal-show-projection-diff
       --radius 0
       joint.cameramodel
       extrinsics.cameramodel
@@ -36,7 +36,7 @@ SYNOPSIS
   extrinsics.cameramodel]
 
 
-  $ mrcal-graft-models
+  $ drcal-graft-models
       --radius -1
       intrinsics.cameramodel
       extrinsics.cameramodel
@@ -48,7 +48,7 @@ SYNOPSIS
   Extrinsics from 'exrinsics.cameramodel'
 
 
-  $ mrcal-show-projection-diff
+  $ drcal-show-projection-diff
       --radius 0
       joint.cameramodel
       extrinsics.cameramodel
@@ -74,7 +74,7 @@ we can compute and apply the implied geometric transformation, so the combined
 model would be usable as a drop-in replacement.
 
 The implied transformation logic is controlled by a number of commandline
-arguments, same ones as used by the mrcal-show-projection-diff tool. The only
+arguments, same ones as used by the drcal-show-projection-diff tool. The only
 difference in options is that THIS tool uses --radius 0 by default, so we do not
 compute or apply the implied transformation unless asked. Pass --radius with a
 non-zero argument to compute and apply the implied transformation.

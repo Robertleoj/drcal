@@ -4,8 +4,8 @@
 #include <stdarg.h>
 #include <string.h>
 
+#include "drcal.h"
 #include "minimath/minimath-extra.h"
-#include "mrcal.h"
 #include "scales.h"
 #include "strides.h"
 #include "util.h"
@@ -13,7 +13,7 @@
 /*
 Detailed docs appear in the docstring of
 
-  https://mrcal.secretsauce.net/uncertainty-cross-reprojection.html
+  https://drcal.secretsauce.net/uncertainty-cross-reprojection.html
 
 The punchline:
 
@@ -214,7 +214,7 @@ static void accumulate_frame(
         rt_ref_frame_packed[1] * SCALE_ROTATION_FRAME,
         rt_ref_frame_packed[2] * SCALE_ROTATION_FRAME
     };
-    mrcal_compose_r_tinyr0_gradientr0(drrfp_drrrp, r_ref_frame);
+    drcal_compose_r_tinyr0_gradientr0(drrfp_drrrp, r_ref_frame);
 
     // Jcross_t__Jpackedf output goes into [Af Bf]
     //                                     [Cf Df]
@@ -771,7 +771,7 @@ int dpptrs_(
     int uplo_len
 );
 
-bool _mrcal_drt_ref_refperturbed__dbpacked(
+bool _drcal_drt_ref_refperturbed__dbpacked(
     // output
     // Shape (6,Nstate_frames)
     double* Kpackedf,
@@ -812,22 +812,22 @@ bool _mrcal_drt_ref_refperturbed__dbpacked(
     int Nobservations_board,
     int Nobservations_point,
 
-    const mrcal_lensmodel_t* lensmodel,
-    mrcal_problem_selections_t problem_selections,
+    const drcal_lensmodel_t* lensmodel,
+    drcal_problem_selections_t problem_selections,
 
     int calibration_object_width_n,
     int calibration_object_height_n
 ) {
-    const int Nmeas_boards = mrcal_num_measurements_boards(
+    const int Nmeas_boards = drcal_num_measurements_boards(
         Nobservations_board,
         calibration_object_width_n,
         calibration_object_height_n
     );
-    const int Nmeas_points = mrcal_num_measurements_points(Nobservations_point);
+    const int Nmeas_points = drcal_num_measurements_points(Nobservations_point);
 
     const int Nmeas_obs = Nmeas_boards + Nmeas_points;
 
-    const int state_index_frame0 = mrcal_state_index_frames(
+    const int state_index_frame0 = drcal_state_index_frames(
         0,
         Ncameras_intrinsics,
         Ncameras_extrinsics,
@@ -838,7 +838,7 @@ bool _mrcal_drt_ref_refperturbed__dbpacked(
         problem_selections,
         lensmodel
     );
-    const int state_index_point0 = mrcal_state_index_points(
+    const int state_index_point0 = drcal_state_index_points(
         0,
         Ncameras_intrinsics,
         Ncameras_extrinsics,
@@ -849,7 +849,7 @@ bool _mrcal_drt_ref_refperturbed__dbpacked(
         problem_selections,
         lensmodel
     );
-    const int state_index_calobject_warp0 = mrcal_state_index_calobject_warp(
+    const int state_index_calobject_warp0 = drcal_state_index_calobject_warp(
         Ncameras_intrinsics,
         Ncameras_extrinsics,
         Nframes,
@@ -859,7 +859,7 @@ bool _mrcal_drt_ref_refperturbed__dbpacked(
         problem_selections,
         lensmodel
     );
-    const int Nstate = mrcal_num_states(
+    const int Nstate = drcal_num_states(
         Ncameras_intrinsics,
         Ncameras_extrinsics,
         Nframes,
@@ -870,18 +870,18 @@ bool _mrcal_drt_ref_refperturbed__dbpacked(
         lensmodel
     );
 
-    const int Nstate_intrinsics = mrcal_num_states_intrinsics(
+    const int Nstate_intrinsics = drcal_num_states_intrinsics(
         Ncameras_intrinsics,
         problem_selections,
         lensmodel
     );
     const int Nstate_extrinsics =
-        mrcal_num_states_extrinsics(Ncameras_extrinsics, problem_selections);
+        drcal_num_states_extrinsics(Ncameras_extrinsics, problem_selections);
     const int Nstate_frames =
-        mrcal_num_states_frames(Nframes, problem_selections);
+        drcal_num_states_frames(Nframes, problem_selections);
     const int Nstate_points =
-        mrcal_num_states_points(Npoints, Npoints_fixed, problem_selections);
-    const int Nstate_calobject_warp = mrcal_num_states_calobject_warp(
+        drcal_num_states_points(Npoints, Npoints_fixed, problem_selections);
+    const int Nstate_calobject_warp = drcal_num_states_calobject_warp(
         problem_selections,
         Nobservations_board
     );

@@ -1,32 +1,32 @@
-### THIS IS LARGELY A COPY OF mrcal-from-cahvor. Please consolidate
+### THIS IS LARGELY A COPY OF drcal-from-cahvor. Please consolidate
 
 r"""Converts a ROS/OpenCV-formatted camera model to the .cameramodel file format
 
 SYNOPSIS
 
-  $ mrcal-from-ros model1.yaml model2.yaml
+  $ drcal-from-ros model1.yaml model2.yaml
   Wrote model1.cameramodel
   Wrote model2.cameramodel
 
 
   $ rostopic echo -n1 -b tst.bag /camera/camera_info \
     | head -n -1                                     \
-    | mrcal-from-ros                                 \
+    | drcal-from-ros                                 \
     > model.cameramodel
 
-File formats supported by mrcal are described at
-https://mrcal.secretsauce.net/cameramodels.html#cameramodel-file-formats
+File formats supported by drcal are described at
+https://drcal.secretsauce.net/cameramodels.html#cameramodel-file-formats
 
 This tool converts the given model(s) to the cameramodel file format. No changes
 to the content are made; this is purely a format converter (the
-mrcal-convert-lensmodel tool fits different lens models instead). Model
+drcal-convert-lensmodel tool fits different lens models instead). Model
 filenames are given on the commandline. Output is written to the same directory,
 with the same filename, but with a .cameramodel extension.
 
 If the model is omitted or given as "-", the input is read from standard input,
 and the output is written to standard output.
 
-Note: there's no corresponding mrcal-to-ros tool at this time, because the
+Note: there's no corresponding drcal-to-ros tool at this time, because the
 behavior of such a tool isn't well-defined. Talk to me if this would be useful
 to you, to clarify what it should do, exactly.
 
