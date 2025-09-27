@@ -97,18 +97,6 @@ points_true[:, 1] -= points_true[:, 2] / ranges[0] * 200.0
 
 Npoints = points_true.shape[0]
 
-# import gnuplotlib as gp
-# gp.plot(points_true,
-#         _3d=1,
-#         xlabel='x',
-#         ylabel='y',
-#         zlabel='z',
-#         _with='points',
-#         square=1,
-#         tuplesize=-3,
-#         wait=1)
-# sys.exit()
-
 x_ref_cam_true = np.arange(Ncameras) * step
 y_ref_cam_true = np.zeros(
     (Ncameras,),

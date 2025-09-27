@@ -29,7 +29,7 @@ import argparse
 import os
 
 import numpy as np
-import numpysane as nps
+import drcal.numpy_utils as npu
 import subprocess
 import drcal
 import io
@@ -97,7 +97,7 @@ def main():
         print(f"Couldn't read columns {args.cols_xy} from the input", file=sys.stderr)
         sys.exit(1)
 
-    ixy = nps.atleast_dims(np.loadtxt(io.StringIO(ixy_text)), -2)
+    ixy = npu.atleast_dims(np.loadtxt(io.StringIO(ixy_text)), -2)
     mask = drcal.is_within_valid_intrinsics_region(ixy[..., 1:], model)
 
     fd_read, fd_write = os.pipe()
@@ -112,7 +112,7 @@ def main():
         with open(f"/dev/fd/{fd_write}", "w") as f:
             np.savetxt(
                 f,
-                nps.transpose(nps.cat(ixy[..., 0], mask)),
+                npu.transpose(npu.cat(ixy[..., 0], mask)),
                 fmt="%06d %d",
                 header=f"__linenumber {args.col_output}",
             )

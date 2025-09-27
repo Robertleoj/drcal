@@ -1,13 +1,3 @@
-#!/usr/bin/env python3
-
-# Copyright (c) 2017-2023 California Institute of Technology ("Caltech"). U.S.
-# Government sponsorship acknowledged. All rights reserved.
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-
 r"""Visualize the difference in projection between N models
 
 SYNOPSIS
@@ -56,6 +46,11 @@ The details of how the comparison is computed, and the meaning of the arguments
 controlling this, are in the docstring of drcal.projection_diff().
 
 """
+
+import drcal
+import numpy as np
+import drcal.numpy_utils as npu
+
 
 import sys
 import argparse
@@ -287,11 +282,6 @@ if args.same_dance and (args.where is not None or args.radius >= 0):
     sys.exit(1)
 
 
-import drcal
-import numpy as np
-import numpysane as nps
-
-
 plotkwargs_extra = {}
 if args.set is not None:
     plotkwargs_extra["set"] = args.set
@@ -386,17 +376,17 @@ if args.same_dance:
 
         # shape (Nframes, Nh, Nw, 3)
         pcorners_ref0 = drcal.transform_point_rt(
-            nps.mv(optimization_inputs0["frames_rt_toref"], -2, -4), calibration_object0
+            npu.mv(optimization_inputs0["frames_rt_toref"], -2, -4), calibration_object0
         )
         pcorners_ref1 = drcal.transform_point_rt(
-            nps.mv(optimization_inputs1["frames_rt_toref"], -2, -4), calibration_object1
+            npu.mv(optimization_inputs1["frames_rt_toref"], -2, -4), calibration_object1
         )
 
         # shape (4,3)
         Rt_ref10 = drcal.align_procrustes_points_Rt01(  # shape (N,3)
-            nps.clump(pcorners_ref1, n=3),
+            npu.clump(pcorners_ref1, n=3),
             # shape (N,3)
-            nps.clump(pcorners_ref0, n=3),
+            npu.clump(pcorners_ref0, n=3),
         )
 
         # I have the ref-ref transform. I convert to a cam-cam transform
@@ -482,34 +472,11 @@ if args.same_dance:
         p1_refall = drcal.transform_point_Rt(Rt_rf1, p0_frame)
         p1_ref = np.mean(p1_refall, axis=0)
 
-        # print(f"p0_ref = {p0_ref}")
-        # print(f"rt_rf0[0] = {optimization_inputs0['frames_rt_toref'][0]}")
-        # print(f"Rt_fr0[0] = {Rt_fr0[0]}")
-        # print(f"p0_frame = {p0_frame}")
-        # print(f"p1_refall = {p1_refall}")
-        # print(f"p1_ref = {p1_ref}")
-
         p1_cam = drcal.transform_point_Rt(Rt_cr1, p1_ref)
         q1 = drcal.project(p1_cam, *models[1].intrinsics())
 
-        # print(f"p1_cam = {p1_cam}")
-        # print(f"q1 = {q1}")
-        # print(f"before:\n{Rt10}")
 
         Rt10 = Rt_r1r0
-
-        # print(f"after:\n{Rt10}")
-
-        # print(f"--same-dance Rt10: {Rt10}")
-        # print(f"--same-dance Ninliers = {np.count_nonzero(idx_inliers[0]*idx_inliers[1])} Ntotal = {np.size(idx_inliers[0])}")
-
-        # print(f"idx_inliers[0].shape: {idx_inliers[0].shape}")
-        # import gnuplotlib as gp
-        # gp.plot(nps.mag(calobjects[0] - calobjects[1]), wait=1)
-        # # gp.plot( (calobjects[0] - calobjects[1],), tuplesize=-3, _with='points', square=1, _3d=1, xlabel='x', ylabel = 'y', zlabel = 'z')
-        # # import IPython
-        # # IPython.embed()
-        # # sys.exit()
 
 if args.observations:
     optimization_inputs = [m.optimization_inputs() for m in models]
@@ -549,10 +516,10 @@ if (
     rt10 = drcal.rt_from_Rt(Rt10)
 
     print(
-        f"Transformation cam1 <-- cam0:  rotation: {nps.mag(rt10[:3]) * 180.0 / np.pi:.03f} degrees, translation: {rt10[3:]} m"
+        f"Transformation cam1 <-- cam0:  rotation: {npu.mag(rt10[:3]) * 180.0 / np.pi:.03f} degrees, translation: {rt10[3:]} m"
     )
 
-    dist_shift = nps.mag(rt10[3:])
+    dist_shift = npu.mag(rt10[3:])
     if dist_shift > 0.01:
         msg = f"## WARNING: fitted camera moved by {dist_shift:.03f}m. This is probably aphysically high, and something is wrong. Pass both a high and a low --distance? See the docs at https://drcal.secretsauce.net/differencing.html"
         print(msg, file=sys.stderr)

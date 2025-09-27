@@ -53,6 +53,7 @@ arguments. Exactly one of these mode options must be given:
 """
 
 import sys
+import drcal.gnuplotlib as gp
 import argparse
 import os
 
@@ -286,7 +287,6 @@ elif args.regional:
 
     # This produces 3 plots. I want to pop up the 3 separate windows at the same
     # time, and I want to exit when all 3 are done
-    import gnuplotlib as gp
 
     pids = [0, 0, 0]
     for i in range(3):

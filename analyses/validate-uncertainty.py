@@ -40,6 +40,15 @@ import argparse
 import os
 
 
+import drcal
+import drcal.model_analysis
+import numpy as np
+import numpysane as nps
+
+import copy
+import drcal.gnuplotlib as gp
+
+
 def parse_args():
     parser = argparse.ArgumentParser(
         description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
@@ -150,15 +159,6 @@ args = parse_args()
 
 # I import the LOCAL drcal
 sys.path[:0] = (f"{os.path.dirname(os.path.realpath(__file__))}/..",)
-
-
-import drcal
-import drcal.model_analysis
-import numpy as np
-import numpysane as nps
-
-import copy
-import gnuplotlib as gp
 
 
 def join_inputs(*optimization_inputs_all):
@@ -375,50 +375,6 @@ def validate_noncentral(models, *, percentile, mode="too-close"):
 
         rthreshold = np.percentile(r.ravel(), percentile)
         print(f"{what.capitalize()} at {percentile}-th percentile: {rthreshold:.2f}")
-
-        if False:
-            # This is a "directions" plot off residuals, with a
-            # range,qdiff_off_center domain. Hopefully I'll be able to see
-            # model-error patterns off this
-
-            x_board = drcal.measurements_board(optimization_inputs)
-            p = drcal.hypothesis_board_corner_positions(**optimization_inputs)[2]
-            r = nps.mag(p)
-
-            qcenter = model.intrinsics()[1][2:4]
-            idx_inliers = observations_board[..., 2].ravel() > 0.0
-            qobs_off_center = (
-                nps.clump(observations_board[..., :2], n=3)[idx_inliers] - qcenter
-            )
-            mag_qobs_off_center = nps.mag(qobs_off_center)
-
-            qobs_dir_off_center = np.array(qobs_off_center)
-            # to avoid /0
-            idx = mag_qobs_off_center > 0
-            qobs_dir_off_center[idx] /= nps.dummy(mag_qobs_off_center[idx], axis=-1)
-            x_board_radial_off_center = nps.inner(x_board, qobs_dir_off_center)
-
-            th = 180.0 / np.pi * np.arctan2(x_board[..., 1], x_board[..., 0])
-
-            # hoping to see low-range points imply clustering in the residual
-            # direction
-            gp.plot(
-                r,
-                mag_qobs_off_center,
-                th,
-                cbrange=[-180.0, 180.0],
-                _with="points pt 7 palette",
-                _tuplesize=3,
-                _set='palette defined ( 0 "#00ffff", 0.5 "#80ffff", 1 "#ffffff") model HSV',
-            )
-
-            # Hoping to see low ranges imply a non-zero bias on x_board_radial_off_center
-            gp.plot(r, x_board_radial_off_center, _with="points")
-
-            import IPython
-
-            IPython.embed()
-            sys.exit()
 
         histogram = gp.gnuplotlib()
         histogram.plot(

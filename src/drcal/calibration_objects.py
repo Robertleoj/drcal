@@ -1,5 +1,5 @@
 import numpy as np
-import numpysane as nps
+from . import numpy_utils as npu
 
 
 def ref_calibration_object(
@@ -20,7 +20,7 @@ def ref_calibration_object(
 
     SYNOPSIS
 
-        import gnuplotlib as gp
+        import drcal.gnuplotlib as gp
         import numpysane as nps
 
         obj = drcal.ref_calibration_object( 10,6, 0.1 )
@@ -190,15 +190,15 @@ def ref_calibration_object(
     )
 
     # shape (Ny,Nx,3)
-    full_object = nps.glue(
-        nps.mv(nps.cat(xx, yy), 0, -1), np.zeros(xx.shape + (1,)), axis=-1
+    full_object = npu.glue(
+        npu.mv(npu.cat(xx, yy), 0, -1), np.zeros(xx.shape + (1,)), axis=-1
     )
 
     # object_spacing has shape (..., 2)
     object_spacing = np.array(object_spacing)
     if object_spacing.ndim == 0:
         object_spacing = np.array((1, 1)) * object_spacing
-    object_spacing = nps.dummy(object_spacing, -2, -2)
+    object_spacing = npu.dummy(object_spacing, -2, -2)
     # object_spacing now has shape (..., 1,1,2)
 
     if object_spacing.ndim > 3:
@@ -215,7 +215,7 @@ def ref_calibration_object(
         # To allow broadcasting over calobject_warp
         if calobject_warp.ndim > 1:
             # shape (..., 1,1,2)
-            calobject_warp = nps.dummy(calobject_warp, -2, -2)
+            calobject_warp = npu.dummy(calobject_warp, -2, -2)
             # extend full_object to the output shape I want
             full_object = full_object * np.ones(calobject_warp.shape[:-3] + (1, 1, 1))
         full_object[..., 2] += calobject_warp[..., 0] * dx

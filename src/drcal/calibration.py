@@ -19,7 +19,7 @@ import numpy as np
 import shlex
 from typing import Any
 import cv2
-import numpysane as nps
+from . import numpy_utils as npu
 import sys
 import re
 from .utils import (
@@ -543,10 +543,10 @@ which drcal.optimize() expects
             index_frame += 1
             iframe_last = iframe
 
-        indices_frame_camera = nps.glue(
+        indices_frame_camera = npu.glue(
             indices_frame_camera, np.array((index_frame, icam), dtype=np.int32), axis=-2
         )
-        observations = nps.glue(observations, mapping_file_corners[f], axis=-4)
+        observations = npu.glue(observations, mapping_file_corners[f], axis=-4)
 
     return observations, indices_frame_camera, files_sorted
 
@@ -642,19 +642,7 @@ def _estimate_camera_pose_from_fixed_point_observations(
                     f"Retried solvePnP() insists that tvec.z <= 0 (i.e. the chessboard is behind us). Cannot estimate initial extrinsics for {what}"
                 )
 
-        Rt_cam_points = Rt_from_rt(nps.glue(rvec.ravel(), tvec.ravel(), axis=-1))
-
-        # visualize the fit
-        # x_cam    = nps.matmult(Rt_cam_points[:3,:],ref_object)[..., 0] + Rt_cam_points[3,:]
-        # x_imager = x_cam[...,:2]/x_cam[...,(2,)] * focal + (imagersize-1)/2
-        # import gnuplotlib as gp
-        # gp.plot( (x_imager[:,0],x_imager[:,1], dict(legend='solved')),
-        #          (observations_local[:,0,0],observations_local[:,1,0], dict(legend='observed')),
-        #          square=1,xrange=(0,4000),yrange=(4000,0),
-        #          wait=1)
-        # import IPython
-        # IPython.embed()
-        # sys.exit()
+        Rt_cam_points = Rt_from_rt(npu.glue(rvec.ravel(), tvec.ravel(), axis=-1))
 
         return Rt_cam_points
 
@@ -795,13 +783,13 @@ camera coordinate system FROM the calibration object coordinate system.
 
     # No calobject_warp. Good-enough for the seeding
     # shape (Npoints,3)
-    points_ref = nps.clump(
+    points_ref = npu.clump(
         ref_calibration_object(object_width_n, object_height_n, object_spacing),
         n=2,
     )
     # observations has shape (Nobservations,Nh,Nw,3). I reshape it into
     # shape (Nobservations,Nh*Nw,3)
-    observations = nps.mv(nps.clump(nps.mv(observations, -1, 0), n=-2), 0, -1)
+    observations = npu.mv(npu.clump(npu.mv(observations, -1, 0), n=-2), 0, -1)
 
     Nobservations = len(observations)
 
@@ -1048,7 +1036,7 @@ def _estimate_camera_poses(  # shape (Nobservations,4,3)
         # j!=0. Good enough for now
 
         # No calobject_warp. Good-enough for the seeding
-        ref_object = nps.clump(
+        ref_object = npu.clump(
             ref_calibration_object(object_width_n, object_height_n, object_spacing),
             n=2,
         )
@@ -1091,8 +1079,8 @@ def _estimate_camera_poses(  # shape (Nobservations,4,3)
                     )
                 Rt_cam1_frame = calobject_poses_local_Rt_cf[i_observation, ...]
 
-                A = nps.glue(A, transform_point_Rt(Rt_cam0_frame, ref_object), axis=-2)
-                B = nps.glue(B, transform_point_Rt(Rt_cam1_frame, ref_object), axis=-2)
+                A = npu.glue(A, transform_point_Rt(Rt_cam0_frame, ref_object), axis=-2)
+                B = npu.glue(B, transform_point_Rt(Rt_cam1_frame, ref_object), axis=-2)
 
         return align_procrustes_points_Rt01(A, B)
 
@@ -1171,7 +1159,7 @@ def _estimate_camera_poses(  # shape (Nobservations,4,3)
             + f"Shared observations matrix:\n{shared_frames}\n"
         )
 
-    return np.ascontiguousarray(nps.cat(*Rt_0c))
+    return np.ascontiguousarray(npu.cat(*Rt_0c))
 
 
 def _traverse_sensor_links_python(
@@ -1428,8 +1416,8 @@ system FROM the calibration object coordinate system.
         # Got my point cloud. fit
 
         # transform both to shape = (N*N, 3)
-        obj = nps.clump(obj, n=2)
-        mean_obj_ref = nps.clump(mean_obj_ref, n=2)
+        obj = npu.clump(obj, n=2)
+        mean_obj_ref = npu.clump(mean_obj_ref, n=2)
         return align_procrustes_points_Rt01(mean_obj_ref, obj)
 
     frames_rt_toref = np.array(())
@@ -1443,14 +1431,14 @@ system FROM the calibration object coordinate system.
         if iframe != iframe_current:
             if i_observation_framestart >= 0:
                 Rt = Rt_ref_frame(i_observation_framestart, i_observation)
-                frames_rt_toref = nps.glue(frames_rt_toref, rt_from_Rt(Rt), axis=-2)
+                frames_rt_toref = npu.glue(frames_rt_toref, rt_from_Rt(Rt), axis=-2)
 
             i_observation_framestart = i_observation
             iframe_current = iframe
 
     if i_observation_framestart >= 0:
         Rt = Rt_ref_frame(i_observation_framestart, indices_frame_camera.shape[0])
-        frames_rt_toref = nps.glue(frames_rt_toref, rt_from_Rt(Rt), axis=-2)
+        frames_rt_toref = npu.glue(frames_rt_toref, rt_from_Rt(Rt), axis=-2)
 
     return frames_rt_toref
 
@@ -1648,7 +1636,7 @@ We return a tuple:
     if len(camera_poses_Rt_0_cami):
         # extrinsics should map FROM the ref coord system TO the coord system of the
         # camera in question. This is backwards from what I have
-        extrinsics_Rt_fromref = nps.atleast_dims(invert_Rt(camera_poses_Rt_0_cami), -3)
+        extrinsics_Rt_fromref = npu.atleast_dims(invert_Rt(camera_poses_Rt_0_cami), -3)
     else:
         extrinsics_Rt_fromref = np.zeros((0, 4, 3))
 
@@ -1662,8 +1650,8 @@ We return a tuple:
     )
 
     return (
-        nps.cat(*[i[1] for i in intrinsics]),
-        nps.atleast_dims(rt_from_Rt(extrinsics_Rt_fromref), -2),
+        npu.cat(*[i[1] for i in intrinsics]),
+        npu.atleast_dims(rt_from_Rt(extrinsics_Rt_fromref), -2),
         frames_rt_toref,
     )
 

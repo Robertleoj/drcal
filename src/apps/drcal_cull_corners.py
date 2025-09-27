@@ -55,7 +55,7 @@ import re
 import numpy as np
 import io
 import shlex
-import numpysane as nps
+import drcal.numpy_utils as npu
 import time
 
 import drcal
@@ -221,7 +221,7 @@ def main():
             else:
                 dims = np.array(args.imagersize, dtype=float)
                 c = (dims - 1.0) / 2.0
-                r = nps.mag(dims) / 2.0 + args.cull_rad_off_center
+                r = npu.mag(dims) / 2.0 + args.cull_rad_off_center
 
         cboard = None
         if args.cull_rad_off_center_board is not None:
@@ -268,7 +268,7 @@ def main():
             if args.cull_rad_off_center is not None:
                 assert c is not None and r is not None
 
-                if nps.norm2(np.array((float(f[1]), float(f[2]))) - c) < r * r:
+                if npu.norm2(np.array((float(f[1]), float(f[2]))) - c) < r * r:
                     sys.stdout.write(line)
                     continue
 
@@ -279,7 +279,7 @@ def main():
 
                 assert cboard is not None
                 accept_pt = (
-                    nps.norm2(xy_pt - cboard)
+                    npu.norm2(xy_pt - cboard)
                     < args.cull_rad_off_center_board * args.cull_rad_off_center_board
                 )
 
@@ -314,7 +314,7 @@ def main():
     paths = [paths[i] for i in indices_keep]
 
     # shape (N, Nh*Nw, 3)
-    observations = nps.mv(nps.clump(nps.mv(observations, -1, -3), n=-2), -2, -1)
+    observations = npu.mv(npu.clump(npu.mv(observations, -1, -3), n=-2), -2, -1)
 
     # I cut out the data. Now I reconstitute the corners.vnl
     print("# filename x y level")

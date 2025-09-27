@@ -9,7 +9,7 @@ drcal.projections.fff() or drcal.fff(). The latter is preferred.
 """
 
 import numpy as np
-import numpysane as nps
+from . import numpy_utils as npu
 
 from .bindings_npsp import (
     _project,
@@ -231,16 +231,16 @@ def unproject(
         # dv_di has shape (...,3,N)
 
         # shape (...,1)
-        magv_recip = 1.0 / nps.dummy(nps.mag(v), -1)
+        magv_recip = 1.0 / npu.dummy(npu.mag(v), -1)
         v *= magv_recip
 
         # shape (...,1,1)
-        magv_recip = nps.dummy(magv_recip, -1)
+        magv_recip = npu.dummy(magv_recip, -1)
         dv_dq *= magv_recip
 
-        dv_dq -= nps.xchg(
-            nps.matmult(
-                nps.dummy(nps.xchg(dv_dq, -1, -2), -2), nps.dummy(nps.outer(v, v), -3)
+        dv_dq -= npu.xchg(
+            npu.matmult(
+                npu.dummy(npu.xchg(dv_dq, -1, -2), -2), npu.dummy(npu.outer(v, v), -3)
             )[..., 0, :],
             -1,
             -2,
@@ -248,9 +248,9 @@ def unproject(
 
         dv_di *= magv_recip
 
-        dv_di -= nps.xchg(
-            nps.matmult(
-                nps.dummy(nps.xchg(dv_di, -1, -2), -2), nps.dummy(nps.outer(v, v), -3)
+        dv_di -= npu.xchg(
+            npu.matmult(
+                npu.dummy(npu.xchg(dv_di, -1, -2), -2), npu.dummy(npu.outer(v, v), -3)
             )[..., 0, :],
             -1,
             -2,
@@ -283,7 +283,7 @@ def unproject(
         if not get_gradients:
             v = func(q, intrinsics_data, out=out)
             if normalize and not always_normalized:
-                v /= nps.dummy(nps.mag(v), axis=-1)
+                v /= npu.dummy(npu.mag(v), axis=-1)
             return v
 
         # shapes (...,2)
@@ -323,7 +323,7 @@ def unproject(
             dv_di *= 0
 
         # dv/df
-        dv_di[..., :2] += nps.dummy((cxy - q) / fxy, -2) * dv_dq
+        dv_di[..., :2] += npu.dummy((cxy - q) / fxy, -2) * dv_dq
         # dv/dc
         dv_di[..., 2:] -= dv_dq
 
@@ -352,7 +352,7 @@ def unproject(
                     * np.isfinite(v[..., 2])
                 )
                 v[~i_vgood] = np.array((0.0, 0.0, 1.0))
-                v /= nps.dummy(nps.mag(v), -1)
+                v /= npu.dummy(npu.mag(v), -1)
                 v[~i_vgood] = np.array((0.0, 0.0, 0.0))
             return v
 
@@ -378,13 +378,13 @@ def unproject(
         _, dq_dv, dq_di = project(v, lensmodel, intrinsics_data, get_gradients=True)
 
         # shape (..., 2,2). Square. Invertible!
-        dq_du = nps.matmult(dq_dv, dv_du)
+        dq_du = npu.matmult(dq_dv, dv_du)
 
         # dv/dq = dv/du du/dq =
         #       = dv/du inv(dq/du)
         #       = transpose(inv(transpose(dq/du)) transpose(dv/du))
-        dv_dq = nps.transpose(
-            np.linalg.solve(nps.transpose(dq_du), nps.transpose(dv_du))
+        dv_dq = npu.transpose(
+            np.linalg.solve(npu.transpose(dq_du), npu.transpose(dv_du))
         )
         if out is not None:
             out[1] *= 0.0
@@ -395,7 +395,7 @@ def unproject(
         # how moving i affects v while keeping q constant. Taylor expansion
         # of projection: q = q0 + dq/dv dv + dq/di di. q is constant so
         # dq/dv dv + dq/di di = 0 -> dv/di = - dv/dq dq/di
-        dv_di = nps.matmult(dv_dq, dq_di, out=None if out is None else out[2])
+        dv_di = npu.matmult(dv_dq, dq_di, out=None if out is None else out[2])
         dv_di *= -1.0
 
         if normalize:

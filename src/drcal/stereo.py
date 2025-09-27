@@ -5,8 +5,8 @@ drcal.stereo.fff() or drcal.fff(). The latter is preferred.
 """
 
 import numpy as np
-import numpysane as nps
-import re
+from . import numpy_utils as npu
+from . import gnuplotlib as gp
 
 from .image_transforms import transform_image
 
@@ -24,11 +24,10 @@ from .projections import (
 
 from .bindings import (
     _rectified_resolution,
-    lensmodel_metadata_and_config,
     _rectified_system,
     _rectification_maps,
 )
-from .bindings_npsp import _stereo_range_dense, _stereo_range_sparse, apply_homography
+from .bindings_npsp import _stereo_range_sparse, apply_homography
 
 
 def rectified_resolution(
@@ -179,7 +178,7 @@ def _rectified_resolution_python(
             raise Exception("Unsupported rectification model")
 
         v0 = rotate_point_R(R_cam0_rect0, v)
-        dv0_dazel = nps.matmult(R_cam0_rect0, dv_dazel)
+        dv0_dazel = npu.matmult(R_cam0_rect0, dv_dazel)
 
         _, dq_dv0, _ = project(v0, *model.intrinsics(), get_gradients=True)
 
@@ -197,18 +196,18 @@ def _rectified_resolution_python(
         #     # actually know the directions I care about, so I evaluate them
         #     # independently for the az and el directions
         #     Ruv = drcal.R_aligned_to_vector(v0)
-        #     M = nps.matmult(dq_dv0, nps.transpose(Ruv[:2,:]))
+        #     M = npu.matmult(dq_dv0, npu.transpose(Ruv[:2,:]))
         #     # I pick the densest direction: highest |dq/dth|
-        #     pixels_per_rad = drcal.worst_direction_stdev( nps.matmult( nps.transpose(M),M) )
+        #     pixels_per_rad = drcal.worst_direction_stdev( npu.matmult( npu.transpose(M),M) )
 
-        dq_dazel = nps.matmult(dq_dv0, dv0_dazel)
+        dq_dazel = npu.matmult(dq_dv0, dv0_dazel)
 
         if pixels_per_deg_az < 0:
-            pixels_per_deg_az_have = nps.mag(dq_dazel[:, 0]) * np.pi / 180.0
+            pixels_per_deg_az_have = npu.mag(dq_dazel[:, 0]) * np.pi / 180.0
             pixels_per_deg_az *= -pixels_per_deg_az_have
 
         if pixels_per_deg_el < 0:
-            pixels_per_deg_el_have = nps.mag(dq_dazel[:, 1]) * np.pi / 180.0
+            pixels_per_deg_el_have = npu.mag(dq_dazel[:, 1]) * np.pi / 180.0
             pixels_per_deg_el *= -pixels_per_deg_el_have
 
     # I now have the desired pixels_per_deg
@@ -252,7 +251,7 @@ SYNOPSIS
     import drcal
     import cv2
     import numpy as np
-    import numpysane as nps
+    import numpysane as npu
 
     models = [ drcal.cameramodel(f) \
                for f in ('left.cameramodel',
@@ -578,7 +577,7 @@ def _rectified_system_python(
     # "right" of the rectified coord system: towards the origin of camera1 from
     # camera0, in camera0 coords
     right[:] = Rt01[3, :]
-    baseline = nps.mag(right)
+    baseline = npu.mag(right)
     right /= baseline
 
     # "forward" for each of the two cameras, in the cam0 coord system
@@ -588,9 +587,9 @@ def _rectified_system_python(
     # "forward" of the rectified coord system, in camera0 coords. The mean
     # optical-axis direction of the two cameras: component orthogonal to "right"
     forward01 = forward0 + forward1
-    forward01_proj_right = nps.inner(forward01, right)
+    forward01_proj_right = npu.inner(forward01, right)
     forward[:] = forward01 - forward01_proj_right * right
-    forward /= nps.mag(forward)
+    forward /= npu.mag(forward)
 
     # "down" of the rectified coord system, in camera0 coords. Completes the
     # right,down,forward coordinate system
@@ -628,7 +627,7 @@ def _rectified_system_python(
         # perpendicular to the baseline. Thus I compute the mean "forward"
         # direction of the cameras in the rectified system, and set that as the
         # center azimuth az0.
-        az0 = np.arcsin(forward01_proj_right / nps.mag(forward01))
+        az0 = np.arcsin(forward01_proj_right / npu.mag(forward01))
         az0_deg = az0 * 180.0 / np.pi
 
     el0 = el0_deg * np.pi / 180.0
@@ -639,7 +638,7 @@ def _rectified_system_python(
         el_fov_deg=el_fov_deg,
         az0_deg=az0_deg,
         el0_deg=el0_deg,
-        R_cam0_rect0=nps.transpose(R_rect0_cam0),
+        R_cam0_rect0=npu.transpose(R_rect0_cam0),
         pixels_per_deg_az=pixels_per_deg_az,
         pixels_per_deg_el=pixels_per_deg_el,
         rectification_model=rectification_model,
@@ -772,9 +771,9 @@ def _rectified_system_python(
     # rect1 coord system has the same orientation as rect0, but is translated so
     # that its origin is at the origin of cam1
     R_rect1_cam0 = R_rect0_cam0
-    R_rect1_cam1 = nps.matmult(R_rect1_cam0, Rt01[:3, :])
+    R_rect1_cam1 = npu.matmult(R_rect1_cam0, Rt01[:3, :])
 
-    Rt_rect1_cam1 = nps.glue(
+    Rt_rect1_cam1 = npu.glue(
         R_rect1_cam1,
         np.zeros(
             (3,),
@@ -847,7 +846,7 @@ def _validate_models_rectified(models_rectified):
             f"Expected two models with the same  'LENSMODEL_LATLON' or 'LENSMODEL_PINHOLE' but got {intrinsics[0][0]} and {intrinsics[1][0]}"
         )
 
-    if nps.norm2(intrinsics[0][1] - intrinsics[1][1]) > 1e-6:
+    if npu.norm2(intrinsics[0][1] - intrinsics[1][1]) > 1e-6:
         raise Exception("The two rectified models MUST have the same intrinsics values")
 
     imagersize_diff = np.array(models_rectified[0].imagersize()) - np.array(
@@ -860,7 +859,7 @@ def _validate_models_rectified(models_rectified):
     if costh < 0.999999:
         raise Exception("The two rectified models MUST have the same relative rotation")
 
-    if nps.norm2(Rt01[3, 1:]) > 1e-9:
+    if npu.norm2(Rt01[3, 1:]) > 1e-9:
         raise Exception(
             "The two rectified models MUST have a translation ONLY in the +x rectified direction"
         )
@@ -875,7 +874,7 @@ SYNOPSIS
     import drcal
     import cv2
     import numpy as np
-    import numpysane as nps
+    import numpysane as npu
 
     models = [ drcal.cameramodel(f) \
                for f in ('left.cameramodel',
@@ -987,7 +986,7 @@ def _rectification_maps_python(models, models_rectified):
     fxycxy = models_rectified[0].intrinsics()[1]
 
     R_cam_rect = [
-        nps.matmult(
+        npu.matmult(
             models[i].extrinsics_Rt_fromref()[:3, :],
             models_rectified[i].extrinsics_Rt_toref()[:3, :],
         )
@@ -1012,7 +1011,7 @@ def _rectification_maps_python(models, models_rectified):
 
     az, el = np.meshgrid(np.arange(Naz, dtype=float), np.arange(Nel, dtype=float))
 
-    v = unproject(np.ascontiguousarray(nps.mv(nps.cat(az, el), 0, -1)), fxycxy)
+    v = unproject(np.ascontiguousarray(npu.mv(npu.cat(az, el), 0, -1)), fxycxy)
 
     v0 = rotate_point_R(R_cam_rect[0], v)
     v1 = rotate_point_R(R_cam_rect[1], v)
@@ -1042,7 +1041,7 @@ SYNOPSIS
     import drcal
     import cv2
     import numpy as np
-    import numpysane as nps
+    import numpysane as npu
 
     models = [ drcal.cameramodel(f) \
                for f in ('left.cameramodel',
@@ -1086,7 +1085,7 @@ SYNOPSIS
 
     # shape (H,W,2)
     q = np.ascontiguousarray( \
-           nps.mv( nps.cat( *np.meshgrid(np.arange(W,dtype=float),
+           npu.mv( npu.cat( *np.meshgrid(np.arange(W,dtype=float),
                                          np.arange(H,dtype=float))),
                    0, -1))
 
@@ -1094,7 +1093,7 @@ SYNOPSIS
     # shape (H,W,3)
     p_rect0 = \
         drcal.unproject_latlon(q, models_rectified[0].intrinsics()[1]) * \
-        nps.dummy(ranges, axis=-1)
+        npu.dummy(ranges, axis=-1)
 
     Rt_cam0_rect0 = drcal.compose_Rt( models          [0].extrinsics_Rt_fromref(),
                                       models_rectified[0].extrinsics_Rt_toref() )
@@ -1326,7 +1325,7 @@ RETURNED VALUES
         models_rectified[0].extrinsics_Rt_fromref(),
         models_rectified[1].extrinsics_Rt_toref(),
     )
-    baseline = nps.mag(Rt01[3, :])
+    baseline = npu.mag(Rt01[3, :])
 
     if qrect0 is None:
         W, H = models_rectified[0].imagersize()
@@ -1451,7 +1450,7 @@ def _stereo_range_python(
         models_rectified[0].extrinsics_Rt_fromref(),
         models_rectified[1].extrinsics_Rt_toref(),
     )
-    baseline = nps.mag(Rt01[3, :])
+    baseline = npu.mag(Rt01[3, :])
 
     if qrect0 is None:
         mask_invalid = (
@@ -1491,7 +1490,7 @@ def _stereo_range_python(
 
             # shape (H,1)
             tanel = (np.arange(H, dtype=float) - cy) / fy
-            tanel = nps.dummy(tanel, -1)
+            tanel = npu.dummy(tanel, -1)
         else:
             tanaz0 = (qrect0[..., 0] - cx) / fx
             tanel = (qrect0[..., 1] - cy) / fy
@@ -1528,7 +1527,7 @@ SYNOPSIS
     import drcal
     import cv2
     import numpy as np
-    import numpysane as nps
+    import numpysane as npu
 
     models = [ drcal.cameramodel(f) \
                for f in ('left.cameramodel',
@@ -1656,8 +1655,8 @@ RETURNED VALUES
 
         # shape (H,W,2)
         qrect0 = np.ascontiguousarray(
-            nps.mv(
-                nps.cat(
+            npu.mv(
+                npu.cat(
                     *np.meshgrid(np.arange(W, dtype=float), np.arange(H, dtype=float))
                 ),
                 0,
@@ -1668,7 +1667,7 @@ RETURNED VALUES
     # shape (..., 3)
     vrect0 = unproject(qrect0, *models_rectified[0].intrinsics(), normalize=True)
     # shape (..., 3)
-    p_rect0 = vrect0 * nps.dummy(ranges, axis=-1)
+    p_rect0 = vrect0 * npu.dummy(ranges, axis=-1)
 
     return p_rect0
 
@@ -1713,9 +1712,9 @@ SYNOPSIS
                               (             0, -t_ref_cam[2], xy[1] - k*vref[1]),
                               (             0, 0,             1)))
 
-        H_v_q = nps.glue( dv_dq, nps.transpose(v - nps.inner(dv_dq,q)),
+        H_v_q = npu.glue( dv_dq, npu.transpose(v - npu.inner(dv_dq,q)),
                           axis = -1)
-        H_xy_q = nps.matmult(H_xy_vref, R_ref_cam, H_v_q)
+        H_xy_q = npu.matmult(H_xy_vref, R_ref_cam, H_v_q)
 
         return xy, H_xy_q
 
@@ -1995,9 +1994,9 @@ data_tuples, plot_options. The plot can then be made with gp.plot(*data_tuples,
     checkdims(image1.shape, "image1", q1_template_min, q1_template_max)
 
     # shape (H,W,2)
-    q1 = nps.glue(
+    q1 = npu.glue(
         *[
-            nps.dummy(arr, -1)
+            npu.dummy(arr, -1)
             for arr in np.meshgrid(
                 np.arange(q1_template_min[0], q1_template_max[0] + 1),
                 np.arange(q1_template_min[1], q1_template_max[1] + 1),
@@ -2074,8 +2073,8 @@ data_tuples, plot_options. The plot can then be made with gp.plot(*data_tuples,
     x, y = np.meshgrid(np.arange(3) - 1, np.arange(3) - 1)
     x = x.ravel().astype(float)
     y = y.ravel().astype(float)
-    M = nps.transpose(
-        nps.cat(
+    M = npu.transpose(
+        npu.cat(
             np.ones(
                 9,
             ),
@@ -2138,8 +2137,6 @@ data_tuples, plot_options. The plot can then be made with gp.plot(*data_tuples,
 
     if not visualize:
         return q1, diagnostics
-
-    import gnuplotlib as gp
 
     plot_options = dict(kwargs)
 

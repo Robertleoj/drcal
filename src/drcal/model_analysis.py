@@ -8,10 +8,9 @@ drcal.model_analysis.fff() or drcal.fff(). The latter is preferred.
 """
 
 import numpy as np
-import numpysane as nps
+from . import numpy_utils as npu
 import sys
 from shapely.geometry import Polygon, Point
-import re
 
 from .bindings_poseutils_npsp import identity_Rt, identity_rt, skew_symmetric
 from .projections import project, unproject
@@ -204,17 +203,17 @@ report a full Rt transformation with the t component set to 0
 
     ### flatten all the input arrays
     # shape (N,2)
-    q0 = nps.clump(q0, n=q0.ndim - 1)
+    q0 = npu.clump(q0, n=q0.ndim - 1)
     # shape (M,N,3)
-    p0 = nps.transpose(nps.clump(nps.mv(nps.atleast_dims(p0, -3), -1, -3), n=-2))
+    p0 = npu.transpose(npu.clump(npu.mv(npu.atleast_dims(p0, -3), -1, -3), n=-2))
     # shape (N,3)
-    v1 = nps.clump(v1, n=v1.ndim - 1)
+    v1 = npu.clump(v1, n=v1.ndim - 1)
 
     if weights is None:
         weights = np.ones(p0.shape[:-1], dtype=float)
     else:
         # shape (..., Nh,Nw) -> (M,N,) where N = Nh*Nw
-        weights = nps.clump(nps.clump(weights, n=-2), n=weights.ndim - 2)
+        weights = npu.clump(npu.clump(weights, n=-2), n=weights.ndim - 2)
 
         # Any inf/nan weight or vector are set to 0
         weights = weights.copy()
@@ -240,7 +239,7 @@ report a full Rt transformation with the t component set to 0
 
     # We try to match the geometry in a particular region
     q_off_center = q0 - focus_center
-    i = nps.norm2(q_off_center) < focus_radius * focus_radius
+    i = npu.norm2(q_off_center) < focus_radius * focus_radius
     if np.count_nonzero(i) < 3:
         raise Exception("Focus region contained too few points")
 
@@ -255,20 +254,20 @@ report a full Rt transformation with the t component set to 0
 
         # inner(a,b)/(mag(a)*mag(b)) = cos(x) ~ 1 - x^2/2
         # Each of these has shape (M,N,)
-        mag_rtp0 = nps.mag(rtp0)
-        inner = nps.inner(rtp0, v1_cut)
+        mag_rtp0 = npu.mag(rtp0)
+        inner = npu.inner(rtp0, v1_cut)
         th2 = 2.0 * (1.0 - inner / mag_rtp0)
         x = th2 * weights
 
         # shape (M,N,6)
-        dmag_rtp0_drt = nps.matmult(
-            nps.dummy(rtp0, -2),  # shape (M,N,1,3)
+        dmag_rtp0_drt = npu.matmult(
+            npu.dummy(rtp0, -2),  # shape (M,N,1,3)
             drtp0_drt,  # shape (M,N,3,6)
             # matmult has shape (M,N,1,6)
-        )[..., 0, :] / nps.dummy(mag_rtp0, -1)  # shape (M,N,1)
+        )[..., 0, :] / npu.dummy(mag_rtp0, -1)  # shape (M,N,1)
         # shape (M,N,6)
-        dinner_drt = nps.matmult(
-            nps.dummy(v1_cut, -2),  # shape (M,N,1,3)
+        dinner_drt = npu.matmult(
+            npu.dummy(v1_cut, -2),  # shape (M,N,1,3)
             drtp0_drt,  # shape (M,N,3,6)
             # matmult has shape (M,N,1,6)
         )[..., 0, :]
@@ -278,13 +277,13 @@ report a full Rt transformation with the t component set to 0
         J = (
             2.0
             * (
-                nps.dummy(inner, -1) * dmag_rtp0_drt
-                - nps.dummy(mag_rtp0, -1) * dinner_drt
+                npu.dummy(inner, -1) * dmag_rtp0_drt
+                - npu.dummy(mag_rtp0, -1) * dinner_drt
             )
-            / nps.dummy(mag_rtp0 * mag_rtp0, -1)
-            * nps.dummy(weights, -1)
+            / npu.dummy(mag_rtp0 * mag_rtp0, -1)
+            * npu.dummy(weights, -1)
         )
-        return x.ravel(), nps.clump(J, n=J.ndim - 1)
+        return x.ravel(), npu.clump(J, n=J.ndim - 1)
 
     def residual_jacobian_r(r):
         # rp0     has shape (M,N,3)
@@ -293,19 +292,19 @@ report a full Rt transformation with the t component set to 0
 
         # inner(a,b)/(mag(a)*mag(b)) ~ cos(x) ~ 1 - x^2/2
         # Each of these has shape (M,N)
-        inner = nps.inner(rp0, v1_cut)
+        inner = npu.inner(rp0, v1_cut)
         th2 = 2.0 * (1.0 - inner)
         x = th2 * weights
 
         # shape (M,N,3)
-        dinner_dr = nps.matmult(
-            nps.dummy(v1_cut, -2),  # shape (M,N,1,3)
+        dinner_dr = npu.matmult(
+            npu.dummy(v1_cut, -2),  # shape (M,N,1,3)
             drp0_dr,  # shape (M,N,3,3)
             # matmult has shape (M,N,1,3)
         )[..., 0, :]
 
-        J = -2.0 * dinner_dr * nps.dummy(weights, -1)
-        return x.ravel(), nps.clump(J, n=J.ndim - 1)
+        J = -2.0 * dinner_dr * npu.dummy(weights, -1)
+        return x.ravel(), npu.clump(J, n=J.ndim - 1)
 
     cache = {"rt": None}
 
@@ -320,28 +319,6 @@ report a full Rt transformation with the t component set to 0
             cache["rt"] = rt
             cache["x"], cache["J"] = f(rt)
         return cache["J"]
-
-    # # gradient check
-    # import gnuplotlib as gp
-    # rt0 = np.random.random(6)*1e-3
-    # x0,J0 = residual_jacobian_rt(rt0)
-    # drt = np.random.random(6)*1e-7
-    # rt1 = rt0+drt
-    # x1,J1 = residual_jacobian_rt(rt1)
-    # dx_theory = nps.matmult(J0, nps.transpose(drt)).ravel()
-    # dx_got    = x1-x0
-    # relerr = (dx_theory-dx_got) / ( (np.abs(dx_theory)+np.abs(dx_got))/2. )
-    # gp.plot(relerr, wait=1, title='rt')
-    # r0 = np.random.random(3)*1e-3
-    # x0,J0 = residual_jacobian_r(r0)
-    # dr = np.random.random(3)*1e-7
-    # r1 = r0+dr
-    # x1,J1 = residual_jacobian_r(r1)
-    # dx_theory = nps.matmult(J0, nps.transpose(dr)).ravel()
-    # dx_got    = x1-x0
-    # relerr = (dx_theory-dx_got) / ( (np.abs(dx_theory)+np.abs(dx_got))/2. )
-    # gp.plot(relerr, wait=1, title='r')
-    # sys.exit()
 
     # I was using loss='soft_l1', but it behaved strangely. For large
     # f_scale_deg it should be equivalent to loss='linear', but I was seeing
@@ -435,7 +412,7 @@ def worst_direction_stdev(cov):
                                           size = (1000,))
 
         # Compute the worst-direction standard deviation of the sampled data
-        print(np.sqrt(np.max(np.linalg.eig(np.mean(nps.outer(x,x),axis=0))[0])))
+        print(np.sqrt(np.max(np.linalg.eig(np.mean(npu.outer(x,x),axis=0))[0])))
         ===>
         1.1102510878087053
 
@@ -486,7 +463,7 @@ def worst_direction_stdev(cov):
 
     """
 
-    cov = nps.atleast_dims(cov, -2)
+    cov = npu.atleast_dims(cov, -2)
 
     if cov.shape[-2:] == (1, 1):
         return np.sqrt(cov[..., 0, 0])
@@ -504,7 +481,7 @@ def worst_direction_stdev(cov):
 
     import scipy.sparse.linalg
 
-    @nps.broadcast_define(
+    @npu.broadcast_define(
         (
             (
                 "N",
@@ -785,7 +762,7 @@ In the regularized case:
             #
             # # shape (N,Nstate) where N=2 usually
             # A = factorization.solve_xt_JtJ_bt( dF_dbpacked )
-            # Var_dF = nps.matmult(dF_dbpacked, nps.transpose(A))
+            # Var_dF = npu.matmult(dF_dbpacked, npu.transpose(A))
             #
             # Instead, I do something smarter. I need to compute
             #
@@ -815,7 +792,7 @@ In the regularized case:
             # A1 = factorization.solve_xt_JtJ_bt( dF_dbpacked, sys='P' )
             # A2 = factorization.solve_xt_JtJ_bt( A1,          sys='L' )
             # A3 = factorization.solve_xt_JtJ_bt( A1,          sys='LD' )
-            # Var_dF = nps.matmult(A2, nps.transpose(A3))
+            # Var_dF = npu.matmult(A2, npu.transpose(A3))
             #
 
             # Fastest, but works only if I have an LLt factorization. Can be
@@ -839,7 +816,7 @@ In the regularized case:
             #
             # A1 = factorization.solve_xt_JtJ_bt( dF_dbpacked, sys='P' )
             # A2 = factorization.solve_xt_JtJ_bt( A1,          sys='L' )
-            # Var_dF = nps.matmult(A2, nps.transpose(A2))
+            # Var_dF = npu.matmult(A2, npu.transpose(A2))
 
             # A bit slower, uses more memory, but works with LDLt. This is what I
             # use
@@ -851,12 +828,12 @@ In the regularized case:
             A2 = factorization.solve_xt_JtJ_bt(A1, sys="L")
             del A1
             A3 = factorization.solve_xt_JtJ_bt(A2, sys="D")
-            return nps.matmult(A2, nps.transpose(A3))
+            return npu.matmult(A2, npu.transpose(A3))
 
     if bestq:
         scalar = False
 
-        @nps.broadcast_define((("Ngeometry", 2, "Nstate"),), (2, 2))
+        @npu.broadcast_define((("Ngeometry", 2, "Nstate"),), (2, 2))
         def process_slice_bestq(dq_db):
             Var_dq = process_slice(dq_db)
 
@@ -888,7 +865,7 @@ In the regularized case:
         # = sqrt( sum(var)/N )
         # = sqrt( trace/N )
         return (
-            np.sqrt(nps.trace(Var_dF) / Var_dF.shape[-1]) * observed_pixel_uncertainty
+            np.sqrt(npu.trace(Var_dF) / Var_dF.shape[-1]) * observed_pixel_uncertainty
         )
     else:
         raise Exception("Shouldn't have gotten here. There's a bug")
@@ -932,7 +909,7 @@ def _dq_db__Kunpacked_rrp(  ## write output here
     #   dq/db[frame_all,calobject_warp] =
     #     dq_dpcam dpcam__dpref dpref*__drt_ref_ref* Kunpacked_rrp
     if dpcam_dpref is not None:
-        dq_dpref = nps.matmult(dq_dpcam, dpcam_dpref)
+        dq_dpref = npu.matmult(dq_dpcam, dpcam_dpref)
     else:
         dq_dpref = dq_dpcam
 
@@ -948,15 +925,15 @@ def _dq_db__Kunpacked_rrp(  ## write output here
 
     # I don't explicitly store dpref*/dt. I multiply by I implicitly
 
-    dq__dr_ref_refp = nps.matmult(dq_dpref, dprefp__dr_ref_refp)
+    dq__dr_ref_refp = npu.matmult(dq_dpref, dprefp__dr_ref_refp)
 
     # I apply this to the whole dq_db array. Kunpacked_rrp has 0 rows for
     # the unaffected state, so the columns that should be untouched will
     # be untouched
-    dq_db += nps.matmult(dq__dr_ref_refp, Kunpacked_rrp[:3, :])
+    dq_db += npu.matmult(dq__dr_ref_refp, Kunpacked_rrp[:3, :])
 
     if not atinfinity:
-        dq_db -= nps.matmult(dq_dpref, Kunpacked_rrp[3:, :])
+        dq_db -= npu.matmult(dq_dpref, Kunpacked_rrp[3:, :])
 
 
 def _dq_db__projection_uncertainty(  # shape (...,3)
@@ -1044,9 +1021,9 @@ def _dq_db__projection_uncertainty(  # shape (...,3)
         frames_rt_toref = np.zeros((0, 6), dtype=float)
 
     # shape (Ncameras_extrinsics,6) where Ncameras_extrinsics may be 1
-    extrinsics_rt_fromref = nps.atleast_dims(extrinsics_rt_fromref, -2)
+    extrinsics_rt_fromref = npu.atleast_dims(extrinsics_rt_fromref, -2)
     # shape (Nframes,6)             where Nframes may be 1
-    frames_rt_toref = nps.atleast_dims(frames_rt_toref, -2)
+    frames_rt_toref = npu.atleast_dims(frames_rt_toref, -2)
 
     Ncameras_extrinsics = extrinsics_rt_fromref.shape[0]
     Nframes = frames_rt_toref.shape[0]
@@ -1070,10 +1047,10 @@ def _dq_db__projection_uncertainty(  # shape (...,3)
     # shape (..., Ncameras_extrinsics, 3)
     if not atinfinity:
         p_ref = transform_point_rt(
-            invert_rt(extrinsics_rt_fromref), nps.dummy(p_cam, -2)
+            invert_rt(extrinsics_rt_fromref), npu.dummy(p_cam, -2)
         )
     else:
-        p_ref = rotate_point_r(-extrinsics_rt_fromref[..., :3], nps.dummy(p_cam, -2))
+        p_ref = rotate_point_r(-extrinsics_rt_fromref[..., :3], npu.dummy(p_cam, -2))
 
     # shape (..., 2,3)
     # shape (..., 2,Nintrinsics)
@@ -1093,7 +1070,7 @@ def _dq_db__projection_uncertainty(  # shape (...,3)
         else:
             dq_db[
                 ..., istate_intrinsics0 : istate_intrinsics0 + Nstates_intrinsics
-            ] += nps.dummy(
+            ] += npu.dummy(
                 dq_dintrinsics[
                     ...,
                     istate_intrinsics0_onecam : istate_intrinsics0_onecam
@@ -1132,9 +1109,9 @@ def _dq_db__projection_uncertainty(  # shape (...,3)
             if not atinfinity:
                 # shape (..., 2, Ncameras_extrinsics,6)
                 dq_db_slice_extrinsics[...] = (
-                    nps.xchg(
-                        nps.matmult(  # shape (..., Ncameras_extrinsics=1,2,3)
-                            nps.dummy(dq_dpcam, -3),
+                    npu.xchg(
+                        npu.matmult(  # shape (..., Ncameras_extrinsics=1,2,3)
+                            npu.dummy(dq_dpcam, -3),
                             # shape (..., Ncameras_extrinsics,  3,6)
                             dpcam_drt,
                         ),
@@ -1146,9 +1123,9 @@ def _dq_db__projection_uncertainty(  # shape (...,3)
             else:
                 # shape (..., 2, Ncameras_extrinsics,3)
                 dq_db_slice_extrinsics[..., :3] = (
-                    nps.xchg(
-                        nps.matmult(  # shape (..., Ncameras_extrinsics=1,2,3)
-                            nps.dummy(dq_dpcam, -3),
+                    npu.xchg(
+                        npu.matmult(  # shape (..., Ncameras_extrinsics=1,2,3)
+                            npu.dummy(dq_dpcam, -3),
                             # shape (..., Ncameras_extrinsics,  3,3)
                             dpcam_dr,
                         ),
@@ -1170,14 +1147,14 @@ def _dq_db__projection_uncertainty(  # shape (...,3)
 
                 if not atinfinity:
                     # shape (..., 2,6)
-                    dq_db_slice_extrinsics[...] = nps.matmult(  # shape (..., 2,3)
+                    dq_db_slice_extrinsics[...] = npu.matmult(  # shape (..., 2,3)
                         dq_dpcam,
                         # shape (..., 3,6)
                         dpcam_drt[..., 0, :, :],
                     )
                 else:
                     # shape (..., 2,3)
-                    dq_db_slice_extrinsics[..., :3] = nps.matmult(  # shape (..., 2,3)
+                    dq_db_slice_extrinsics[..., :3] = npu.matmult(  # shape (..., 2,3)
                         dq_dpcam,
                         # shape (..., 3,3)
                         dpcam_dr[..., 0, :, :],
@@ -1199,7 +1176,7 @@ def _dq_db__projection_uncertainty(  # shape (...,3)
 
                     if not atinfinity:
                         # shape (..., 2,6)
-                        dq_db_slice_extrinsics[...] = nps.matmult(  # shape (..., 2,3)
+                        dq_db_slice_extrinsics[...] = npu.matmult(  # shape (..., 2,3)
                             dq_dpcam,
                             # shape (..., 3,6)
                             dpcam_drt[..., icamera_extrinsics, :, :],
@@ -1207,7 +1184,7 @@ def _dq_db__projection_uncertainty(  # shape (...,3)
                     else:
                         # shape (..., 2,3)
                         dq_db_slice_extrinsics[..., :3] = (
-                            nps.matmult(  # shape (..., 2,3)
+                            npu.matmult(  # shape (..., 2,3)
                                 dq_dpcam,
                                 # shape (..., 3,3)
                                 dpcam_dr[..., icamera_extrinsics, :, :],
@@ -1217,8 +1194,8 @@ def _dq_db__projection_uncertainty(  # shape (...,3)
     if method == "mean-pcam" or separate_output_per_geometry:
         if istate_frames0 is not None:
             # shape (..., Ncameras_extrinsics, 2, 3)
-            dq_dpref = nps.matmult(  # shape (...,          Ncameras_extrinsics=1, 2, 3)
-                nps.dummy(dq_dpcam, -3),
+            dq_dpref = npu.matmult(  # shape (...,          Ncameras_extrinsics=1, 2, 3)
+                npu.dummy(dq_dpcam, -3),
                 # shape (...,          Ncameras_extrinsics,   3, 3)
                 dpcam_dpref,
             )
@@ -1227,31 +1204,31 @@ def _dq_db__projection_uncertainty(  # shape (...,3)
                 # shape (Nframes,Ncameras_extrinsics,3)
                 p_frames = (
                     transform_point_rt(  # shape (Nframes,Ncameras_extrinsics=1,6)
-                        nps.dummy(invert_rt(frames_rt_toref), -2),
+                        npu.dummy(invert_rt(frames_rt_toref), -2),
                         # shape (..., Nframes=1, Ncameras_extrinsics, 3)
-                        nps.dummy(p_ref, -3),
+                        npu.dummy(p_ref, -3),
                     )
                 )
 
                 # shape (...,Nframes,Ncameras_extrinsics,3,6)
                 _, dpref_dframes, _ = (
                     transform_point_rt(  # shape (Nframes,Ncameras_extrinsics=1,6)
-                        nps.dummy(frames_rt_toref, -2), p_frames, get_gradients=True
+                        npu.dummy(frames_rt_toref, -2), p_frames, get_gradients=True
                     )
                 )
 
             else:
                 # shape (Nframes,Ncameras_extrinsics,3)
                 p_frames = rotate_point_r(  # shape (Nframes,Ncameras_extrinsics=1,6)
-                    nps.dummy(-frames_rt_toref[..., :3], -2),
+                    npu.dummy(-frames_rt_toref[..., :3], -2),
                     # shape (..., Nframes=1, Ncameras_extrinsics, 3)
-                    nps.dummy(p_ref, -3),
+                    npu.dummy(p_ref, -3),
                 )
 
                 # shape (...,Nframes,Ncameras_extrinsics,3,6)
                 _, dpref_dframes, _ = (
                     rotate_point_r(  # shape (Nframes,Ncameras_extrinsics=1,3)
-                        nps.dummy(frames_rt_toref[..., :3], -2),
+                        npu.dummy(frames_rt_toref[..., :3], -2),
                         p_frames,
                         get_gradients=True,
                     )
@@ -1261,8 +1238,8 @@ def _dq_db__projection_uncertainty(  # shape (...,3)
             #    (..., Nframes, Ncameras_extrinsics, 2, 6)
             #    (..., Nframes, Ncameras_extrinsics, 2, 3)
             # depending on atinfinity
-            dq_dframes = nps.matmult(  # shape (...,          Nframes=1, Ncameras_extrinsics, 2, 3)
-                nps.dummy(dq_dpref, -4),
+            dq_dframes = npu.matmult(  # shape (...,          Nframes=1, Ncameras_extrinsics, 2, 3)
+                npu.dummy(dq_dpref, -4),
                 # shape (...,          Nframes,   Ncameras_extrinsics, 3, 6)
                 dpref_dframes,
             )
@@ -1275,12 +1252,12 @@ def _dq_db__projection_uncertainty(  # shape (...,3)
                 if not atinfinity:
                     # shape (..., 2, Nframes,6)
                     dq_db_slice_frames[...] = (
-                        nps.xchg(np.mean(dq_dframes, axis=-3), -2, -3) / Nframes
+                        npu.xchg(np.mean(dq_dframes, axis=-3), -2, -3) / Nframes
                     )
                 else:
                     # shape (..., 2, Nframes,3)
                     dq_db_slice_frames[..., :3] = (
-                        nps.xchg(np.mean(dq_dframes, axis=-3), -2, -3) / Nframes
+                        npu.xchg(np.mean(dq_dframes, axis=-3), -2, -3) / Nframes
                     )
             else:
                 # separate_output_per_geometry
@@ -1510,7 +1487,7 @@ def projection_uncertainty(
     ipcice = optimization_inputs["indices_point_camintrinsics_camextrinsics"]
     if ipcice is None:
         ipcice = np.zeros((0, 3), dtype=np.int32)
-    icice = nps.glue(ifcice[:, 1:], ipcice[:, 1:], axis=-2)
+    icice = npu.glue(ifcice[:, 1:], ipcice[:, 1:], axis=-2)
 
     icam_extrinsics = np.unique(icice[icice[:, 0] == icam_intrinsics, 1])  # sorted
     if icam_extrinsics.size == 0:
@@ -1784,7 +1761,7 @@ def projection_diff(
     - difflen: a numpy array of shape (...,gridn_height,gridn_width) containing the
       magnitude of differences at each cell, or the standard deviation of the
       differences between models 1..N and model0 if len(models)>2. if
-      len(models)==2: this is nps.mag(diff). If the given 'distance' argument was an
+      len(models)==2: this is npu.mag(diff). If the given 'distance' argument was an
       iterable, the shape is (len(distance),...). Otherwise the shape is (...)
 
     - diff: a numpy array of shape (...,gridn_height,gridn_width,2) containing the
@@ -1825,8 +1802,8 @@ def projection_diff(
         distance = np.ones((1,), dtype=float)
     else:
         atinfinity = False
-        distance = nps.atleast_dims(np.array(distance), -1)
-    distance = nps.mv(distance.ravel(), -1, -4)
+        distance = npu.atleast_dims(np.array(distance), -1)
+    distance = npu.mv(distance.ravel(), -1, -4)
 
     imagersizes = np.array([model.imagersize() for model in models])
     if np.linalg.norm(np.std(imagersizes, axis=-2)) != 0:
@@ -1931,10 +1908,10 @@ def projection_diff(
             intrinsics_data[1],
         )
         # shape (len(distance),Nheight,Nwidth,2)
-        q1 = nps.atleast_dims(q1, -4)
+        q1 = npu.atleast_dims(q1, -4)
 
         diff = q1 - q0
-        difflen = nps.mag(diff)
+        difflen = npu.mag(diff)
 
     else:
         # Many models. Look at the stdev
@@ -1985,14 +1962,14 @@ def projection_diff(
                 intrinsics_data,
             )
             # returning shape (len(distance),Nheight,Nwidth,2)
-            return nps.atleast_dims(q1, -4)
+            return npu.atleast_dims(q1, -4)
 
         Ncameras = len(v)
         # shape (Ncameras-1, 4,3)
-        Rt10 = nps.cat(*[get_Rt10(0, i) for i in range(1, Ncameras)])
+        Rt10 = npu.cat(*[get_Rt10(0, i) for i in range(1, Ncameras)])
 
         # shape (Ncameras-1,len(distance),Nheight,Nwidth,2)
-        grids = nps.cat(
+        grids = npu.cat(
             *[
                 get_reprojections(q0, Rt10[i - 1], lensmodels[i], intrinsics_data[i])
                 for i in range(1, Ncameras)
@@ -2001,7 +1978,7 @@ def projection_diff(
 
         diff = None
         # shape (len(distance),Nheight,Nwidth)
-        difflen = np.sqrt(np.mean(nps.norm2(grids - q0), axis=0))
+        difflen = np.sqrt(np.mean(npu.norm2(grids - q0), axis=0))
 
     # difflen, diff, q0 currently all have shape (len(distance), ...). If the
     # given distance was NOT an iterable, I strip out that leading dimension
@@ -2206,8 +2183,8 @@ def stereo_pair_diff(model_pairs, *, gridn_width=60, gridn_height=None, distance
         distance = np.ones((1,), dtype=float)
     else:
         atinfinity = False
-        distance = nps.atleast_dims(np.array(distance), -1)
-    distance = nps.mv(distance.ravel(), -1, -4)
+        distance = npu.atleast_dims(np.array(distance), -1)
+    distance = npu.mv(distance.ravel(), -1, -4)
 
     Rt10_pairs = [
         compose_Rt(
@@ -2244,7 +2221,7 @@ def stereo_pair_diff(model_pairs, *, gridn_width=60, gridn_height=None, distance
     ]
 
     diff = q1[1] - q1[0]
-    difflen = nps.mag(diff)
+    difflen = npu.mag(diff)
 
     # difflen, diff, q0 currently all have shape (len(distance), ...). If the
     # given distance was NOT an iterable, I strip out that leading dimension

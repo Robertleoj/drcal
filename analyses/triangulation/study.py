@@ -4,7 +4,12 @@ r"""Study the precision and accuracy of the various triangulation routines"""
 
 import sys
 import argparse
-import os
+
+import numpy as np
+import numpysane as nps
+import drcal.gnuplotlib as gp
+import pickle
+import drcal
 
 
 def parse_args():
@@ -112,18 +117,6 @@ def parse_args():
 
 
 args = parse_args()
-
-
-import numpy as np
-import numpysane as nps
-import gnuplotlib as gp
-import pickle
-import os.path
-
-# I import the LOCAL drcal
-scriptdir = os.path.dirname(os.path.realpath(__file__))
-sys.path[:0] = (f"{scriptdir}/../..",)
-import drcal
 
 ############ bias visualization
 #

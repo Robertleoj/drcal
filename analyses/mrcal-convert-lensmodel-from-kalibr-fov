@@ -9,6 +9,7 @@ See the docs for drcal-convert-lensmodel for usage details
 """
 
 import sys
+import drcal.gnuplotlib as gp
 import argparse
 import re
 import os
@@ -276,11 +277,6 @@ if args.radius != 0:
     q = q[i, ...]
 
 
-# To visualize the sample grid:
-# import gnuplotlib as gp
-# gp.plot(q[:,0], q[:,1], _with='points pt 7 ps 2', xrange=[0,3904],yrange=[3904,0], wait=1, square=1)
-# sys.exit()
-
 ### I unproject this, with broadcasting
 # shape (Ny*Nx, 3)
 p = fov_unproject_normalized(
@@ -418,8 +414,6 @@ if args.viz:
     q_to = drcal.project(p, *m_to.intrinsics())
     diff = q - q_to
     difflen = nps.mag(diff)
-
-    import gnuplotlib as gp
 
     plotkwargs_extra["hardcopy"] = args.hardcopy
     plotkwargs_extra["terminal"] = args.terminal

@@ -32,6 +32,7 @@ opencv8" or "--model splined"
 
 import sys
 import argparse
+import drcal.gnuplotlib as gp
 import re
 import os
 
@@ -634,8 +635,6 @@ else:
 
 
 if args.make_documentation_plots is not None:
-    import gnuplotlib as gp
-
     if args.make_documentation_plots:
         for extension in ("pdf", "svg", "png", "gp"):
             processoptions_output = dict(
@@ -1795,11 +1794,6 @@ def reproject_perturbed__cross_reprojection(
                     relative=True,
                     msg=f"cross-reprojection uncertainty at distance={distance}: db_predicted is db_observed",
                 )
-                if 0:
-                    import gnuplotlib as gp
-
-                    gp.plot(nps.cat(db_predicted, db_observed), wait=True)
-
             #### Look only at the effects of frames and calobject_warp when
             #### computing the initial dx_cross0 value
 
@@ -2421,42 +2415,6 @@ def reproject_perturbed__cross_reprojection(
                 msg=f"cross-reprojection uncertainty at distance={distance}: rt_refperturbed_ref is the inverse of rt_ref_refperturbed with method {method} (t)",
             )
 
-        if 0:
-            import gnuplotlib as gp
-
-            direction = "rt_ref_refperturbed"
-            gp.plot(
-                nps.cat(
-                    dxcross_Jcross[direction]["compose-grad"][0][0],
-                    dxcross_Jcross[direction]["linearization-Jfp"][0][0],
-                ),
-                wait=True,
-            )
-            # dx/dr
-            gp.plot(
-                nps.cat(
-                    np.ravel(
-                        dxcross_Jcross[direction]["compose-grad"][1][0, :1000, :3]
-                    ),
-                    np.ravel(
-                        dxcross_Jcross[direction]["linearization-Jfp"][1][0, :1000, :3]
-                    ),
-                ),
-                wait=True,
-            )
-            # dx/dt
-            gp.plot(
-                nps.cat(
-                    np.ravel(
-                        dxcross_Jcross[direction]["compose-grad"][1][0, :1000, 3:]
-                    ),
-                    np.ravel(
-                        dxcross_Jcross[direction]["linearization-Jfp"][1][0, :1000, 3:]
-                    ),
-                ),
-                wait=True,
-            )
-
         del dxcross_Jcross
 
         # Done. Let's pick one of the estimates to return to the outside. The
@@ -2583,51 +2541,6 @@ def reproject_perturbed__cross_reprojection(
                     f"RMS error perturbed_solvedref = {np.mean(err_rms_cross_solved)} pixels"
                 )
 
-                if 0:
-                    # crude plotting to make sure the solved rt_ref_refperturbed
-                    # are near optimal
-                    def compute(rt_ref_refperturbed):
-                        what = "point"
-                        pcam = drcal.transform_point_rt(
-                            drcal.compose_rt(
-                                baseline_rt_cam_ref[idx_camextrinsics["point"] + 1, :],
-                                rt_ref_refperturbed,
-                            ),
-                            query_point[0, idx_points],
-                        )
-                        q_cross = drcal.project(
-                            pcam,
-                            baseline_optimization_inputs["lensmodel"],
-                            baseline_intrinsics[idx_camintrinsics[what], :],
-                        )
-
-                        x_cross0 = (
-                            q_cross - baseline_observations[what][..., :2]
-                        ) * nps.dummy(weight[what], -1)
-                        x_cross0[..., weight[what] <= 0, :] = 0  # outliers
-
-                        norm2 = nps.norm2(x_cross0.ravel())
-                        return np.sqrt(norm2 / (Nmeas_cross / 2))
-
-                    i = 3
-
-                    b = compute(rt_ref_refperturbed[0])
-                    delta = np.linspace(-1e-5, 1e-5, 1000)
-                    dirac = np.zeros((6,), dtype=float)
-                    dirac[i] = 1.0
-                    e = np.array(
-                        [compute(rt_ref_refperturbed[0] + d * dirac) for d in delta]
-                    )
-
-                    import gnuplotlib as gp
-
-                    gp.plot(delta + rt_ref_refperturbed[0, i], b + e)
-
-                    import IPython
-
-                    IPython.embed()
-                    sys.exit()
-
         return rt_ref_refperturbed
 
     # shape (Nsamples,6)
@@ -2641,8 +2554,6 @@ def reproject_perturbed__cross_reprojection(
             observed_pixel_uncertainty__empirical = np.sqrt(
                 np.mean((W_delta_qref - np.mean(W_delta_qref, axis=-2)) ** 2.0, axis=-2)
             )
-
-            import gnuplotlib as gp
 
             gp.plot(
                 observed_pixel_uncertainty__empirical,
@@ -2701,20 +2612,6 @@ def reproject_perturbed__cross_reprojection(
         var_empirical__rt_ref_refperturbed = np.mean(
             nps.outer(rt_ref_refperturbed__mean0, rt_ref_refperturbed__mean0), axis=0
         )
-
-        if 0:
-            # I do this more or less below in the confirm_covariances_equal()
-            l0, v0 = drcal.sorted_eig(var_empirical__rt_ref_refperturbed)
-            l1, v1 = drcal.sorted_eig(var_predicted__rt_ref_refperturbed)
-
-            import gnuplotlib as gp
-
-            # Eigenvalues should match-ish
-            gp.plot(nps.cat(l0, l1), wait=True)
-
-            # eigenvectors of each mode should deviate by a small number of
-            # degrees
-            print(np.arccos(np.abs(np.diag(nps.matmult(v0.T, v1)))) * 180.0 / np.pi)
 
         testutils.confirm_covariances_equal(
             var_empirical__rt_ref_refperturbed,
@@ -2948,22 +2845,6 @@ for icam in (0, 3):
                 msg=f"x is consistent when looking at {what}",
             )
 
-            # This test fails unless I apply this patch:
-            #
-            # diff --git a/drcal.c b/drcal.c
-            # index ff709e36..d3e7057b 100644
-            # --- a/drcal.c
-            # +++ b/drcal.c
-            # @@ -6468,3 +6474,3 @@ drcal_optimize( // out
-            #      dogleg_parameters.Jt_x_threshold                    = 0;
-            # -    dogleg_parameters.update_threshold                  = 1e-6;
-            # +    dogleg_parameters.update_threshold                  = 1e-9;
-            #      dogleg_parameters.trustregion_threshold             = 0;
-            #
-            # Can visualize like this:
-            #   import gnuplotlib as gp
-            #   gp.plot( np.abs(x_baseline_optimized - x),
-            #            _set = drcal.plotoptions_measurement_boundaries(**optimization_inputs_baseline_moving_cameras_refcam0) )
             x = drcal.optimize(**optimization_inputs_here)["x"]
             testutils.confirm_equal(
                 x_baseline_optimized,
@@ -3166,8 +3047,6 @@ if not (
 ):
     testutils.finish()
     sys.exit()
-
-import gnuplotlib as gp
 
 
 def make_plot__distribution(icam, report_center_points=True, **kwargs):

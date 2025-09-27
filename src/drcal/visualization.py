@@ -5,13 +5,13 @@ drcal.visualization.fff() or drcal.fff(). The latter is preferred.
 
 """
 
-import gnuplotlib as gp
+from . import gnuplotlib as gp
 import numpy as np
 import scipy.optimize
 import cv2
 from typing import Any, Literal
 from scipy.special import erf
-import numpysane as nps
+import drcal.numpy_utils as npu
 import sys
 import re
 import os
@@ -269,7 +269,7 @@ plot
             # shape is (4,3). I extend it to
             # shape (N,4,3)
             cameras_Rt_plot_ref = np.repeat(
-                nps.atleast_dims(cameras_Rt_plot_ref, -3), Ncameras, axis=-3
+                npu.atleast_dims(cameras_Rt_plot_ref, -3), Ncameras, axis=-3
             )
         elif cameras_Rt_plot_ref.ndim == 3:
             # shape is (N,4,3).
@@ -301,13 +301,13 @@ plot
         else:
             return invert_Rt(Rt_from_rt(m))
 
-    extrinsics_Rt_toref = nps.cat(
+    extrinsics_Rt_toref = npu.cat(
         *[get_extrinsics_Rt_toref_one(m) for m in models_or_extrinsics_rt_fromref]
     )
 
     # reshape extrinsics_Rt_toref to exactly (N,4,3)
-    extrinsics_Rt_toref = nps.atleast_dims(extrinsics_Rt_toref, -3)
-    extrinsics_Rt_toref = nps.clump(extrinsics_Rt_toref, n=extrinsics_Rt_toref.ndim - 3)
+    extrinsics_Rt_toref = npu.atleast_dims(extrinsics_Rt_toref, -3)
+    extrinsics_Rt_toref = npu.clump(extrinsics_Rt_toref, n=extrinsics_Rt_toref.ndim - 3)
 
     if axis_scale is None:
         # This is intended to work with the behavior in the drcal-stereo
@@ -327,14 +327,14 @@ plot
             axis_scale = 1.0
         else:
             res = scipy.optimize.least_squares(  # cost function
-                lambda c: np.sum(nps.mag(p - c)),
+                lambda c: np.sum(npu.mag(p - c)),
                 # seed
                 np.mean(p, axis=-2),
                 method="trf",
                 verbose=False,
             )
             center = res.x
-            baseline = np.mean(nps.mag(p - center)) * 2.0
+            baseline = np.mean(npu.mag(p - center)) * 2.0
             axis_scale = baseline / 3.0
 
             if axis_scale == 0.0:
@@ -351,7 +351,7 @@ plot
         if frames_rt_toref is not None:
             # We have explicit poses given. Use them
             return (
-                nps.atleast_dims(frames_rt_toref, -2),
+                npu.atleast_dims(frames_rt_toref, -2),
                 object_width_n,
                 object_height_n,
                 object_spacing,
@@ -419,7 +419,7 @@ plot
 
         # All good. Done
         return (
-            nps.atleast_dims(_frames_rt_toref, -2),
+            npu.atleast_dims(_frames_rt_toref, -2),
             _object_width_n,
             _object_height_n,
             _object_spacing,
@@ -435,7 +435,7 @@ plot
 
         if points is not None:
             # We have explicit points given. Use them
-            return nps.atleast_dims(points, -2)
+            return npu.atleast_dims(points, -2)
 
         # Points aren't given. Grab them from the model
         if not (
@@ -490,7 +490,7 @@ plot
                 extrinsics_Rt_toref[i_model_with_optimization_inputs], _points
             )
         # All good. Done
-        return nps.atleast_dims(_points, -2)
+        return npu.atleast_dims(_points, -2)
 
     boards_to_plot_list = get_boards_to_plot()
     if boards_to_plot_list is not None:
@@ -514,10 +514,10 @@ plot
         """
 
         # first, copy the center 3 times
-        out = nps.cat(axes[0, :], axes[0, :], axes[0, :])
+        out = npu.cat(axes[0, :], axes[0, :], axes[0, :])
 
         # then append just the deviations to each row containing the center
-        out = nps.glue(out, axes[1:, :] - axes[0, :], axis=-1)
+        out = npu.glue(out, axes[1:, :] - axes[0, :], axis=-1)
         return out
 
     def gen_plot_axes(transforms, legend, scale=1.0):
@@ -578,7 +578,7 @@ plot
             transform = compose_Rt(transform, x)
 
         return tuple(
-            nps.transpose(transform_point_Rt(transform, axes[1:, :] * 1.01))
+            npu.transpose(transform_point_Rt(transform, axes[1:, :] * 1.01))
         ) + (
             np.array(("x", "y", "z")),
             dict(_with="labels", tuplesize=4, legend=None),
@@ -617,9 +617,9 @@ plot
         # able to turn them all on/off together
         return cam_axes + [
             (
-                np.ravel(nps.cat(*[l[0] for l in cam_axes_labels])),
-                np.ravel(nps.cat(*[l[1] for l in cam_axes_labels])),
-                np.ravel(nps.cat(*[l[2] for l in cam_axes_labels])),
+                np.ravel(npu.cat(*[l[0] for l in cam_axes_labels])),
+                np.ravel(npu.cat(*[l[1] for l in cam_axes_labels])),
+                np.ravel(npu.cat(*[l[2] for l in cam_axes_labels])),
                 np.tile(cam_axes_labels[0][3], Ncameras),
             )
             + cam_axes_labels[0][4:]
@@ -634,21 +634,6 @@ plot
                 "We're observing calibration boards, so object_spacing and object_width_n and object_height_n must be valid"
             )
 
-        # if observations_board              is None or \
-        #    indices_frame_camera_board      is None or \
-        #    len(observations_board)         == 0    or \
-        #    len(indices_frame_camera_board) == 0:
-        #     return []
-        # Nobservations = len(indices_frame_camera_board)
-
-        # if icam_highlight is not None:
-        #     i_observations_frames = [(i_observation,indices_frame_camera_board[i_observation,0]) \
-        #                              for i_observation in range(Nobservations) \
-        #                              if indices_frame_camera_board[i_observation,1] == icam_highlight]
-
-        #     i_observations, iframes = nps.transpose(np.array(i_observations_frames))
-        #     frames_rt_toref = frames_rt_toref[iframes, ...]
-
         calobject_ref = ref_calibration_object(
             object_width_n,
             object_height_n,
@@ -659,7 +644,7 @@ plot
         # object in the ref coord system.
         # shape (Nframes, object_height_n, object_width_n, 3)
         calobject_ref = transform_point_rt(
-            nps.mv(frames_rt_toref, -2, -4), calobject_ref
+            npu.mv(frames_rt_toref, -2, -4), calobject_ref
         )
 
         if cameras_Rt_plot_ref is not None:
@@ -675,26 +660,9 @@ plot
                 calobject_ref,
             )
 
-        # if icam_highlight is not None:
-        #     # shape=(Nobservations, object_height_n, object_width_n, 2)
-        #     calobject_cam = nps.transform_point_Rt( models[icam_highlight].extrinsics_Rt_fromref(), calobject_ref )
-
-        #     print("double-check this. I don't broadcast over the intrinsics anymore")
-        #     err = observations[i_observations, ...] - drcal.project(calobject_cam, *models[icam_highlight].intrinsics())
-        #     err = nps.clump(err, n=-3)
-        #     rms = np.mag(err) / (object_height_n*object_width_n))
-        #     # igood = rms <  0.4
-        #     # ibad  = rms >= 0.4
-        #     # rms[igood] = 0
-        #     # rms[ibad] = 1
-        #     calobject_ref = nps.glue( calobject_ref,
-        #                               nps.dummy( nps.mv(rms, -1, -3) * np.ones((object_height_n,object_width_n)),
-        #                                          -1 ),
-        #                               axis = -1)
-
         # calobject_ref shape: (3, Nframes, object_height_n*object_width_n).
         # This will broadcast nicely
-        calobject_ref = nps.clump(nps.mv(calobject_ref, -1, -4), n=-2)
+        calobject_ref = npu.clump(npu.mv(calobject_ref, -1, -4), n=-2)
 
         # if icam_highlight is not None:
         #     calobject_curveopts = {'with':'lines palette', 'tuplesize': 4}
@@ -1002,7 +970,7 @@ def _append_observation_visualizations(
         )
         observations_board = observations_board[mask_observation]
         # shape (N,3)
-        observations_board = nps.clump(observations_board, n=3)
+        observations_board = npu.clump(observations_board, n=3)
         mask_inliers = observations_board[..., 2] > 0
 
         q_cam_boards_inliers = observations_board[mask_inliers, :2]
@@ -1022,19 +990,6 @@ def _append_observation_visualizations(
 
         q_cam_points_inliers = observations_point[mask_inliers, :2]
         q_cam_points_outliers = observations_point[~mask_inliers, :2]
-
-    # Disabled for now. I see a legend entry for each broadcasted slice,
-    # which isn't what I want
-    #
-    # if len(q_cam_calobjects):
-    #     plot_data_args.append( ( nps.clump(q_cam_calobjects[...,0], n=-2),
-    #                              nps.clump(q_cam_calobjects[...,1], n=-2) ) +
-    #                            ( () if _2d else
-    #                              (np.zeros((q_cam_calobjects.shape[-2]*
-    #                                         q_cam_calobjects.shape[-3],)),)) +
-    #                            ( dict( tuplesize = 2 if _2d else 3,
-    #                                    _with     = f'lines lc "black"' + ("" if _2d else ' nocontour'),
-    #                                    legend    = f"{legend_prefix} board sequences"),))
 
     for q, color, what in (
         (q_cam_boards_inliers, "black", "board inliers"),
@@ -1331,21 +1286,21 @@ def show_projection_diff(
     # the list
     # shape (Nheight, Nwidth)
     if difflen is not None and difflen.ndim > 2:
-        difflen = nps.clump(difflen, n=difflen.ndim - 2)[0]
+        difflen = npu.clump(difflen, n=difflen.ndim - 2)[0]
     # shape (Nheight, Nwidth,2)
     if diff is not None and diff.ndim > 3:
-        diff = nps.clump(diff, n=diff.ndim - 3)[0]
+        diff = npu.clump(diff, n=diff.ndim - 3)[0]
 
     plot_options = kwargs
 
     if vectorfield:
         # Not plotting a matrix image. I collapse (Nheight, Nwidth, ...) to (Nheight*Nwidth, ...)
         if q0 is not None:
-            q0 = nps.clump(q0, n=2)
+            q0 = npu.clump(q0, n=2)
         if difflen is not None:
-            difflen = nps.clump(difflen, n=2)
+            difflen = npu.clump(difflen, n=2)
         if diff is not None:
-            diff = nps.clump(diff, n=2)
+            diff = npu.clump(diff, n=2)
 
     if directions:
         gp.add_plot_option(
@@ -1655,21 +1610,21 @@ def show_stereo_pair_diff(
     )
     # shape (Nheight, Nwidth)
     if difflen is not None and difflen.ndim > 2:
-        difflen = nps.clump(difflen, n=difflen.ndim - 2)[0]
+        difflen = npu.clump(difflen, n=difflen.ndim - 2)[0]
     # shape (Nheight, Nwidth,2)
     if diff is not None and diff.ndim > 3:
-        diff = nps.clump(diff, n=diff.ndim - 3)[0]
+        diff = npu.clump(diff, n=diff.ndim - 3)[0]
 
     plot_options = kwargs
 
     if vectorfield:
         # Not plotting a matrix image. I collapse (Nheight, Nwidth, ...) to (Nheight*Nwidth, ...)
         if q0 is not None:
-            q0 = nps.clump(q0, n=2)
+            q0 = npu.clump(q0, n=2)
         if difflen is not None:
-            difflen = nps.clump(difflen, n=2)
+            difflen = npu.clump(difflen, n=2)
         if diff is not None:
-            diff = nps.clump(diff, n=2)
+            diff = npu.clump(diff, n=2)
 
     gp.add_plot_option(plot_options, cbrange=[0, cbmax])
     color = difflen
@@ -2075,7 +2030,7 @@ def _observed_hypothesis_points_and_boards_at_calibration_time(model):
         icame = icame[mask_inliers]
 
         icame[icame < 0] = -1
-        rt_cam_ref = nps.glue(
+        rt_cam_ref = npu.glue(
             identity_rt(), optimization_inputs["extrinsics_rt_fromref"], axis=-2
         )[icame + 1]
 
@@ -2084,7 +2039,7 @@ def _observed_hypothesis_points_and_boards_at_calibration_time(model):
         p_ref_points = points[ipoint]
         p_cam_points = transform_point_rt(rt_cam_ref, p_ref_points)
 
-        p_cam_observed_at_calibration_time = nps.glue(
+        p_cam_observed_at_calibration_time = npu.glue(
             p_cam_observed_at_calibration_time, p_cam_points, axis=-2
         )
 
@@ -2222,7 +2177,7 @@ def show_projection_uncertainty_vs_distance(
 
         elif where == "centroid":
             p = np.mean(p_cam_observed_at_calibration_time, axis=-2)
-            vcam = p / nps.mag(p)
+            vcam = p / npu.mag(p)
 
         else:
             raise Exception("'where' should be 'center' or an array specifying a pixel")
@@ -2235,7 +2190,7 @@ def show_projection_uncertainty_vs_distance(
 
     # shape (Ndistances)
     if distance_min is None or distance_max is None:
-        distance_observed_at_calibration_time = nps.mag(
+        distance_observed_at_calibration_time = npu.mag(
             p_cam_observed_at_calibration_time
         )
         if distance_min is None:
@@ -2248,7 +2203,7 @@ def show_projection_uncertainty_vs_distance(
     distances = np.logspace(np.log10(distance_min), np.log10(distance_max), 80)
 
     # shape (Ndistances, 3)
-    pcam = vcam * nps.dummy(distances, -1)
+    pcam = vcam * npu.dummy(distances, -1)
 
     # shape (Ndistances)
     uncertainty = projection_uncertainty(
@@ -2416,13 +2371,13 @@ def show_distortion_off_pinhole_radial(
     v_centersy = v_centersy[np.all(np.isfinite(v_centersy), axis=-1)]
 
     th_corners = (
-        180.0 / np.pi * np.arctan2(nps.mag(v_corners[..., :2]), v_corners[..., 2])
+        180.0 / np.pi * np.arctan2(npu.mag(v_corners[..., :2]), v_corners[..., 2])
     )
     th_centersx = (
-        180.0 / np.pi * np.arctan2(nps.mag(v_centersx[..., :2]), v_centersx[..., 2])
+        180.0 / np.pi * np.arctan2(npu.mag(v_centersx[..., :2]), v_centersx[..., 2])
     )
     th_centersy = (
-        180.0 / np.pi * np.arctan2(nps.mag(v_centersy[..., :2]), v_centersy[..., 2])
+        180.0 / np.pi * np.arctan2(npu.mag(v_centersy[..., :2]), v_centersy[..., 2])
     )
 
     # Now the equations. The 'x' value here is "pinhole pixels off center",
@@ -2481,7 +2436,7 @@ def show_distortion_off_pinhole_radial(
         _xrange=[
             0,
             np.max(
-                np.nan_to_num(nps.glue(th_corners, th_centersx, th_centersy, axis=-1))
+                np.nan_to_num(npu.glue(th_corners, th_centersx, th_centersy, axis=-1))
             )
             * 1.01,
         ],
@@ -2594,8 +2549,8 @@ def show_distortion_off_pinhole(
 
     # shape: (Nheight,Nwidth,2). Contains (x,y) rows
     grid = np.ascontiguousarray(
-        nps.mv(
-            nps.cat(
+        npu.mv(
+            npu.cat(
                 *np.meshgrid(
                     np.linspace(0, W - 1, gridn_width),
                     np.linspace(0, H - 1, gridn_height),
@@ -2608,7 +2563,7 @@ def show_distortion_off_pinhole(
     )
 
     dgrid = project(
-        nps.glue(
+        npu.glue(
             (grid - cxy) / fxy, np.ones(grid.shape[:-1] + (1,), dtype=float), axis=-1
         ),
         lensmodel,
@@ -2628,7 +2583,7 @@ def show_distortion_off_pinhole(
 
         # shape: gridn_height,gridn_width. Because numpy (and thus gnuplotlib) want it that
         # way
-        distortion = nps.mag(delta)
+        distortion = npu.mag(delta)
 
         data_tuples = ((distortion, curveoptions),)
 
@@ -2636,8 +2591,8 @@ def show_distortion_off_pinhole(
         # vectorfield
 
         # shape: gridn_height*gridn_width,2
-        grid = nps.clump(grid, n=2)
-        dgrid = nps.clump(dgrid, n=2)
+        grid = npu.clump(grid, n=2)
+        dgrid = npu.clump(dgrid, n=2)
 
         delta = dgrid - grid
         delta *= vectorscale
@@ -3033,8 +2988,8 @@ def show_splined_model_correction(
 
     if imager_domain:
         # Shape (Ny,Nx,2); contains (x,y) rows
-        q = nps.mv(
-            nps.cat(
+        q = npu.mv(
+            npu.cat(
                 *np.meshgrid(
                     np.linspace(0, W - 1, gridn_width),
                     np.linspace(0, H - 1, gridn_height),
@@ -3047,8 +3002,8 @@ def show_splined_model_correction(
         u = project_stereographic(v)
     else:
         # Shape (gridn_height,gridn_width,2); contains (x,y) rows
-        u = nps.mv(
-            nps.cat(
+        u = npu.mv(
+            npu.cat(
                 *np.meshgrid(
                     np.linspace(ux_knots[0], ux_knots[-1], gridn_width),
                     np.linspace(uy_knots[0], uy_knots[-1], gridn_height),
@@ -3121,7 +3076,7 @@ def show_splined_model_correction(
                 (deltau[..., 0 if xy == "x" else 1], surface_curveoptions),
             )
         else:
-            plot_data_tuples_surface = ((nps.mag(deltau), surface_curveoptions),)
+            plot_data_tuples_surface = ((npu.mag(deltau), surface_curveoptions),)
 
     else:
         if imager_domain:
@@ -3158,7 +3113,7 @@ def show_splined_model_correction(
             )
 
     domain_contour_u = _splined_stereographic_domain(lensmodel)
-    knots_u = nps.clump(nps.mv(nps.cat(*np.meshgrid(ux_knots, uy_knots)), 0, -1), n=2)
+    knots_u = npu.clump(npu.mv(npu.cat(*np.meshgrid(ux_knots, uy_knots)), 0, -1), n=2)
     if imager_domain:
         domain_contour = project(
             unproject_stereographic(domain_contour_u), lensmodel, intrinsics_data
@@ -3537,7 +3492,7 @@ def show_residuals_board_observation(
     if from_worst:
         if i_observations_sorted_from_worst is None:
             # shape (Nobservations,)
-            err_per_observation = nps.norm2(nps.clump(x, n=-3))
+            err_per_observation = npu.norm2(npu.clump(x, n=-3))
             i_observations_sorted_from_worst = list(
                 reversed(np.argsort(err_per_observation))
             )
@@ -3546,11 +3501,11 @@ def show_residuals_board_observation(
         i_observation = i_observations_sorted_from_worst[i_observation_from_worst]
 
     # shape (Nh*Nw,2)
-    x = nps.clump(x[i_observation], n=2)
+    x = npu.clump(x[i_observation], n=2)
     # shape (Nh*Nw,2)
-    obs = nps.clump(observations[i_observation, ..., :2], n=2)
+    obs = npu.clump(observations[i_observation, ..., :2], n=2)
     # shape (Nh*Nw)
-    weight = nps.clump(observations[i_observation, ..., 2], n=2)
+    weight = npu.clump(observations[i_observation, ..., 2], n=2)
 
     # take non-outliers
     i_inliers = weight > 0.0
@@ -3569,7 +3524,7 @@ def show_residuals_board_observation(
                 i_observation, :2
             ],
             "" if paths is None else f"path={paths[i_observation]}, ",
-            np.sqrt(np.mean(nps.norm2(x))),
+            np.sqrt(np.mean(npu.norm2(x))),
         )
         if extratitle is not None:
             title += ": " + extratitle
@@ -3616,7 +3571,7 @@ def show_residuals_board_observation(
             obs[:, 0],
             obs[:, 1],
             3.0 * weight * circlescale,  # size
-            nps.mag(x),  # color
+            npu.mag(x),  # color
             dict(_with="points pt 7 ps variable palette", tuplesize=4),
         ),
         # Vectors. From observation to prediction. Scaled by the weight.
@@ -3743,7 +3698,7 @@ def show_residuals_histogram(
 
     # I just pool all the observations together for now. I could display them
     # separately...
-    x = nps.glue(x_chessboard, x_point, axis=-1)
+    x = npu.glue(x_chessboard, x_point, axis=-1)
 
     if x.size == 0:
         raise Exception("No board or point observations in this solve!")
@@ -3829,8 +3784,8 @@ def _get_show_residuals_data_onecam(
 
     # I just pool all the observations together for now. I could display them
     # separately...
-    err = nps.glue(err_chessboard, err_point, axis=-1)
-    obs = nps.glue(obs_chessboard, obs_point, axis=-1)
+    err = npu.glue(err_chessboard, err_point, axis=-1)
+    obs = npu.glue(obs_chessboard, obs_point, axis=-1)
 
     if valid_intrinsics_region and icam_intrinsics is not None:
         legend = "Valid-intrinsics region"
@@ -3985,7 +3940,7 @@ def show_residuals_vectorfield(
             obs[:, 1],
             vectorscale * err[:, 0],
             vectorscale * err[:, 1],
-            np.sqrt(nps.norm2(err)),
+            np.sqrt(npu.norm2(err)),
             dict(_with="vectors filled palette", tuplesize=5),
         )
     ]
@@ -4110,7 +4065,7 @@ def show_residuals_magnitudes(
         (
             obs[:, 0],
             obs[:, 1],
-            np.sqrt(nps.norm2(err)),
+            np.sqrt(npu.norm2(err)),
             dict(_with="points pt 7 palette", tuplesize=3),
         )
     ]
@@ -4494,7 +4449,7 @@ This function returns a tuple
     hcell = float(H - 1) / (gridn_height - 1)
     rcell = np.array((wcell, hcell), dtype=float) / 2.0
 
-    @nps.broadcast_define((("N", 2), ("N", 2), (2,)), (3,))
+    @npu.broadcast_define((("N", 2), ("N", 2), (2,)), (3,))
     def stats(q, err, q_cell_center):
         r"""Compute the residual statistics in a single cell"""
 
@@ -4543,7 +4498,7 @@ This function returns a tuple
     obs = observations[idx, ..., :2]
 
     # Each has shape (Nheight,Nwidth)
-    mean, stdev, count = nps.mv(stats(obs, err, q_cell_center), -1, 0)
+    mean, stdev, count = npu.mv(stats(obs, err, q_cell_center), -1, 0)
     return (
         mean,
         stdev,

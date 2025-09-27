@@ -30,7 +30,7 @@ import re
 import shlex
 import os
 import numpy as np
-import numpysane as nps
+import drcal.numpy_utils as npu
 import time
 import glob
 
@@ -398,7 +398,7 @@ def solve_initial(
 
     """
 
-    indices_frame_camintrinsics_camextrinsics = nps.glue(
+    indices_frame_camintrinsics_camextrinsics = npu.glue(
         indices_frame_camera, indices_frame_camera[:, (1,)] - 1, axis=-1
     )
 
@@ -464,12 +464,12 @@ def solve_initial(
     def compute_seed_from_existing_models():
         # The caller made sure that all the models use the same lens model
         lensmodel = seedmodels[0].intrinsics()[0]
-        intrinsics_data = nps.cat(*[m.intrinsics()[1] for m in seedmodels])
+        intrinsics_data = npu.cat(*[m.intrinsics()[1] for m in seedmodels])
 
         # I keep the relative camera poses constant, but place camera0 at the
         # origin
         Rt_r0 = seedmodels[0].extrinsics_Rt_toref()
-        extrinsics_Rt_fromref = nps.cat(
+        extrinsics_Rt_fromref = npu.cat(
             *[
                 drcal.compose_Rt(m.extrinsics_Rt_fromref(), Rt_r0)
                 for m in seedmodels[1:]
@@ -837,7 +837,7 @@ def main():
     residuals = stats["x"][: Npoints_chessboard * 2].reshape(
         Nobservations, args.object_height_n, args.object_width_n, 2
     )
-    worst_point_err = np.sqrt(np.max(nps.norm2(nps.clump(residuals, n=3))))
+    worst_point_err = np.sqrt(np.max(npu.norm2(npu.clump(residuals, n=3))))
     report += f"Worst residual (by measurement): {worst_point_err:.01f} pixels\n"
     if not args.skip_outlier_rejection:
         report += "Noutliers: {} out of {} total points: {:.01f}% of the data\n".format(

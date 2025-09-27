@@ -105,7 +105,7 @@ from typing import Any
 import re
 import os
 import numpy as np
-import numpysane as nps
+import drcal.numpy_utils as npu
 import time
 import copy
 import shlex
@@ -518,13 +518,13 @@ def main():
                 if args.radius > 0:
                     r = args.radius
                 else:
-                    if nps.norm2(focus_center - (dims - 1.0) / 2) > 1e-3:
+                    if npu.norm2(focus_center - (dims - 1.0) / 2) > 1e-3:
                         print(
                             "A radius <0 is only implemented if we're focusing on the imager center",
                             file=sys.stderr,
                         )
                         sys.exit(1)
-                    r = nps.mag(dims) / 2.0 + args.radius
+                    r = npu.mag(dims) / 2.0 + args.radius
 
                 indices_cam = optimization_inputs[
                     "indices_frame_camintrinsics_camextrinsics"
@@ -533,10 +533,10 @@ def main():
 
                 mask_thiscam = indices_cam == icam
                 mask_past_radius = (
-                    nps.norm2(observations[..., :2] - focus_center) > r * r
+                    npu.norm2(observations[..., :2] - focus_center) > r * r
                 )
 
-                observations[nps.mv(mask_thiscam, -1, -3) * mask_past_radius, 2] = -1
+                observations[npu.mv(mask_thiscam, -1, -3) * mask_past_radius, 2] = -1
 
         optimization_inputs["verbose"] = False
 
@@ -620,7 +620,7 @@ def main():
         # For the purposes of visualization I use what I was given. Or the mean
         # observation distance if I was given nothing
         if args.distance is None:
-            distance_for_diff = np.mean(nps.mag(calobject_camframe_after))
+            distance_for_diff = np.mean(npu.mag(calobject_camframe_after))
         else:
             distance_for_diff = np.array(args.distance)
 
@@ -670,7 +670,7 @@ def main():
             )
             if (
                 args.where is not None
-                and nps.norm2(args.where - (dims - 1.0) / 2) > 1e-3
+                and npu.norm2(args.where - (dims - 1.0) / 2) > 1e-3
             ):
                 print(
                     "A radius <0 is only implemented if we're focusing on the imager center: use an explicit --radius, or omit --where",
@@ -693,7 +693,7 @@ def main():
 
         # q is (Ny*Nx, 2). Each slice of q[:] is an (x,y) pixel coord
         q = np.ascontiguousarray(
-            nps.transpose(nps.clump(nps.cat(*np.meshgrid(qx, qy)), n=-2))
+            npu.transpose(npu.clump(npu.cat(*np.meshgrid(qx, qy)), n=-2))
         )
         if args.radius != 0:
             # we use a subset of the input data for the fit
@@ -705,22 +705,17 @@ def main():
             if args.radius > 0:
                 r = args.radius
             else:
-                if nps.norm2(focus_center - (dims - 1.0) / 2) > 1e-3:
+                if npu.norm2(focus_center - (dims - 1.0) / 2) > 1e-3:
                     print(
                         "A radius <0 is only implemented if we're focusing on the imager center",
                         file=sys.stderr,
                     )
                     sys.exit(1)
-                r = nps.mag(dims) / 2.0 + args.radius
+                r = npu.mag(dims) / 2.0 + args.radius
 
             grid_off_center = q - focus_center
-            i = nps.norm2(grid_off_center) < r * r
+            i = npu.norm2(grid_off_center) < r * r
             q = q[i, ...]
-
-        # To visualize the sample grid:
-        # import gnuplotlib as gp
-        # gp.plot(q[:,0], q[:,1], _with='points pt 7 ps 2', xrange=[0,3904],yrange=[3904,0], wait=1, square=1)
-        # sys.exit()
 
         intrinsics_from = m.assume_intrinsics()
 
@@ -730,12 +725,12 @@ def main():
         # shape (Ndistances, Ny*Nx, 2)
         q = q * np.ones((d.size, 1, 1))
         # shape (Ndistances, Ny*Nx, 3)
-        p = drcal.unproject(q, *intrinsics_from, normalize=True) * nps.mv(d, -1, -3)
+        p = drcal.unproject(q, *intrinsics_from, normalize=True) * npu.mv(d, -1, -3)
 
         # shape (Ndistances*Ny*Nx, 2)
-        q = nps.clump(q, n=2)
+        q = npu.clump(q, n=2)
         # shape (Ndistances*Ny*Nx, 3)
-        p = nps.clump(p, n=2)
+        p = npu.clump(p, n=2)
 
         # The list of distances. The meaning is the same as expected by
         # drcal.show_projection_diff(): we visualize the diff of the FIRST distance
@@ -763,11 +758,11 @@ def main():
             distortions = (
                 np.random.rand(Ndistortions) - 0.5
             ) * 1e-3  # random initial seed
-            intrinsics_to_values = nps.dummy(
-                nps.glue(intrinsics_core, distortions, axis=-1), axis=-2
+            intrinsics_to_values = npu.dummy(
+                npu.glue(intrinsics_core, distortions, axis=-1), axis=-2
             )
             # each point has weight 1.0
-            observations_points = nps.glue(q, nps.transpose(weights), axis=-1)
+            observations_points = npu.glue(q, npu.transpose(weights), axis=-1)
             observations_points = np.ascontiguousarray(
                 observations_points
             )  # must be contiguous. drcal.optimize() should really be more lax here
@@ -795,7 +790,7 @@ def main():
                 observations_point=observations_points,
                 indices_point_camintrinsics_camextrinsics=indices_point_camintrinsics_camextrinsics,
                 lensmodel=lensmodel_to,
-                imagersizes=nps.atleast_dims(dims, -2),
+                imagersizes=npu.atleast_dims(dims, -2),
                 # I'm not optimizing the point positions (frames), so these
                 # need to be set to be inactive, and to include the ranges I do
                 # have
@@ -872,11 +867,11 @@ def main():
     if not (args.sampled and args.intrinsics_only):
         implied_rt10 = drcal.rt_from_Rt(implied_Rt10)
         print(
-            f"Transformation cam_fitted <-- cam_input:  rotation: {nps.mag(implied_rt10[:3]) * 180.0 / np.pi:.03f} degrees, translation: {np.array2string(implied_rt10[3:], precision=2)} m",
+            f"Transformation cam_fitted <-- cam_input:  rotation: {npu.mag(implied_rt10[:3]) * 180.0 / np.pi:.03f} degrees, translation: {np.array2string(implied_rt10[3:], precision=2)} m",
             file=sys.stderr,
         )
 
-        dist_shift = nps.mag(implied_rt10[3:])
+        dist_shift = npu.mag(implied_rt10[3:])
         if dist_shift > 0.01:
             msg = f"## WARNING: fitted camera moved by {dist_shift:.03f}m. This is probably aphysically high, and something is wrong."
             if args.distance is not None and args.sampled:

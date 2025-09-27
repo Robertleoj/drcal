@@ -181,20 +181,6 @@ testutils.confirm_equal(
     msg="Trivial, sanity-checking gradient check",
 )
 
-if 0:
-    import gnuplotlib as gp
-
-    gp.plot(
-        nps.cat(
-            dx_predicted,
-            dx_observed,
-        ),
-        _with="lines",
-        legend=np.arange(2),
-        _set=drcal.plotoptions_measurement_boundaries(**optimization_inputs),
-        wait=1,
-    )
-
 ###########################################################################
 # We're supposed to be at the optimum. E = norm2(x) ~ norm2(x0 + J db) =
 # norm2(x0) + 2 dbt Jt x0 + norm2(J db). At the optimum Jt x0 = 0 -> E =
@@ -281,23 +267,6 @@ slice_intrinsics = slice(0, istate0_extrinsics)
 slice_extrinsics = slice(istate0_extrinsics, istate0_frames)
 slice_frames = slice(istate0_frames, istate0_calobject_warp)
 
-# These thresholds look terrible. And they are. But I'm pretty sure this is
-# working properly. Look at the plots:
-if 0:
-    import gnuplotlib as gp
-
-    plot_db = gp.gnuplotlib(
-        title="db predicted,observed",
-        _set=drcal.plotoptions_state_boundaries(**optimization_inputs),
-    )
-    plot_db.plot(
-        (
-            nps.cat(db_observed, db_predicted),
-            dict(legend=np.array(("observed", "predicted")), _with="linespoints"),
-        ),
-        (db_observed - db_predicted, dict(legend="err", _with="lines lw 2", y2=1)),
-    )
-    plot_db.wait()
 
 testutils.confirm_equal(
     db_predicted[slice_intrinsics],

@@ -5,9 +5,10 @@ from .image_transforms import (
     pinhole_model_for_reprojection,
     transform_image,
 )
+from . import gnuplotlib
 from .model_analysis import is_within_valid_intrinsics_region, projection_diff
 from .bindings_poseutils_npsp import identity_Rt
-from .projections import unproject
+from .projections import project, unproject
 from .visualization import (
     annotate_image__valid_intrinsics_region,
     show_projection_diff,
@@ -71,6 +72,7 @@ __all__ = [
     "is_within_valid_intrinsics_region",
     "projection_diff",
     "identity_Rt",
+    "project",
     "unproject",
     "annotate_image__valid_intrinsics_region",
     "show_projection_diff",
@@ -116,4 +118,5 @@ __all__ = [
     "estimate_joint_frame_poses",
     "estimate_monocular_calobject_poses_Rt_tocam",
     "seed_stereographic",
+    "gnuplotlib",
 ]

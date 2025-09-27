@@ -21,7 +21,8 @@ drcal.cameramodel.fff() or drcal.fff(). The latter is preferred.
 
 import sys
 import numpy as np
-import numpysane as nps
+from . import numpy_utils as npu
+
 import numbers
 import yaml
 import ast
@@ -168,7 +169,7 @@ def _validateValidIntrinsicsRegion(valid_intrinsics_region):
 
     if (
         valid_intrinsics_region.size > 0
-        and nps.norm2(valid_intrinsics_region[0] - valid_intrinsics_region[-1]) > 1e-6
+        and npu.norm2(valid_intrinsics_region[0] - valid_intrinsics_region[-1]) > 1e-6
     ):
         raise Exception(
             "The valid extrinsics region must be a closed contour: the first and last points must be identical"
@@ -1010,9 +1011,9 @@ class cameramodel(object):
                     R = identity_R()
 
                 # Special-case P=0 or R=0. Sometimes I see this. Set everything to identity
-                if nps.norm2(P.ravel()) == 0:
+                if npu.norm2(P.ravel()) == 0:
                     P[:, :3] = np.eye(3)
-                if nps.norm2(R.ravel()) == 0:
+                if npu.norm2(R.ravel()) == 0:
                     R = np.eye(3)
 
                 lensmodel, lensmodel_at = find_array(
@@ -1070,7 +1071,7 @@ class cameramodel(object):
 
                 Rt_ref_cam = np.zeros((4, 3), dtype=float)
                 Rt_ref_cam[:3, :] = R
-                if nps.norm2((nps.matmult(R, R.T) - np.eye(3)).ravel()) > 1e-12:
+                if npu.norm2((npu.matmult(R, R.T) - np.eye(3)).ravel()) > 1e-12:
                     raise CameramodelParseException(
                         f"R must be a valid rotation. Instead it is {R}"
                     )
@@ -1313,10 +1314,10 @@ class cameramodel(object):
                 distortions = self._intrinsics[1][4:]
             elif self._intrinsics[0] == "LENSMODEL_OPENCV4":
                 distortion_model = "plumb_bob"
-                distortions = nps.glue(self._intrinsics[1][4:], 0, axis=-1)
+                distortions = npu.glue(self._intrinsics[1][4:], 0, axis=-1)
             elif self._intrinsics[0] == "LENSMODEL_PINHOLE":
                 distortion_model = "plumb_bob"
-                distortions = nps.glue(
+                distortions = npu.glue(
                     self._intrinsics[1][4:], np.zeros((5,), dtype=float), axis=-1
                 )
             elif self._intrinsics[0] == "LENSMODEL_OPENCV8":
@@ -1342,7 +1343,7 @@ class cameramodel(object):
             )
             np.savetxt(
                 f,
-                nps.atleast_dims(distortions, -2),
+                npu.atleast_dims(distortions, -2),
                 delimiter=", ",
                 newline="",
                 fmt="%.12g",
@@ -1358,7 +1359,9 @@ projection_matrix:
   data: [1, 0, 0, 0,  0, 1, 0, 0,  0, 0, 1, 0]
 """)
 
-        write_function = write_opencv
+        write_function = None
+        if _opencv:
+            write_function = write_opencv
 
         if isinstance(f, str):
             with open(f, "w") as openedfile:

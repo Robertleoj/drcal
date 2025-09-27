@@ -6,7 +6,7 @@ drcal.utils.fff() or drcal.fff(). The latter is preferred.
 """
 
 import numpy as np
-import numpysane as nps
+from . import numpy_utils as npu
 import sys
 import re
 
@@ -60,7 +60,7 @@ def _align_procrustes_points_Rt01_python(p0, p1, weights=None):
     return _align_procrustes_points_Rt01(p0, p1, weights)
 
 
-@nps.broadcast_define(
+@npu.broadcast_define(
     (
         (
             "N",
@@ -75,14 +75,14 @@ def _align_procrustes_points_Rt01_python(p0, p1, weights=None):
     (4, 3),
 )
 def _align_procrustes_points_Rt01(p0, p1, weights):
-    p0 = nps.transpose(p0)
-    p1 = nps.transpose(p1)
+    p0 = npu.transpose(p0)
+    p1 = npu.transpose(p1)
 
     # I process Mt instead of M to not need to transpose anything later, and to
     # end up with contiguous-memory results
-    Mt = nps.matmult(
+    Mt = npu.matmult(
         (p0 - np.mean(p0, axis=-1)[..., np.newaxis]) * weights,
-        nps.transpose(p1 - np.mean(p1, axis=-1)[..., np.newaxis]),
+        npu.transpose(p1 - np.mean(p1, axis=-1)[..., np.newaxis]),
     )
     V, S, Ut = np.linalg.svd(Mt)
 
@@ -92,23 +92,23 @@ def _align_procrustes_points_Rt01(p0, p1, weights):
         # Poorly-defined problem. Return error
         return np.zeros((4, 3), dtype=float)
 
-    R = nps.matmult(V, Ut)
+    R = npu.matmult(V, Ut)
 
     # det(R) is now +1 or -1. If it's -1, then this contains a mirror, and thus
     # is not a physical rotation. I compensate by negating the least-important
     # pair of singular vectors
     if np.linalg.det(R) < 0:
         V[:, 2] *= -1
-        R = nps.matmult(V, Ut)
+        R = npu.matmult(V, Ut)
 
     # Now that I have my optimal R, I compute the optimal t. From before:
     #
     #   t = mean(a) - R mean(b)
-    t = np.mean(p0, axis=-1)[..., np.newaxis] - nps.matmult(
+    t = np.mean(p0, axis=-1)[..., np.newaxis] - npu.matmult(
         R, np.mean(p1, axis=-1)[..., np.newaxis]
     )
 
-    return nps.glue(R, t.ravel(), axis=-2)
+    return npu.glue(R, t.ravel(), axis=-2)
 
 
 def _align_procrustes_vectors_R01_python(v0, v1, weights=None):
@@ -126,7 +126,7 @@ def _align_procrustes_vectors_R01_python(v0, v1, weights=None):
     return _align_procrustes_vectors_R01(v0, v1, weights)
 
 
-@nps.broadcast_define(
+@npu.broadcast_define(
     (
         (
             "N",
@@ -141,12 +141,12 @@ def _align_procrustes_vectors_R01_python(v0, v1, weights=None):
     (3, 3),
 )
 def _align_procrustes_vectors_R01(v0, v1, weights):
-    v0 = nps.transpose(v0)
-    v1 = nps.transpose(v1)
+    v0 = npu.transpose(v0)
+    v1 = npu.transpose(v1)
 
     # I process Mt instead of M to not need to transpose anything later, and to
     # end up with contiguous-memory results
-    Mt = nps.matmult(v0 * weights, nps.transpose(v1))
+    Mt = npu.matmult(v0 * weights, npu.transpose(v1))
     V, S, Ut = np.linalg.svd(Mt)
 
     # I look at the second-lowest singular value. One 0 singular value is OK;
@@ -155,14 +155,14 @@ def _align_procrustes_vectors_R01(v0, v1, weights):
         # Poorly-defined problem. Return error
         return np.zeros((3, 3), dtype=float)
 
-    R = nps.matmult(V, Ut)
+    R = npu.matmult(V, Ut)
 
     # det(R) is now +1 or -1. If it's -1, then this contains a mirror, and thus
     # is not a physical rotation. I compensate by negating the least-important
     # pair of singular vectors
     if np.linalg.det(R) < 0:
         V[:, 2] *= -1
-        R = nps.matmult(V, Ut)
+        R = npu.matmult(V, Ut)
 
     return R
 
@@ -182,7 +182,7 @@ def align_procrustes_points_Rt01(p0, p1, weights=None):
 
         Rt01 = drcal.align_procrustes_points_Rt01(points0, points1)
 
-        print( np.sum(nps.norm2(drcal.transform_point_Rt(Rt01, points1) -
+        print( np.sum(npu.norm2(drcal.transform_point_Rt(Rt01, points1) -
                                 points0)) )
         ===>
         [The fit error from applying the optimal transformation. If the two point
@@ -254,7 +254,7 @@ def align_procrustes_vectors_R01(v0, v1, weights=None):
 
         R01 = drcal.align_procrustes_vectors_R01(vectors0, vectors1)
 
-        print( np.mean(1. - nps.inner(drcal.rotate_point_R(R01, vectors1),
+        print( np.mean(1. - npu.inner(drcal.rotate_point_R(R01, vectors1),
                                       vectors0)) )
         ===>
         [The fit error from applying the optimal rotation. If the two sets of
@@ -368,7 +368,7 @@ def sample_imager(gridn_width, gridn_height, imager_width, imager_height):
 
     w = np.linspace(0, imager_width - 1, gridn_width)
     h = np.linspace(0, imager_height - 1, gridn_height)
-    return np.ascontiguousarray(nps.mv(nps.cat(*np.meshgrid(w, h)), 0, -1))
+    return np.ascontiguousarray(npu.mv(npu.cat(*np.meshgrid(w, h)), 0, -1))
 
 
 def sample_imager_unproject(
@@ -509,7 +509,7 @@ SYNOPSIS
       optimization_inputs['indices_frame_camintrinsics_camextrinsics'][:,1]
 
     # shape (Nobservations,1,1,Nintrinsics)
-    intrinsics = nps.mv(optimization_inputs['intrinsics'][i_intrinsics],-2,-4)
+    intrinsics = npu.mv(optimization_inputs['intrinsics'][i_intrinsics],-2,-4)
 
     optimization_inputs['observations_board'][...,:2] = \
         drcal.project( pcam,
@@ -519,7 +519,7 @@ SYNOPSIS
     # optimization_inputs now contains perfect, noiseless board observations
 
     x = drcal.optimizer_callback(**optimization_inputs)[1]
-    print(nps.norm2(x[:drcal.num_measurements_boards(**optimization_inputs)]))
+    print(npu.norm2(x[:drcal.num_measurements_boards(**optimization_inputs)]))
     ==>
     0
 
@@ -598,7 +598,7 @@ RETURNED VALUE
     frames_Rt_toref = Rt_from_rt(optimization_inputs["frames_rt_toref"])[
         indices_frame_camintrinsics_camextrinsics[:, 0]
     ]
-    extrinsics_Rt_fromref = nps.glue(
+    extrinsics_Rt_fromref = npu.glue(
         identity_Rt(),
         Rt_from_rt(optimization_inputs["extrinsics_rt_fromref"]),
         axis=-3,
@@ -606,7 +606,7 @@ RETURNED VALUE
 
     Rt_cam_frame = compose_Rt(extrinsics_Rt_fromref, frames_Rt_toref)
 
-    p_cam_calobjects = transform_point_Rt(nps.mv(Rt_cam_frame, -3, -5), full_object)
+    p_cam_calobjects = transform_point_Rt(npu.mv(Rt_cam_frame, -3, -5), full_object)
 
     # shape (Nobservations,Nheight,Nwidth)
     if idx_inliers is None:
@@ -670,13 +670,13 @@ def _splined_stereographic_domain(lensmodel):
 
     ux, uy = knots_for_splined_models(lensmodel)
     # shape (Ny,Nx,2)
-    u = np.ascontiguousarray(nps.mv(nps.cat(*np.meshgrid(ux, uy)), 0, -1))
+    u = np.ascontiguousarray(npu.mv(npu.cat(*np.meshgrid(ux, uy)), 0, -1))
 
     meta = lensmodel_metadata_and_config(lensmodel)
     if meta["order"] == 2:
         # spline order is 3. The valid region is 1/2 segments inwards from the
         # outer contour
-        return nps.glue(
+        return npu.glue(
             (u[0, 1:-2] + u[1, 1:-2]) / 2.0,
             (u[0, -2] + u[1, -2] + u[0, -1] + u[1, -1]) / 4.0,
             (u[1:-2, -2] + u[1:-2, -1]) / 2.0,
@@ -692,7 +692,7 @@ def _splined_stereographic_domain(lensmodel):
     elif meta["order"] == 3:
         # spline order is 3. The valid region is the outer contour, leaving one
         # knot out
-        return nps.glue(u[1, 1:-2], u[1:-2, -2], u[-2, -2:1:-1], u[-2:0:-1, 1], axis=-2)
+        return npu.glue(u[1, 1:-2], u[1:-2, -2], u[-2, -2:1:-1], u[-2:0:-1, 1], axis=-2)
     else:
         raise Exception(
             "I only support cubic (order==3) and quadratic (order==2) models"
@@ -705,7 +705,7 @@ def polygon_difference(positive, negative):
     SYNOPSIS
 
         import numpy as np
-        import numpysane as nps
+        import numpysane as npu
         import gnuplotlib as gp
 
         A = np.array(((-1,-1),( 1,-1),( 1, 1),(-1, 1),(-1,-1)))
@@ -819,13 +819,13 @@ def _densify_polyline(p, spacing):
         a = p[i - 1, :]
         b = p[i, :]
         d = b - a
-        l = nps.mag(d)
+        l = npu.mag(d)
 
         # A hacky method of rounding up
         N = int(l / spacing - 1e-6 + 1.0)
 
         for j in range(N):
-            p1 = nps.glue(p1, float(j + 1) / N * d + a, axis=-2)
+            p1 = npu.glue(p1, float(j + 1) / N * d + a, axis=-2)
     return p1
 
 
@@ -1043,7 +1043,7 @@ def close_contour(c):
 
     if np.linalg.norm(c[0, :] - c[-1, :]) < 1e-6:
         return c
-    return nps.glue(c, c[0, :], axis=-2)
+    return npu.glue(c, c[0, :], axis=-2)
 
 
 def _plot_options_state_meas_boundary(f, optimization_inputs, arg0):
@@ -1206,7 +1206,7 @@ def ingest_packed_state(b_packed, **optimization_inputs):
                                       **optimization_inputs)[1]
 
         dx_observed  = x1 - x0
-        dx_predicted = nps.inner(J, db_packed)
+        dx_predicted = npu.inner(J, db_packed)
 
     This is the converse of drcal.optimizer_callback(). One thing
     drcal.optimizer_callback() does is to convert the expanded (intrinsics,
@@ -1321,7 +1321,7 @@ def sorted_eig(M):
         # plane
         p -= np.mean(p, axis=-2)
 
-        l,v = drcal.sorted_eig(nps.matmult(nps.transpose(p),p))
+        l,v = drcal.sorted_eig(npu.matmult(npu.transpose(p),p))
 
         n = v[:,0]
 
@@ -1350,7 +1350,7 @@ def sorted_eig(M):
     # for single matrices, I can simply do
     #   return l[i], v[:,i]
     # But to support broadcasting I need these more complex expressions
-    return (np.take_along_axis(l, i, -1), np.take_along_axis(v, nps.dummy(i, -2), -1))
+    return (np.take_along_axis(l, i, -1), np.take_along_axis(v, npu.dummy(i, -2), -1))
 
 
 def _plot_arg_covariance_ellipse(q_mean, Var, what):
@@ -1362,7 +1362,7 @@ def _plot_arg_covariance_ellipse(q_mean, Var, what):
 
     l, v = sorted_eig(Var)
     l0, l1 = l
-    v0, v1 = nps.transpose(v)
+    v0, v1 = npu.transpose(v)
 
     major = np.sqrt(l0)
     minor = np.sqrt(l1)
@@ -1380,7 +1380,7 @@ def _plot_arg_covariance_ellipse(q_mean, Var, what):
 def _plot_args_points_and_covariance_ellipse(q, what):
     q_mean = np.mean(q, axis=-2)
     q_mean0 = q - q_mean
-    Var = np.mean(nps.outer(q_mean0, q_mean0), axis=0)
+    Var = np.mean(npu.outer(q_mean0, q_mean0), axis=0)
     # Some functions assume that we're plotting _with = "dots". Look for the
     # callers if changing this
     return (
@@ -1655,15 +1655,15 @@ def _R_aligned_to_vector_python(v):
 
     The two implementations are identical, with a test to verify this
     """
-    z = v / nps.mag(v)
+    z = v / npu.mag(v)
     if np.abs(z[0]) < 0.9:
         x = np.array((1, 0, 0.0))
     else:
         x = np.array((0, 1, 0.0))
-    x -= nps.inner(x, z) * z
-    x /= nps.mag(x)
+    x -= npu.inner(x, z) * z
+    x /= npu.mag(x)
     y = np.cross(z, x)
-    return nps.cat(x, y, z)
+    return npu.cat(x, y, z)
 
 
 def write_point_cloud_as_ply(filename, points, *, color=None, binary=True):
@@ -1813,13 +1813,13 @@ property float z
         else:
             if color is not None and color.ndim == 1:
                 # grayscale
-                pbgr = nps.glue(points, nps.dummy(color, -1), axis=-1)
+                pbgr = npu.glue(points, npu.dummy(color, -1), axis=-1)
                 np.savetxt(
                     f, pbgr, fmt=("%.1f", "%.1f", "%.1f", "%d"), comments="", header=""
                 )
             elif color is not None and color.ndim == 2:
                 # bgr
-                pbgr = nps.glue(
+                pbgr = npu.glue(
                     points,
                     color[:, (2,)],
                     color[:, (1,)],

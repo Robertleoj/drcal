@@ -85,7 +85,7 @@ import sys
 import shlex
 import argparse
 import numpy as np
-import numpysane as nps
+import drcal.numpy_utils as npu
 import drcal
 import time
 
@@ -212,7 +212,7 @@ def main():
 
         rt10 = drcal.rt_from_Rt(Rt_camoldintrinsics_camnewintrinsics)
         print(
-            f"Transformation cam1 <-- cam0:  rotation: {nps.mag(rt10[:3]) * 180.0 / np.pi:.03f} degrees, translation: {rt10[3:]} m",
+            f"Transformation cam1 <-- cam0:  rotation: {npu.mag(rt10[:3]) * 180.0 / np.pi:.03f} degrees, translation: {rt10[3:]} m",
             file=sys.stderr,
         )
 

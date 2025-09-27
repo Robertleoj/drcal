@@ -8,7 +8,7 @@ import os
 
 import numpy as np
 import numpysane as nps
-import gnuplotlib as gp
+import drcal.gnuplotlib as gp
 
 
 usage = "Usage: {} order Npoints noise_stdev".format(sys.argv[0])

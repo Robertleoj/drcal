@@ -36,6 +36,11 @@ y pixel coords. Comments are allowed, and start with the '#' character.
 
 import sys
 import argparse
+import numpy as np
+import drcal.numpy_utils as npu
+
+import drcal
+import time
 
 
 def parse_args():
@@ -64,21 +69,12 @@ def parse_args():
 
 args = parse_args()
 
-# arg-parsing is done before the imports so that --help works without building
-# stuff, so that I can generate the manpages and README
-
-
-import numpy as np
-import numpysane as nps
-
-import drcal
-import time
 
 model_from = drcal.cameramodel(getattr(args, "model-from"))
 model_to = drcal.cameramodel(getattr(args, "model-to"))
 
 
-p = nps.atleast_dims(np.genfromtxt(sys.stdin), -2)
+p = npu.atleast_dims(np.genfromtxt(sys.stdin), -2)
 v = drcal.unproject(p, *model_from.intrinsics())
 
 print(
@@ -92,12 +88,12 @@ if not args.intrinsics_only:
         model_to.extrinsics_Rt_fromref(), model_from.extrinsics_Rt_toref()
     )
 
-    if nps.norm2(Rt_to_from[3, :]) > 1e-6:
+    if npu.norm2(Rt_to_from[3, :]) > 1e-6:
         print(
             f"## WARNING: {sys.argv[0]} ignores relative translations, which were non-zero here. t_to_from = {Rt_to_from[3, :]}"
         )
 
-    v = nps.matmult(Rt_to_from[:3, :], nps.dummy(v, -1))[..., 0]
+    v = npu.matmult(Rt_to_from[:3, :], npu.dummy(v, -1))[..., 0]
 
 p = drcal.project(v, *model_to.intrinsics())
 np.savetxt(sys.stdout, p, fmt="%f", header="x y")

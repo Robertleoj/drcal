@@ -11,6 +11,7 @@ sources to make sure the analytical uncertainty predictions are correct
 
 import sys
 import argparse
+import drcal.gnuplotlib as gp
 import re
 import os
 
@@ -983,8 +984,6 @@ if not (args.explore or args.make_documentation_plots is not None):
 
 
 if args.make_documentation_plots is not None:
-    import gnuplotlib as gp
-
     empirical_distributions_xz = [
         drcal.utils._plot_args_points_and_covariance_ellipse(
             p_triangulated_sampled0[:, ipt, (0, 2)], "Observed"
@@ -1214,9 +1213,3 @@ if args.make_documentation_plots is not None:
             )
     else:
         makeplots(dohardcopy=False, processoptions_base=dict(wait=True))
-
-if args.explore:
-    import gnuplotlib as gp
-    import IPython
-
-    IPython.embed()

@@ -1,12 +1,4 @@
-#!/usr/bin/env python3
-
-# Copyright (c) 2017-2023 California Institute of Technology ("Caltech"). U.S.
-# Government sponsorship acknowledged. All rights reserved.
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
+"""Keep for reference, don't put in apps"""
 
 r"""Triangulate a feature in a pair of images to report a range
 
@@ -42,6 +34,7 @@ This is useful to evaluate ranging results.
 
 import sys
 import argparse
+import drcal.gnuplotlib as gp
 
 
 def parse_args():
@@ -476,8 +469,6 @@ def compute_H10_planes(models, q0, v0, plane_n, plane_d):
 
 
 def visualize_match(args, match_feature_diagnostics, match_feature_out):
-    import gnuplotlib as gp
-
     if match_feature_diagnostics is None:
         print(
             "## WARNING: no feature matching was performed, so not visualizing the feature-matching results"
@@ -492,8 +483,6 @@ def visualize_match(args, match_feature_diagnostics, match_feature_out):
 def visualize_uncertainty(
     args, Var_p_calibration, Var_p_observation, Var_p_joint, Rt01, p0
 ):
-    import gnuplotlib as gp
-
     if Var_p_calibration is None and Var_p_observation is None and Var_p_joint is None:
         print("## WARNING: don't have any ellipses, so not visualizing them")
         return

@@ -5,7 +5,7 @@ r""" """
 import sys
 import numpy as np
 import numpysane as nps
-import gnuplotlib as gp
+import drcal.gnuplotlib as gp
 import glob
 import os
 import sqlite3

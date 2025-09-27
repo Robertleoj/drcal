@@ -62,7 +62,7 @@ args = parse_args()
 
 import numpy as np
 import numpysane as nps
-import gnuplotlib as gp
+import drcal.gnuplotlib as gp
 
 testdir = os.path.dirname(os.path.realpath(__file__))
 

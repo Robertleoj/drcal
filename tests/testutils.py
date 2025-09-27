@@ -1,6 +1,6 @@
 import sys
 import numpy as np
-import numpysane as nps
+import drcal.numpy_utils as npu
 import os
 import re
 from inspect import currentframe
@@ -212,24 +212,24 @@ def confirm_equal(
                 )
             else:
                 what = "RMS"
-                err = np.sqrt(nps.norm2(diff) / len(diff))
+                err = np.sqrt(npu.norm2(diff) / len(diff))
 
             if not np.all(np.isfinite(err)):
                 print_red(
-                    f"FAILED{(': ' + msg) if msg else ''}: Some comparison results are NaN or Inf. {what}. error_x_xref =\n{nps.cat(err, x, xref)}"
+                    f"FAILED{(': ' + msg) if msg else ''}: Some comparison results are NaN or Inf. {what}. error_x_xref =\n{npu.cat(err, x, xref)}"
                 )
                 NchecksFailed = NchecksFailed + 1
                 return False
             if err > eps:
                 print_red(
-                    f"FAILED{(': ' + msg) if msg else ''}: {what} error = {err}. x_xref_err =\n{nps.cat(x, xref, diff)}"
+                    f"FAILED{(': ' + msg) if msg else ''}: {what} error = {err}. x_xref_err =\n{npu.cat(x, xref, diff)}"
                 )
                 NchecksFailed = NchecksFailed + 1
                 return False
         except:  # Can't subtract. Do == instead
             if not np.array_equal(x, xref):
                 print_red(
-                    f"FAILED{(': ' + msg) if msg else ''}: x_xref =\n{nps.cat(x, xref)}"
+                    f"FAILED{(': ' + msg) if msg else ''}: x_xref =\n{npu.cat(x, xref)}"
                 )
                 NchecksFailed = NchecksFailed + 1
                 return False
@@ -311,7 +311,7 @@ def confirm_covariances_equal(
 ):
     # First, the thing is symmetric, right?
     confirm_equal(
-        nps.transpose(var), var, worstcase=True, msg=f"Var(dq) is symmetric for {what}"
+        npu.transpose(var), var, worstcase=True, msg=f"Var(dq) is symmetric for {what}"
     )
 
     l_predicted, v_predicted = drcal.sorted_eig(var)
@@ -355,7 +355,7 @@ def confirm_covariances_equal(
         v0_observed = v_observed[:, -1]
 
         confirm_equal(
-            np.arccos(np.abs(nps.inner(v0_observed, v0_predicted))) * 180.0 / np.pi,
+            np.arccos(np.abs(npu.inner(v0_observed, v0_predicted))) * 180.0 / np.pi,
             0,
             eps=eps_eigenvectors_deg,
             worstcase=True,

@@ -22,7 +22,8 @@ calibration objects they observed when computing the calibration.
 
 import sys
 import argparse
-import re
+import drcal.gnuplotlib as gp
+import drcal
 
 
 def parse_args():
@@ -140,10 +141,6 @@ if args.show_points and args.show_points_thiscamera:
 
 # arg-parsing is done before the imports so that --help works without building
 # stuff, so that I can generate the manpages and README
-
-
-import gnuplotlib as gp
-import drcal
 
 
 def openmodel(f):

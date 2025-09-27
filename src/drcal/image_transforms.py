@@ -7,7 +7,7 @@ drcal.image_transforms.fff() or drcal.fff(). The latter is preferred.
 
 import numpy as np
 import cv2
-import numpysane as nps
+from . import numpy_utils as npu
 import sys
 import re
 
@@ -223,8 +223,8 @@ def pinhole_model_for_reprojection(
             if isinstance(fit, np.ndarray):
                 if fit.shape[-1] != 2:
                     raise Exception("'fit' is an array, so it must have shape (...,2)")
-                fit = nps.atleast_dims(fit, -2)
-                fit = nps.clump(fit, n=len(fit.shape) - 1)
+                fit = npu.atleast_dims(fit, -2)
+                fit = npu.clump(fit, n=len(fit.shape) - 1)
                 # fit now has shape (N,2)
 
             elif re.match("^(corners|centers-horizontal|centers-vertical)$", fit):
@@ -484,9 +484,9 @@ This array can be passed to drcal.transform_image()
         else:
             R_to_from = None
 
-        return nps.glue(
+        return npu.glue(
             *[
-                nps.dummy(arr, -1)
+                npu.dummy(arr, -1)
                 for arr in cv2.initUndistortRectifyMap(
                     cameraMatrix_from,
                     distortion_coeffs,
@@ -504,7 +504,7 @@ This array can be passed to drcal.transform_image()
 
     # shape: (Nheight,Nwidth,2). Contains (x,y) rows
     grid = np.ascontiguousarray(
-        nps.mv(nps.cat(*np.meshgrid(np.arange(W_to), np.arange(H_to))), 0, -1),
+        npu.mv(npu.cat(*np.meshgrid(np.arange(W_to), np.arange(H_to))), 0, -1),
         dtype=float,
     )
     v = unproject(grid, lensmodel_to, intrinsics_data_to)
@@ -516,20 +516,20 @@ This array can be passed to drcal.transform_image()
         # The homography definition. Derived in many places. For instance in
         # "Motion and structure from motion in a piecewise planar environment"
         # by Olivier Faugeras, F. Lustman.
-        A_to_from = plane_d * R_to_from + nps.outer(t_to_from, plane_n)
+        A_to_from = plane_d * R_to_from + npu.outer(t_to_from, plane_n)
         A_from_to = np.linalg.inv(A_to_from)
-        v = nps.matmult(v, nps.transpose(A_from_to))
+        v = npu.matmult(v, npu.transpose(A_from_to))
 
     else:
         if Rt_to_from is not None:
             if distance is not None:
                 v = transform_point_Rt(
                     invert_Rt(Rt_to_from),
-                    v / nps.dummy(nps.mag(v), -1) * distance,
+                    v / npu.dummy(npu.mag(v), -1) * distance,
                 )
             else:
                 R_to_from = Rt_to_from[:3, :]
-                v = nps.matmult(v, R_to_from)
+                v = npu.matmult(v, R_to_from)
 
     mapxy = project(v, lensmodel_from, intrinsics_data_from)
 
@@ -538,7 +538,7 @@ This array can be passed to drcal.transform_image()
         # support broadcasting, so I do that manually with a clump/reshape
 
         region = Path(model_from.valid_intrinsics_region())
-        is_inside = region.contains_points(nps.clump(mapxy, n=2)).reshape(
+        is_inside = region.contains_points(npu.clump(mapxy, n=2)).reshape(
             mapxy.shape[:2]
         )
         mapxy[~is_inside, :] = -1

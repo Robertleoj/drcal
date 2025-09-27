@@ -1,14 +1,5 @@
-"""Routines useful in generation and processing of synthetic data
-
-These are very useful in analyzing the behavior or cameras and lenses.
-
-All functions are exported into the drcal module. So you can call these via
-drcal.synthetic_data.fff() or drcal.fff(). The latter is preferred.
-
-"""
-
 import numpy as np
-import numpysane as nps
+from . import numpy_utils as npu
 
 from .calibration_objects import ref_calibration_object
 
@@ -78,12 +69,12 @@ SYNOPSIS
 
     # Set the weights to 1 initially
     # shape (Nframes, Ncameras, object_height_n, object_width_n, 3)
-    observations = nps.glue(q,
+    observations = npu.glue(q,
                             np.ones( q.shape[:-1] + (1,) ),
                             axis = -1)
 
     # shape (Ncameras, 1, 1, 2)
-    imagersizes = nps.mv( nps.cat(*[ m.imagersize() for m in models ]),
+    imagersizes = npu.mv( npu.cat(*[ m.imagersize() for m in models ]),
                           -2, -4 )
 
     observations[ np.any( q              < 0, axis=-1 ), 2 ] = -1.
@@ -189,7 +180,7 @@ We return a tuple:
                                             object_height_n                 = 20,
                                             object_spacing                  = 0.1,
                                             calobject_warp                  = None,
-                                            rt_ref_boardcenter              = nps.glue(r, np.array((0,0,3.)), axis=-1),
+                                            rt_ref_boardcenter              = npu.glue(r, np.array((0,0,3.)), axis=-1),
                                             rt_ref_boardcenter__noiseradius = np.array((0,0,0., 0,0,0)),
                                             Nframes                         = 1) [1]
     drcal.show_geometry( models_or_extrinsics_rt_fromref = np.zeros((1,1,6), dtype=float),
@@ -267,14 +258,14 @@ We return a tuple:
 
         # shape = (Nframes, Nh,Nw,3)
         boards_ref = transform_point_Rt(  # shape (Nframes, 1,1,4,3)
-            nps.mv(Rt_ref_boardref, 0, -5),
+            npu.mv(Rt_ref_boardref, 0, -5),
             # shape ( Nh,Nw,3)
             board_reference,
         )
 
         # I project full_board. Shape: (Nframes,Ncameras,Nh,Nw,2)
-        q = nps.mv(
-            nps.cat(
+        q = npu.mv(
+            npu.cat(
                 *[
                     project(
                         transform_point_Rt(
@@ -298,9 +289,9 @@ We return a tuple:
         ######## Throw out extreme oblique views
         if max_cos_oblique_angle is not None:
             nref_position = Rt_ref_boardref[..., 3, :] - pcamera_nominal_ref
-            nref_position /= nps.dummy(nps.mag(nref_position), -1)
+            nref_position /= npu.dummy(npu.mag(nref_position), -1)
             nref_orientation = Rt_ref_boardref[..., :3, 2]
-            costh = np.abs(nps.inner(nref_position, nref_orientation))
+            costh = np.abs(npu.inner(nref_position, nref_orientation))
             i = costh > max_cos_oblique_angle
 
             q = q[i]
@@ -349,8 +340,8 @@ We return a tuple:
 
         q_here, Rt_ref_boardref_here = cull(q_here, Rt_ref_boardref_here, which)
 
-        q = nps.glue(q, q_here, axis=-5)
-        Rt_ref_boardref = nps.glue(Rt_ref_boardref, Rt_ref_boardref_here, axis=-3)
+        q = npu.glue(q, q_here, axis=-5)
+        Rt_ref_boardref = npu.glue(Rt_ref_boardref, Rt_ref_boardref_here, axis=-3)
         if q.shape[0] >= Nframes:
             q = q[:Nframes, ...]
             Rt_ref_boardref = Rt_ref_boardref[:Nframes, ...]
@@ -369,8 +360,8 @@ def _noisy_observation_vectors_for_triangulation(
     q1 = project(transform_point_Rt(invert_Rt(Rt01), p), *intrinsics1)
 
     # shape (..., 1,2). Each has x,y
-    q0 = nps.dummy(q0, -2)
-    q1 = nps.dummy(q1, -2)
+    q0 = npu.dummy(q0, -2)
+    q1 = npu.dummy(q1, -2)
 
     q_noise = np.random.randn(*p.shape[:-1], Nsamples, 2, 2) * sigma
     # shape (..., Nsamples,2). Each has x,y
@@ -469,7 +460,7 @@ def make_perfect_observations(optimization_inputs, *, observed_pixel_uncertainty
             :, 1
         ]
         # shape (Nobservations,1,1,Nintrinsics)
-        intrinsics = nps.mv(optimization_inputs["intrinsics"][i_intrinsics], -2, -4)
+        intrinsics = npu.mv(optimization_inputs["intrinsics"][i_intrinsics], -2, -4)
         optimization_inputs["observations_board"][..., :2] = project(
             pcam, optimization_inputs["lensmodel"], intrinsics
         )
@@ -489,7 +480,7 @@ def make_perfect_observations(optimization_inputs, *, observed_pixel_uncertainty
         ]
 
         # shape (Nobservations,4,3)
-        Rt_cam_ref = nps.glue(
+        Rt_cam_ref = npu.glue(
             identity_Rt(),
             Rt_from_rt(optimization_inputs["extrinsics_rt_fromref"]),
             axis=-3,
@@ -520,7 +511,7 @@ def make_perfect_observations(optimization_inputs, *, observed_pixel_uncertainty
                 *optimization_inputs[what][..., :2].shape
             )
 
-            weight = nps.dummy(optimization_inputs[what][..., 2], axis=-1)
+            weight = npu.dummy(optimization_inputs[what][..., 2], axis=-1)
             weight[weight <= 0] = 1.0  # to avoid dividing by 0
 
             optimization_inputs[what][..., :2] += noise_nominal / weight

@@ -2,8 +2,8 @@
 
 import sys
 import numpy as np
-import numpysane as nps
 import drcal
+import drcal.numpy_utils
 
 
 def compute_Rt_implied_01(*models):
@@ -25,8 +25,8 @@ def compute_Rt_implied_01(*models):
         distance = np.ones((1,), dtype=float)
     else:
         atinfinity = False
-        distance = nps.atleast_dims(np.array(distance), -1)
-    distance = nps.mv(distance.ravel(), -1, -4)
+        distance = drcal.numpy_utils.atleast_dims(np.array(distance), -1)
+    distance = drcal.numpy_utils.mv(distance.ravel(), -1, -4)
 
     if focus_center is None:
         focus_center = (models[0].imagersize() - 1.0) / 2.0
@@ -76,9 +76,9 @@ Rt_1before_1after = drcal.compose_Rt(drcal.invert_Rt(Rt01), Rt01_after_extrinsic
 
 r_1before_1after = drcal.r_from_R(Rt_1before_1after[:3, :])
 t_1before_1after = Rt_1before_1after[3, :]
-magnitude = nps.mag(t_1before_1after)
+magnitude = drcal.numpy_utils.mag(t_1before_1after)
 direction = t_1before_1after / magnitude
-angle = nps.mag(r_1before_1after)
+angle = drcal.numpy_utils.mag(r_1before_1after)
 axis = r_1before_1after / angle
 angle_deg = angle * 180.0 / np.pi
 
@@ -101,7 +101,9 @@ for i in range(len(models)):
     # it good. I can do that because dq_dv will be diagonally dominant, and the
     # diagonal elements will be very similar. drcal.rectified_resolution() does
     # this
-    resolution__pix_per_rad = np.max(nps.transpose(nps.mag(dq_dv[:, :2])))
+    resolution__pix_per_rad = np.max(
+        drcal.numpy_utils.transpose(drcal.numpy_utils.mag(dq_dv[:, :2]))
+    )
     resolution__pix_per_deg = resolution__pix_per_rad * np.pi / 180.0
 
     if 0:
@@ -127,7 +129,7 @@ for i in range(len(models)):
         # So
         dv_dr = np.array(((0, 1, 0), (1, 0, 0), (0, 0, 0)))
 
-        dq_dr = nps.matmult(dq_dv, dv_dr)
+        dq_dr = drcal.numpy_utils.matmult(dq_dv, dv_dr)
         # I have dq_dr2 = 0, so lets ignore it
         dq_dr01 = dq_dr[:, :2]
 

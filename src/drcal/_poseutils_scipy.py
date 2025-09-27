@@ -1,7 +1,7 @@
 #!/usr/bin/python3
 
 import numpy as np
-import numpysane as nps
+from . import numpy_utils as npu
 
 
 def quat_from_R(R, *, out=None):
@@ -93,10 +93,10 @@ def quat_from_R(R, *, out=None):
     # extra broadcasted shape
     extra_dims = R.shape[:-2]
     # R.shape = (..., 3,3) with some non-empty ...
-    R = nps.atleast_dims(R, -3)
+    R = npu.atleast_dims(R, -3)
 
     # R.shape = (N,3,3)
-    R = nps.clump(R, n=R.ndim - 2)
+    R = npu.clump(R, n=R.ndim - 2)
 
     num_rotations = R.shape[0]
 

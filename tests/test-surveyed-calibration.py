@@ -15,7 +15,16 @@ there's no reason to have more than one
 import sys
 import argparse
 import re
-import os
+import numpy as np
+import numpysane as nps
+import drcal
+import testutils
+
+from test_calibration_helpers import sample_dqref, calibration_sample
+import copy
+
+
+import drcal.gnuplotlib as gp
 
 
 def parse_args():
@@ -118,19 +127,6 @@ def parse_args():
 args = parse_args()
 
 
-import numpy as np
-import numpysane as nps
-
-testdir = os.path.dirname(os.path.realpath(__file__))
-
-# I import the LOCAL drcal since that's what I'm testing
-sys.path[:0] = (f"{testdir}/..",)
-import drcal
-import testutils
-
-from test_calibration_helpers import sample_dqref, calibration_sample
-import copy
-
 # I Reduce FOV to make it clear that you need data from different ranges
 focal_length_scale_from_true = 10.0
 
@@ -162,8 +158,6 @@ if args.make_documentation_plots is not None:
         if m is None:
             return t
         return m.group(1) + m.group(2) + str(float(m.group(3)) * 0.8) + m.group(4)
-
-    import gnuplotlib as gp
 
     terminal = dict(
         pdf=args.terminal_pdf, svg=args.terminal_svg, png=args.terminal_png, gp="gp"
@@ -306,20 +300,6 @@ pref_true = drcal.transform_point_rt(drcal.invert_rt(rt_cam_ref_true), pcam_true
 q_true = drcal.project(pcam_true, lensmodel, intrinsics_data_true)
 
 Npoints = q_true.shape[0]
-
-if False:
-    # show the angles off the optical axis
-    import gnuplotlib as gp
-
-    p = pcam_true / nps.dummy(nps.mag(pcam_true), -1)
-    c = p[..., 2]
-    th = np.arccos(c).ravel() * 180.0 / np.pi
-    gp.plot(th, yrange=(45, 90))
-
-    import IPython
-
-    IPython.embed()
-    sys.exit()
 
 
 # I have perfect observations in q_true. I corrupt them by noise weight has
@@ -683,20 +663,6 @@ def projection_diff(models, max_dist_from_center):
     # zero-out everything too far from the center
     center = (imagersizes[0] - 1.0) / 2.0
     diff[nps.norm2(q0 - center) > max_dist_from_center * max_dist_from_center] = 0
-
-    if False:
-        import gnuplotlib as gp
-
-        gp.plot(
-            diff,
-            ascii=True,
-            using=drcal.imagergrid_using(imagersizes[0], Nw),
-            square=1,
-            _with="image",
-            tuplesize=3,
-            hardcopy="/tmp/yes.gp",
-            cbmax=3,
-        )
 
     return diff
 

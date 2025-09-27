@@ -14,12 +14,7 @@ positions of some points in space in order to sufficiently constrain the problem
 import sys
 import numpy as np
 import numpysane as nps
-import os
-
-testdir = os.path.dirname(os.path.realpath(__file__))
-
-# I import the LOCAL drcal since that's what I'm testing
-sys.path[:0] = (f"{testdir}/..",)
+import drcal.gnuplotlib as gp
 import drcal
 import testutils
 import test_sfm_helpers
@@ -90,33 +85,24 @@ stats = drcal.optimize(**optimization_inputs)
 if add_outlier:
     p, x, J, f = drcal.optimizer_callback(**optimization_inputs)
 
-    if 0:  # print measurements x
-        import gnuplotlib as gp
+    J = np.array(J.todense())
 
-        gp.plot(x, _with="points pt 7", wait=1)
-        sys.exit()
+    outlierness = np.zeros((len(observations_noisy),), dtype=float)
+    for iobservation in range(len(observations_noisy)):
+        Ji = J[iobservation * 3 : iobservation * 3 + 3, :]
+        xi = x[iobservation * 3 : iobservation * 3 + 3]
 
-    elif 1:  # print outlierness. Not 100% sure this code is right
-        J = np.array(J.todense())
+        # A = J* inv(JtJ) J*t
+        # B = inv(A - I)
+        # Dima's self+others:        x*t (-B      ) x*
 
-        outlierness = np.zeros((len(observations_noisy),), dtype=float)
-        for iobservation in range(len(observations_noisy)):
-            Ji = J[iobservation * 3 : iobservation * 3 + 3, :]
-            xi = x[iobservation * 3 : iobservation * 3 + 3]
+        A = nps.matmult(f.solve_xt_JtJ_bt(Ji), nps.transpose(Ji))
+        B = np.linalg.inv(A - np.eye(3))
 
-            # A = J* inv(JtJ) J*t
-            # B = inv(A - I)
-            # Dima's self+others:        x*t (-B      ) x*
+        outlierness[iobservation] = -nps.inner(xi, nps.inner(B, xi))
 
-            A = nps.matmult(f.solve_xt_JtJ_bt(Ji), nps.transpose(Ji))
-            B = np.linalg.inv(A - np.eye(3))
-
-            outlierness[iobservation] = -nps.inner(xi, nps.inner(B, xi))
-
-        import gnuplotlib as gp
-
-        gp.plot(outlierness, _with="points pt 7", wait=1)
-        sys.exit()
+    gp.plot(outlierness, _with="points pt 7", wait=1)
+    sys.exit()
 
 
 testutils.confirm_equal(

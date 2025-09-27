@@ -1,12 +1,4 @@
-#!/usr/bin/env python3
-
-# Copyright (c) 2017-2023 California Institute of Technology ("Caltech"). U.S.
-# Government sponsorship acknowledged. All rights reserved.
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
+"""This is messed up - keep it for reference, but stick with the python api. Don't put it in apps"""
 
 r"""Stereo processing
 
@@ -157,14 +149,11 @@ import sys
 import argparse
 import re
 import os
-
-# A private, jpl-internal library. Most people do not have this
-try:
-    import sad5
-
-    have_libsad5 = True
-except:
-    have_libsad5 = False
+import numpy as np
+import numpysane as nps
+import glob
+import drcal
+import drcal.gnuplotlib as gp
 
 
 def parse_args():
@@ -278,11 +267,9 @@ def parse_args():
     ######## image pre-filtering
     parser.add_argument(
         "--equalization",
-        choices=("clahe", "fieldscale"),
+        choices=("clahe",),
         help="""The equalization method to use for the input
-                        images. "fieldscale" requires mrcam to be installed, and
-                        can only operate on uint16 images. These require
-                        --force-grayscale""",
+                        images.""",
     )
     parser.add_argument(
         "--clahe", action="store_true", help='''Equivalent to "--equalization clahe"'''
@@ -408,8 +395,7 @@ def parse_args():
     )
 
     correlators = ["SGBM", "ELAS"]
-    if have_libsad5:
-        correlators.append("libsad5")
+
     parser.add_argument(
         "--stereo-matcher",
         choices=correlators,
@@ -476,33 +462,6 @@ def parse_args():
                         one of ('SGBM','HH','HH4','SGBM_3WAY'). If omitted, the
                         OpenCV default (SGBM) is used""",
     )
-
-    if have_libsad5:
-        parser.add_argument(
-            "--correlator-size",
-            type=int,
-            nargs=2,
-            default=(11, 11),
-            help="""The correlator window size: WIDTH HEIGHT""",
-        )
-        parser.add_argument(
-            "--prefilter-kernel-size",
-            type=int,
-            default=0,
-            help="""The kernel size of the prefilter""",
-        )
-        parser.add_argument(
-            "--postfilter-blob-area",
-            type=int,
-            default=0,
-            help="""The minimum blob size to keep in the postfilter""",
-        )
-        parser.add_argument(
-            "--lr-limit",
-            type=float,
-            default=0.7,
-            help="""Threshold for the left-right line-of-sight check""",
-        )
 
     parser.add_argument(
         "--write-point-cloud",
@@ -604,26 +563,10 @@ args = parse_args()
 # stuff, so that I can generate the manpages and README
 
 
-import numpy as np
-import numpysane as nps
-import glob
-import drcal
-
-
 if args.stereo_matcher == "ELAS":
     if not hasattr(drcal, "stereo_matching_libelas"):
         print(
             "ERROR: the ELAS stereo matcher isn't available. libelas must be installed, and enabled at compile-time with USE_LIBELAS=1. Pass '--stereo-matcher SGBM' instead",
-            file=sys.stderr,
-        )
-        sys.exit(1)
-
-if args.equalization == "fieldscale":
-    try:
-        import mrcam
-    except:
-        print(
-            "ERROR: the 'fieldscale' equalization method requires mrcam, but it could not be imported",
             file=sys.stderr,
         )
         sys.exit(1)
@@ -759,8 +702,6 @@ if args.viz == "geometry":
             ),
         )
     )
-
-    import gnuplotlib as gp
 
     gp.plot(*data_tuples, **plot_options)
 
@@ -1031,25 +972,7 @@ if args.stereo_matcher == "SGBM":
     )
 elif args.stereo_matcher == "ELAS":
     disparity_scale = 1
-elif args.stereo_matcher == "libsad5":
-    disparity_scale = 64
 
-    correlator_sad5 = sad5.dense(
-        corr_width=args.correlator_size[0]
-        if args.correlator_size is not None
-        else None,
-        corr_height=args.correlator_size[1]
-        if args.correlator_size is not None
-        else None,
-        rectified_image_width=models_rectified[0].imagersize()[0],
-        rectified_image_height=models_rectified[0].imagersize()[1],
-        disp_min=disparity_min,
-        disp_max=disparity_max,
-        lr_limit=args.lr_limit,
-        do_write_diagnostics=args.verbose,
-        prefilter_kernel_size=args.prefilter_kernel_size,
-        postfilter_blob_area=args.postfilter_blob_area,
-    )
 else:
     raise Exception("Getting here is a bug")
 
@@ -1085,8 +1008,6 @@ def process(i_image):
 
     if args.equalization == "clahe":
         images = [clahe.apply(image) for image in images]
-    elif args.equalization == "fieldscale":
-        images = [mrcam.equalize_fieldscale(image) for image in images]
 
     if len(images[0].shape) == 3 or len(images[1].shape) == 3:
         if args.stereo_matcher == "ELAS":
@@ -1132,10 +1053,8 @@ def process(i_image):
 
         disparity = disparities[0]
 
-    elif args.stereo_matcher == "libsad5":
-        disparity = correlator_sad5.compute(*images_rectified).astype(np.int16)
     else:
-        raise ("This is a bug")
+        raise RuntimeError("This is a bug")
 
     disparity_colored = drcal.apply_color_map(
         disparity,

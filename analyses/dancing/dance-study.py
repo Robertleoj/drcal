@@ -1,5 +1,3 @@
-#!/usr/bin/env python3
-
 r"""Simulates different chessboard dances to find the best technique
 
 We want the shortest chessboard dances that produce the most confident results.
@@ -43,6 +41,12 @@ import sys
 import argparse
 import re
 import os
+import numpy as np
+import numpysane as nps
+import drcal.gnuplotlib as gp
+import copy
+import os.path
+import drcal
 
 
 def parse_args():
@@ -441,18 +445,6 @@ elif (
 
 # arg-parsing is done before the imports so that --help works without building
 # stuff, so that I can generate the manpages and README
-
-
-import numpy as np
-import numpysane as nps
-import gnuplotlib as gp
-import copy
-import os.path
-
-# I import the LOCAL drcal
-scriptdir = os.path.dirname(os.path.realpath(__file__))
-sys.path[:0] = (f"{scriptdir}/../..",)
-import drcal
 
 
 def split_list(s, t):

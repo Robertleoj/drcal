@@ -45,7 +45,7 @@ translated to [0,1] from [3,4]
 
 import numpy as np
 import numpysane as nps
-import gnuplotlib as gp
+import drcal.gnuplotlib as gp
 
 
 skip_plots = False

@@ -1,13 +1,3 @@
-#!/usr/bin/env python3
-
-# Copyright (c) 2017-2023 California Institute of Technology ("Caltech"). U.S.
-# Government sponsorship acknowledged. All rights reserved.
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-
 r"""Visualize calibration residuals for one or more observations of a board
 
 SYNOPSIS
@@ -32,6 +22,10 @@ import sys
 import argparse
 import re
 import os
+import drcal.numpy_utils as npu
+import drcal
+import numpy as np
+import pprint
 
 
 def parse_args():
@@ -232,12 +226,6 @@ args = parse_args()
 # stuff, so that I can generate the manpages and README
 
 
-import drcal
-import numpy as np
-import numpysane as nps
-import pprint
-
-
 plotkwargs_extra = {}
 if args.set is not None:
     plotkwargs_extra["set"] = args.set
@@ -315,7 +303,7 @@ x_shape = observations.shape[:-1] + (2,)
 # shape (Nobservations, object_height_n, object_width_n, 2)
 x_reshaped = x[: np.prod(x_shape)].reshape(*x_shape)
 # shape (Nobservations,)
-err_per_observation = nps.norm2(nps.clump(x_reshaped, n=-3))
+err_per_observation = npu.norm2(npu.clump(x_reshaped, n=-3))
 i_observations_sorted_from_worst = list(reversed(np.argsort(err_per_observation)))
 
 

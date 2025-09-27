@@ -8,7 +8,7 @@ drcal.triangulation.fff() or drcal.fff(). The latter is preferred.
 """
 
 import numpy as np
-import numpysane as nps
+import drcal.numpy_utils as npu
 
 from .bindings import (
     corresponding_icam_extrinsics,
@@ -937,7 +937,7 @@ if get_gradients: we return a tuple:
     if not v_are_local:
         if get_gradients:
             raise Exception("get_gradients is True, so v_are_local MUST be True")
-        v1 = rotate_point_R(nps.transpose(Rt01[:3, :]), v1)
+        v1 = rotate_point_R(npu.transpose(Rt01[:3, :]), v1)
 
     if not get_gradients:
         return _triangulate_lindstrom(v0, v1, Rt01, out=out)
@@ -1155,8 +1155,8 @@ def _triangulate_grad_simple(q, models, out, method=triangulate_leecivera_mid2):
     )
 
     dp_triangulated_dq = np.zeros((3,) + q.shape[-2:], dtype=float)
-    nps.matmult(dp_triangulated_dv0, dvlocal0_dq0, out=dp_triangulated_dq[..., 0, :])
-    nps.matmult(
+    npu.matmult(dp_triangulated_dv0, dvlocal0_dq0, out=dp_triangulated_dq[..., 0, :])
+    npu.matmult(
         dp_triangulated_dv1,
         dv1_dvlocal1,
         dvlocal1_dq1,
@@ -1164,7 +1164,7 @@ def _triangulate_grad_simple(q, models, out, method=triangulate_leecivera_mid2):
     )
 
     # shape (3,4)
-    return nps.clump(dp_triangulated_dq, n=-2)
+    return npu.clump(dp_triangulated_dq, n=-2)
 
 
 def _triangulation_uncertainty_internal(
@@ -1224,10 +1224,10 @@ def _triangulation_uncertainty_internal(
         )
 
         dp_triangulated_dq = np.zeros((3,) + q.shape[-2:], dtype=float)
-        nps.matmult(
+        npu.matmult(
             dp_triangulated_dv0, dvlocal0_dq0, out=dp_triangulated_dq[..., 0, :]
         )
-        nps.matmult(
+        npu.matmult(
             dp_triangulated_dv1,
             dv1_dvlocal1,
             dvlocal1_dq1,
@@ -1235,7 +1235,7 @@ def _triangulation_uncertainty_internal(
         )
 
         # shape (3,4)
-        dp_triangulated_dq = nps.clump(dp_triangulated_dq, n=-2)
+        dp_triangulated_dq = npu.clump(dp_triangulated_dq, n=-2)
 
         return (
             dp_triangulated_dq,
@@ -1352,11 +1352,11 @@ def _triangulation_uncertainty_internal(
             # dp_frames_drtrf  has shape (..., Nframes, 3,6)
             # dp_frames_dp_ref has shape (..., Nframes, 3,3)
             _, dp_frames_drtrf, dp_frames_dp_ref = transform_point_rt(
-                rt_ref_frame, nps.dummy(p_ref, -2), get_gradients=True, inverted=True
+                rt_ref_frame, npu.dummy(p_ref, -2), get_gradients=True, inverted=True
             )
 
-            dp_frames_dp_cam0 = nps.matmult(
-                dp_frames_dp_ref, nps.dummy(dp_ref_dp_cam0, -3)
+            dp_frames_dp_cam0 = npu.matmult(
+                dp_frames_dp_ref, npu.dummy(dp_ref_dp_cam0, -3)
             )
 
             Nframes = len(rt_ref_frame)
@@ -1444,10 +1444,10 @@ def _triangulation_uncertainty_internal(
 
         # triangulation-time uncertainty
         if q_observation_stdev is not None:
-            nps.matmult(
+            npu.matmult(
                 dp_triangulated_dq,
                 Var_q_observation_flat,
-                nps.transpose(dp_triangulated_dq),
+                npu.transpose(dp_triangulated_dq),
                 out=Var_p_observation[ipt, ...],
             )
 
@@ -1495,13 +1495,13 @@ def _triangulation_uncertainty_internal(
         if istate_i0 is not None:
             # dp_triangulated_di0 = dp_triangulated_dv0              dvlocal0_di0
             # dp_triangulated_di1 = dp_triangulated_dv1 dv1_dvlocal1 dvlocal1_di1
-            nps.matmult(
+            npu.matmult(
                 dp_triangulated_dv0,
                 dvlocal0_dintrinsics0,
                 out=dp_triangulated_db[ipt, :, istate_i0 : istate_i0 + Nintrinsics],
             )
         if istate_i1 is not None:
-            nps.matmult(
+            npu.matmult(
                 dp_triangulated_dv1,
                 dv1_dvlocal1,
                 dvlocal1_dintrinsics1,
@@ -1533,23 +1533,23 @@ def _triangulation_uncertainty_internal(
             # dp_triangulated_dt_1ref = dp_triangulated_dt01          dt01_dt_1ref
             dr01_dr_ref1 = drt01_drt_ref1[:3, :3]
             dr_ref1_dr_1ref = drt_ref1_drt_1ref[:3, :3]
-            dr01_dr_1ref = nps.matmult(dr01_dr_ref1, dr_ref1_dr_1ref)
+            dr01_dr_1ref = npu.matmult(dr01_dr_ref1, dr_ref1_dr_1ref)
 
             dt01_drt_ref1 = drt01_drt_ref1[3:, :]
-            dt01_dr_1ref = nps.matmult(dt01_drt_ref1, drt_ref1_drt_1ref[:, :3])
-            dt01_dt_1ref = nps.matmult(dt01_drt_ref1, drt_ref1_drt_1ref[:, 3:])
+            dt01_dr_1ref = npu.matmult(dt01_drt_ref1, drt_ref1_drt_1ref[:, :3])
+            dt01_dt_1ref = npu.matmult(dt01_drt_ref1, drt_ref1_drt_1ref[:, 3:])
 
-            nps.matmult(
+            npu.matmult(
                 dp_triangulated_dv1,
                 dv1_dr01,
                 dr01_dr_1ref,
                 out=dp_triangulated_db[ipt, :, istate_e1 : istate_e1 + 3],
             )
-            dp_triangulated_db[ipt, :, istate_e1 : istate_e1 + 3] += nps.matmult(
+            dp_triangulated_db[ipt, :, istate_e1 : istate_e1 + 3] += npu.matmult(
                 dp_triangulated_dt01, dt01_dr_1ref
             )
 
-            nps.matmult(
+            npu.matmult(
                 dp_triangulated_dt01,
                 dt01_dt_1ref,
                 out=dp_triangulated_db[ipt, :, istate_e1 + 3 : istate_e1 + 6],
@@ -1560,17 +1560,17 @@ def _triangulation_uncertainty_internal(
             dt01_dr_0ref = drt01_drt_0ref[3:, :3]
             dt01_dt_0ref = drt01_drt_0ref[3:, 3:]
 
-            nps.matmult(
+            npu.matmult(
                 dp_triangulated_dv1,
                 dv1_dr01,
                 dr01_dr_0ref,
                 out=dp_triangulated_db[ipt, :, istate_e0 : istate_e0 + 3],
             )
-            dp_triangulated_db[ipt, :, istate_e0 : istate_e0 + 3] += nps.matmult(
+            dp_triangulated_db[ipt, :, istate_e0 : istate_e0 + 3] += npu.matmult(
                 dp_triangulated_dt01, dt01_dr_0ref
             )
 
-            nps.matmult(
+            npu.matmult(
                 dp_triangulated_dt01,
                 dt01_dt_0ref,
                 out=dp_triangulated_db[ipt, :, istate_e0 + 3 : istate_e0 + 6],
@@ -1588,7 +1588,7 @@ def _triangulation_uncertainty_internal(
 
             # dp_triangulated_drtrf has shape (Npoints,Nframes,3,6). I reshape to (Npoints,3,Nframes*6)
             dp_triangulated_db[ipt, :, istate_f0 : istate_f0 + Nstate_frames] = (
-                nps.clump(nps.xchg(dp_triangulated_drtrf, -2, -3), n=-2)
+                npu.clump(npu.xchg(dp_triangulated_drtrf, -2, -3), n=-2)
             )
 
     # Returning the istate stuff for the test suite. These are the istate_...
@@ -1849,15 +1849,15 @@ Complete logic:
     if not isinstance(models, np.ndarray):
         models = np.array(models, dtype=object)
 
-    slices = tuple(nps.broadcast_generate(((2, 2), (2,)), (q, models)))
-    broadcasted_shape = tuple(nps.broadcast_extra_dims(((2, 2), (2,)), (q, models)))
+    slices = tuple(npu.broadcast_generate(((2, 2), (2,)), (q, models)))
+    broadcasted_shape = tuple(npu.broadcast_extra_dims(((2, 2), (2,)), (q, models)))
 
     if (q_calibration_stdev is None or q_calibration_stdev == 0) and (
         q_observation_stdev is None or q_observation_stdev == 0
     ):
         # I don't need to propagate any noise
 
-        @nps.broadcast_define(((2, 2), (2,)), (3,))
+        @npu.broadcast_define(((2, 2), (2,)), (3,))
         def triangulate_slice(q01, m01):
             Rt01 = compose_Rt(
                 m01[0].extrinsics_Rt_fromref(), m01[1].extrinsics_Rt_toref()
@@ -1937,7 +1937,7 @@ Complete logic:
     if optimization_inputs is not None:
         # reshape dp_triangulated_db to (Npoints*3, Nstate)
         # So the Var(p) will end up with shape (Npoints*3, Npoints*3)
-        dp_triangulated_db = nps.clump(dp_triangulated_db, n=2)
+        dp_triangulated_db = npu.clump(dp_triangulated_db, n=2)
 
         if q_calibration_stdev > 0:
             # Calibration-time noise is given. Use it.

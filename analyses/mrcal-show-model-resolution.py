@@ -4,6 +4,10 @@ r"""Display the imager resolution"""
 
 import sys
 import argparse
+import numpy as np
+import numpysane as nps
+import drcal.gnuplotlib as gp
+import drcal
 
 
 def parse_args():
@@ -58,12 +62,6 @@ def parse_args():
 
 
 args = parse_args()
-
-
-import numpy as np
-import numpysane as nps
-import gnuplotlib as gp
-import drcal
 
 
 def mean_resolution__rad_pixel(q, model):

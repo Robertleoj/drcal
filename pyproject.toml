@@ -11,10 +11,8 @@ readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
     "fire>=0.7.1",
-    "gnuplotlib>=0.42",
     "matplotlib>=3.10.6",
     "numpy>=1.26,<2",
-    "numpysane>=0.40",
     "opencv-contrib-python>=4.11.0.86",
     "pybind11>=3.0.1",
     "pybind11-stubgen>=2.5.5",
@@ -42,10 +40,7 @@ minimum-version = "build-system.requires"
 skip = ["*musllinux*", "*win*"]
 
 [dependency-groups]
-dev = [
-    "pytest>=8.4.2",
-    "ruff>=0.13.1",
-]
+dev = ["pytest>=8.4.2", "ruff>=0.13.1", "numpysane>=0.40"]
 
 [tool.ruff]
 lint.ignore = ["E722"]
