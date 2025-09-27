@@ -4,10 +4,6 @@ import numpysane as nps
 import copy
 import os
 import re
-
-# I import the LOCAL drcal since that's what I'm testing
-testdir = os.path.dirname(os.path.realpath(__file__))
-sys.path[:0] = (f"{testdir}/..",)
 import drcal
 
 
