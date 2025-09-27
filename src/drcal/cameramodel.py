@@ -674,8 +674,7 @@ class cameramodel(object):
         ARGUMENTS
 
         - file_or_model: we read the camera model from a filename or a pre-opened file
-          object or from an existing cameramodel object to copy. Both .cameramodel and
-          the legacy .cahvor formats are supported. This may be given as a positional
+          object or from an existing cameramodel object to copy. This may be given as a positional
           argument. Everything else may be given only as keyword arguments.
 
         - intrinsics: a tuple (lensmodel, intrinsics_data). If given, 'imagersize' is
@@ -1108,26 +1107,6 @@ class cameramodel(object):
                     errors["yaml_or_json"] = e
                     pass
 
-                # Couldn't read the file in any known method. Last try: does a
-                # .cahvor work?
-
-                # This is more complicated than it looks. I want to read the
-                # .cahvor file into self, but the current cahvor interface
-                # wants to generate a new model object. So I do that, write
-                # it as a .cameramodel-formatted string, and then read that
-                # back into self. Inefficient, but this is far from a hot
-                # path
-                try:
-                    from . import cahvor
-
-                    model = cahvor.read_from_string(modelstring)
-                    modelfile = io.StringIO()
-                    model.write(modelfile)
-                    self._read_into_self(modelfile.getvalue())
-                    return
-                except Exception as e:
-                    errors["cahvor"] = e
-
                 raise Exception(
                     f"Couldn't parse {what}. Errors for each attempt: {errors}"
                 )
@@ -1135,11 +1114,6 @@ class cameramodel(object):
             if isinstance(file_or_model, str):
                 if file_or_model == "-":
                     if sys.stdin.isatty():
-                        # This isn't an error per-se. But most likely the user
-                        # ran something like "drcal-to-cahvor" without
-                        # redirecting any data into it. Without this check the
-                        # program will sit there, waiting for input. Which will
-                        # look strange to an unsuspecting user
                         raise Exception(
                             "Trying to read a model from standard input, but no file is being redirected into it"
                         )
@@ -1258,7 +1232,7 @@ class cameramodel(object):
             + ")"
         )
 
-    def write(self, f, *, note=None, cahvor=False, _opencv=False):
+    def write(self, f, *, note=None, _opencv=False):
         r"""Write out this camera model to disk
 
         SYNOPSIS
@@ -1266,9 +1240,7 @@ class cameramodel(object):
             model.write('left.cameramodel')
 
         We write the contents of the given drcal.cameramodel object to the given
-        filename or a given pre-opened file. If the filename is 'xxx.cahv' or
-        'xxx.cahvor' or 'xxx.cahvore' or if cahvor: we use the legacy cahvor file format
-        for output
+        filename or a given pre-opened file.
 
         ARGUMENTS
 
@@ -1277,9 +1249,6 @@ class cameramodel(object):
         - note: an optional string, defaulting to None. This is a comment that will be
           written to the top of the output file. This should describe how this model was
           generated
-
-        - cahvor: an optional boolean, defaulting to False. If True: we write out the
-          data using the legacy .cahvor file format
 
         RETURNED VALUES
 
@@ -1290,7 +1259,7 @@ class cameramodel(object):
         # opencv models may be written by setting _opencv=True. But this has no
         # clear way to specify extrinsics, and requires specifying stereo
         # rectification, so this is undocumented for now
-        known_format_options = ("cahvor", "_opencv")
+        known_format_options = ("_opencv",)
 
         NformatOptions = 0
         for o in known_format_options:
@@ -1302,11 +1271,6 @@ class cameramodel(object):
         _validateIntrinsics(self._imagersize, self._intrinsics)
         _validateValidIntrinsicsRegion(self._valid_intrinsics_region)
         _validateExtrinsics(self._extrinsics)
-
-        def write_cahvor(f):
-            from . import cahvor
-
-            cahvor.write(f, self, note)
 
         def write_opencv(f):
             r"""Write out an opencv-format file
@@ -1394,18 +1358,12 @@ projection_matrix:
   data: [1, 0, 0, 0,  0, 1, 0, 0,  0, 0, 1, 0]
 """)
 
-        write_function = None
-        if cahvor:
-            write_function = write_cahvor
-        elif _opencv:
-            write_function = write_opencv
+        write_function = write_opencv
 
         if isinstance(f, str):
             with open(f, "w") as openedfile:
                 if write_function is not None:
                     write_function(openedfile)
-                elif re.match(r".*\.cahv(or(e)?)?$", f):
-                    write_cahvor(openedfile)
                 elif re.match(r".*\.ya?ml$", f):
                     write_opencv(openedfile)
                 else:

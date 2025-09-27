@@ -101,14 +101,6 @@ def parse_args():
     )
 
     parser.add_argument(
-        "--transforms",
-        type=str,
-        help="""Optional transforms.txt. This is a legacy file
-                        representing an extra transformation for each camera
-                        pair. If you need this, you know what it is""",
-    )
-
-    parser.add_argument(
         "--set",
         type=str,
         action="append",
@@ -165,26 +157,6 @@ def openmodel(f):
 models = [openmodel(modelfilename) for modelfilename in args.models]
 
 cameras_Rt_plot_ref = None
-if args.transforms is not None:
-    import drcal.cahvor
-
-    transforms = drcal.cahvor.read_transforms(args.transforms)
-
-    def get_pair(icam):
-        f = args.models[icam]
-        m = re.search("camera([0-9]+)", f)
-        return int(m.group(1))
-
-    def Rt_plot_ref(icam):
-        try:
-            pair = get_pair(icam)
-            Rt_ins_ref = transforms["ins_from_camera"][pair]
-            return Rt_ins_ref
-        except:
-            return None
-
-    cameras_Rt_plot_ref = [Rt_plot_ref(icam) for icam in range(len(models))]
-
 plotkwargs = {}
 if args.title is not None:
     plotkwargs["title"] = args.title

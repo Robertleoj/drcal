@@ -27,22 +27,6 @@ intrinsics = (
         np.array((1512.0, 1112, 500.0, 333.0, -0.012, 0.035, -0.001, 0.002)),
     ),
     (
-        "LENSMODEL_CAHVOR",
-        np.array(
-            (
-                4842.918,
-                4842.771,
-                1970.528,
-                1085.302,
-                -0.001,
-                0.002,
-                -0.637,
-                -0.002,
-                0.016,
-            )
-        ),
-    ),
-    (
         "LENSMODEL_SPLINED_STEREOGRAPHIC_order=3_Nx=11_Ny=8_fov_x_deg=200",
         np.array(
             [

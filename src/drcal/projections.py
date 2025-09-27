@@ -72,7 +72,6 @@ def project(v, lensmodel, intrinsics_data, *, get_gradients=False, out=None):
 
       LENSMODEL_PINHOLE
       LENSMODEL_OPENCV4
-      LENSMODEL_CAHVOR
       LENSMODEL_SPLINED_STEREOGRAPHIC_order=3_Nx=16_Ny=12_fov_x_deg=100
 
     - intrinsics: array of dims (Nintrinsics):
@@ -179,7 +178,6 @@ def unproject(
 
       LENSMODEL_PINHOLE
       LENSMODEL_OPENCV4
-      LENSMODEL_CAHVOR
       LENSMODEL_SPLINED_STEREOGRAPHIC_order=3_Nx=16_Ny=12_fov_x_deg=100
 
     - intrinsics_data: array of dims (Nintrinsics):

@@ -66,7 +66,6 @@ Python3_add_library(
     cpp_src/uncertainty.c
     cpp_src/stereo.c
     cpp_src/traverse-sensor-links.c
-    cpp_src/cahvore.cc
     cpp_src/opencv.c
     cpp_src/poseutils.c
     cpp_src/poseutils-opencv.c
@@ -82,7 +81,6 @@ Python3_add_library(
     cpp_src/bindings_npsp_generated.c
     cpp_src/drcal.c
     cpp_src/stereo.c
-    cpp_src/cahvore.cc
     cpp_src/opencv.c
     cpp_src/poseutils.c
     cpp_src/poseutils-opencv.c
@@ -97,7 +95,6 @@ Python3_add_library(
     cpp_src/bindings_poseutils_npsp_generated.c
     cpp_src/drcal.c
     cpp_src/stereo.c
-    cpp_src/cahvore.cc
     cpp_src/opencv.c
     cpp_src/poseutils.c
     cpp_src/poseutils-opencv.c
@@ -112,7 +109,6 @@ Python3_add_library(
     cpp_src/bindings_triangulation_npsp_generated.c
     cpp_src/drcal.c
     cpp_src/stereo.c
-    cpp_src/cahvore.cc
     cpp_src/opencv.c
     cpp_src/poseutils.c
     cpp_src/poseutils-opencv.c

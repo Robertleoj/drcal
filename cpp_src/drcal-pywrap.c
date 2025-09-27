@@ -948,18 +948,7 @@ static PyObject* lensmodel_metadata_and_config(
 )                                    \
     , #name, cookie name
 
-    if (lensmodel.type == drcal_LENSMODEL_CAHVORE) {
-        result = Py_BuildValue(
-            "{" drcal_LENSMODEL_META_LIST(drcal_ITEM_BUILDVALUE_DEF, )
-                drcal_LENSMODEL_CAHVORE_CONFIG_LIST(
-                    drcal_ITEM_BUILDVALUE_DEF,
-                ) "}" drcal_LENSMODEL_META_LIST(drcal_ITEM_BUILDVALUE_VALUE, meta.)
-                    drcal_LENSMODEL_CAHVORE_CONFIG_LIST(
-                        drcal_ITEM_BUILDVALUE_VALUE,
-                        lensmodel.LENSMODEL_CAHVORE__config.
-                    )
-        );
-    } else if (lensmodel.type == drcal_LENSMODEL_SPLINED_STEREOGRAPHIC) {
+    if (lensmodel.type == drcal_LENSMODEL_SPLINED_STEREOGRAPHIC) {
         result = Py_BuildValue(
             "{" drcal_LENSMODEL_META_LIST(drcal_ITEM_BUILDVALUE_DEF, )
                 drcal_LENSMODEL_SPLINED_STEREOGRAPHIC_CONFIG_LIST(
@@ -6840,7 +6829,6 @@ REQUIRED ARGUMENTS
 
   LENSMODEL_PINHOLE
   LENSMODEL_OPENCV4
-  LENSMODEL_CAHVOR
   LENSMODEL_SPLINED_STEREOGRAPHIC_order=3_Nx=16_Ny=12_fov_x_deg=100
 
 - imagersizes: integer array of dims (Ncameras_intrinsics,2)
@@ -7044,7 +7032,6 @@ is given as a string such as
 
   LENSMODEL_PINHOLE
   LENSMODEL_OPENCV4
-  LENSMODEL_CAHVOR
   LENSMODEL_SPLINED_STEREOGRAPHIC_order=3_Nx=16_Ny=12_fov_x_deg=100
 
 The full list can be obtained with drcal.supported_lensmodels()
@@ -7079,9 +7066,7 @@ SYNOPSIS
      'LENSMODEL_OPENCV4',
      'LENSMODEL_OPENCV5',
      'LENSMODEL_OPENCV8',
-     'LENSMODEL_OPENCV12',
-     'LENSMODEL_CAHVOR',
-     'LENSMODEL_CAHVORE_linearity=...')
+     'LENSMODEL_OPENCV12')
 
 drcal knows about some set of lens models, which can be queried here. The above
 list is correct as of this writing, but more models could be added with time.

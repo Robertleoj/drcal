@@ -19,7 +19,6 @@
 #include <string.h>
 #include "dogleg.h"
 
-#include "cahvore.h"
 #include "drcal-internal.h"
 #include "drcal.h"
 #include "minimath/minimath-extra.h"
@@ -109,7 +108,6 @@ const char* drcal_lensmodel_name_unconfigured(
     _CASE_STRING_WITHCONFIG(s, n, drcal_##s##_CONFIG_LIST)
 
         drcal_LENSMODEL_NOCONFIG_LIST(CASE_STRING_NOCONFIG
-        ) drcal_LENSMODEL_WITHCONFIG_STATIC_NPARAMS_LIST(CASE_STRING_WITHCONFIG
         ) drcal_LENSMODEL_WITHCONFIG_DYNAMIC_NPARAMS_LIST(CASE_STRING_WITHCONFIG
         )
 
@@ -123,19 +121,7 @@ const char* drcal_lensmodel_name_unconfigured(
 
 // Write the model name WITH the full config into the given buffer. Identical to
 // drcal_lensmodel_name_unconfigured() for configuration-free models
-static int LENSMODEL_CAHVORE__snprintf_model(
-    char* out,
-    int size,
-    const drcal_LENSMODEL_CAHVORE__config_t* config
-) {
-    return snprintf(
-        out,
-        size,
-        "LENSMODEL_CAHVORE" drcal_LENSMODEL_CAHVORE_CONFIG_LIST(
-            LENSMODEL_PRINT_CFG_ELEMENT_FMT,
-        ) drcal_LENSMODEL_CAHVORE_CONFIG_LIST(LENSMODEL_PRINT_CFG_ELEMENT_VAR, )
-    );
-}
+
 static int LENSMODEL_SPLINED_STEREOGRAPHIC__snprintf_model(
     char* out,
     int size,
@@ -168,7 +154,6 @@ bool drcal_lensmodel_name(
         return size > s##__snprintf_model(out, size, &lensmodel->s##__config);
 
         drcal_LENSMODEL_NOCONFIG_LIST(CASE_STRING_NOCONFIG
-        ) drcal_LENSMODEL_WITHCONFIG_STATIC_NPARAMS_LIST(CASE_STRING_WITHCONFIG
         ) drcal_LENSMODEL_WITHCONFIG_DYNAMIC_NPARAMS_LIST(CASE_STRING_WITHCONFIG
         )
 
@@ -180,24 +165,6 @@ bool drcal_lensmodel_name(
     return NULL;
 }
 
-static bool LENSMODEL_CAHVORE__scan_model_config(
-    drcal_LENSMODEL_CAHVORE__config_t* config,
-    const char* config_str
-) {
-    int pos;
-    int Nelements = 0 drcal_LENSMODEL_CAHVORE_CONFIG_LIST(
-        LENSMODEL_SCAN_CFG_ELEMENT_PLUS1,
-    );
-    return Nelements ==
-               sscanf(
-                   config_str,
-                   drcal_LENSMODEL_CAHVORE_CONFIG_LIST(
-                       LENSMODEL_SCAN_CFG_ELEMENT_FMT,
-                   ) "%n" drcal_LENSMODEL_CAHVORE_CONFIG_LIST(LENSMODEL_SCAN_CFG_ELEMENT_VAR, ),
-                   &pos
-               ) &&
-           config_str[pos] == '\0';
-}
 static bool LENSMODEL_SPLINED_STEREOGRAPHIC__scan_model_config(
     drcal_LENSMODEL_SPLINED_STEREOGRAPHIC__config_t* config,
     const char* config_str
@@ -228,7 +195,6 @@ const char* const* drcal_supported_lensmodel_names(
 
     static const char* names[] = {drcal_LENSMODEL_NOCONFIG_LIST(
         NAMESTRING_NOCONFIG
-    ) drcal_LENSMODEL_WITHCONFIG_STATIC_NPARAMS_LIST(NAMESTRING_WITHCONFIG
     ) drcal_LENSMODEL_WITHCONFIG_DYNAMIC_NPARAMS_LIST(NAMESTRING_WITHCONFIG)
                                       NULL};
     return names;
@@ -291,7 +257,6 @@ bool drcal_lensmodel_from_name(
     }
 
     drcal_LENSMODEL_NOCONFIG_LIST(CHECK_AND_RETURN_NOCONFIG);
-    drcal_LENSMODEL_WITHCONFIG_STATIC_NPARAMS_LIST(CHECK_AND_RETURN_WITHCONFIG);
     drcal_LENSMODEL_WITHCONFIG_DYNAMIC_NPARAMS_LIST(CHECK_AND_RETURN_WITHCONFIG
     );
 
@@ -326,7 +291,6 @@ drcal_lensmodel_type_t drcal_lensmodel_type_from_name(
     }
 
     drcal_LENSMODEL_NOCONFIG_LIST(CHECK_AND_RETURN_NOCONFIG);
-    drcal_LENSMODEL_WITHCONFIG_STATIC_NPARAMS_LIST(CHECK_AND_RETURN_WITHCONFIG);
     drcal_LENSMODEL_WITHCONFIG_DYNAMIC_NPARAMS_LIST(CHECK_AND_RETURN_WITHCONFIG
     );
 
@@ -347,27 +311,16 @@ drcal_lensmodel_metadata_t drcal_lensmodel_metadata(
             return (drcal_lensmodel_metadata_t){.has_core = true,
                                                 .can_project_behind_camera =
                                                     true,
-                                                .has_gradients = true,
-                                                .noncentral = false};
+                                                .has_gradients = true};
         case drcal_LENSMODEL_PINHOLE:
         case drcal_LENSMODEL_OPENCV4:
         case drcal_LENSMODEL_OPENCV5:
         case drcal_LENSMODEL_OPENCV8:
         case drcal_LENSMODEL_OPENCV12:
-        case drcal_LENSMODEL_CAHVOR:
             return (drcal_lensmodel_metadata_t){.has_core = true,
                                                 .can_project_behind_camera =
                                                     false,
-                                                .has_gradients = true,
-                                                .noncentral = false};
-
-        case drcal_LENSMODEL_CAHVORE:
-            return (drcal_lensmodel_metadata_t){.has_core = true,
-                                                .can_project_behind_camera =
-                                                    false,
-                                                .has_gradients = true,
-                                                .noncentral = true};
-
+                                                .has_gradients = true};
         default:;
     }
     MSG("Unknown lens model %d. Barfing out", lensmodel->type);
@@ -415,8 +368,7 @@ int drcal_lensmodel_num_params(
     case drcal_##s:            \
         return s##__lensmodel_num_params(&lensmodel->s##__config);
 
-        drcal_LENSMODEL_NOCONFIG_LIST(CASE_NUM_STATIC
-        ) drcal_LENSMODEL_WITHCONFIG_STATIC_NPARAMS_LIST(CASE_NUM_STATIC)
+        drcal_LENSMODEL_NOCONFIG_LIST(CASE_NUM_STATIC)
             drcal_LENSMODEL_WITHCONFIG_DYNAMIC_NPARAMS_LIST(CASE_NUM_DYNAMIC)
 
                 default :;
@@ -1242,396 +1194,6 @@ typedef struct {
     // _d_rj_tc is always 0
 
 } geometric_gradients_t;
-
-static void project_cahvor(
-    // outputs
-    drcal_point2_t* restrict q,
-    drcal_point2_t* restrict dq_dfxy,
-    double* restrict dq_dintrinsics_nocore,
-    drcal_point3_t* restrict dq_drcamera,
-    drcal_point3_t* restrict dq_dtcamera,
-    drcal_point3_t* restrict dq_drframe,
-    drcal_point3_t* restrict dq_dtframe,
-
-    // inputs
-    const drcal_point3_t* restrict p,
-    const drcal_point3_t* restrict dp_drc,
-    const drcal_point3_t* restrict dp_dtc,
-    const drcal_point3_t* restrict dp_drf,
-    const drcal_point3_t* restrict dp_dtf,
-
-    const double* restrict intrinsics,
-    bool camera_at_identity,
-    const drcal_lensmodel_t* lensmodel
-) {
-    int NdistortionParams = drcal_lensmodel_num_params(lensmodel) - 4;
-
-    // I perturb p, and then apply the focal length, center pixel stuff
-    // normally
-    drcal_point3_t p_distorted;
-
-    bool need_any_extrinsics_gradients =
-        (dq_drcamera != NULL) || (dq_dtcamera != NULL) ||
-        (dq_drframe != NULL) || (dq_dtframe != NULL);
-
-    // distortion parameter layout:
-    //   alpha
-    //   beta
-    //   r0
-    //   r1
-    //   r2
-    double alpha = intrinsics[4 + 0];
-    double beta = intrinsics[4 + 1];
-    double r0 = intrinsics[4 + 2];
-    double r1 = intrinsics[4 + 3];
-    double r2 = intrinsics[4 + 4];
-
-    double s_al = sin(alpha);
-    double c_al = cos(alpha);
-    double s_be = sin(beta);
-    double c_be = cos(beta);
-
-    // I parametrize the optical axis such that
-    // - o(alpha=0, beta=0) = (0,0,1) i.e. the optical axis is at the center
-    //   if both parameters are 0
-    // - The gradients are cartesian. I.e. do/dalpha and do/dbeta are both
-    //   NOT 0 at (alpha=0,beta=0). This would happen at the poles (gimbal
-    //   lock), and that would make my solver unhappy
-    double o[] = {s_al * c_be, s_be, c_al * c_be};
-    double do_dalpha[] = {c_al * c_be, 0, -s_al * c_be};
-    double do_dbeta[] = {-s_al * s_be, c_be, -c_al * s_be};
-
-    double norm2p = norm2_vec(3, p->xyz);
-    double omega = dot_vec(3, p->xyz, o);
-    double domega_dalpha = dot_vec(3, p->xyz, do_dalpha);
-    double domega_dbeta = dot_vec(3, p->xyz, do_dbeta);
-
-    double omega_recip = 1.0 / omega;
-    double tau = norm2p * omega_recip * omega_recip - 1.0;
-    double s__dtau_dalphabeta__domega_dalphabeta =
-        -2.0 * norm2p * omega_recip * omega_recip * omega_recip;
-    double dmu_dtau = r1 + 2.0 * tau * r2;
-    double dmu_dxyz[3];
-    for (int i = 0; i < 3; i++) {
-        dmu_dxyz[i] = dmu_dtau * (2.0 * p->xyz[i] * omega_recip * omega_recip +
-                                  s__dtau_dalphabeta__domega_dalphabeta * o[i]);
-    }
-    double mu = r0 + tau * r1 + tau * tau * r2;
-    double s__dmu_dalphabeta__domega_dalphabeta =
-        dmu_dtau * s__dtau_dalphabeta__domega_dalphabeta;
-
-    double dpdistorted_dpcam[3 * 3] = {};
-    double dpdistorted_ddistortion[3 * NdistortionParams];
-
-    for (int i = 0; i < 3; i++) {
-        double dmu_ddist[5] = {
-            s__dmu_dalphabeta__domega_dalphabeta * domega_dalpha,
-            s__dmu_dalphabeta__domega_dalphabeta * domega_dbeta,
-            1.0,
-            tau,
-            tau * tau
-        };
-
-        dpdistorted_ddistortion[i * NdistortionParams + 0] =
-            p->xyz[i] * dmu_ddist[0];
-        dpdistorted_ddistortion[i * NdistortionParams + 1] =
-            p->xyz[i] * dmu_ddist[1];
-        dpdistorted_ddistortion[i * NdistortionParams + 2] =
-            p->xyz[i] * dmu_ddist[2];
-        dpdistorted_ddistortion[i * NdistortionParams + 3] =
-            p->xyz[i] * dmu_ddist[3];
-        dpdistorted_ddistortion[i * NdistortionParams + 4] =
-            p->xyz[i] * dmu_ddist[4];
-
-        dpdistorted_ddistortion[i * NdistortionParams + 0] -=
-            dmu_ddist[0] * omega * o[i];
-        dpdistorted_ddistortion[i * NdistortionParams + 1] -=
-            dmu_ddist[1] * omega * o[i];
-        dpdistorted_ddistortion[i * NdistortionParams + 2] -=
-            dmu_ddist[2] * omega * o[i];
-        dpdistorted_ddistortion[i * NdistortionParams + 3] -=
-            dmu_ddist[3] * omega * o[i];
-        dpdistorted_ddistortion[i * NdistortionParams + 4] -=
-            dmu_ddist[4] * omega * o[i];
-
-        dpdistorted_ddistortion[i * NdistortionParams + 0] -=
-            mu * domega_dalpha * o[i];
-        dpdistorted_ddistortion[i * NdistortionParams + 1] -=
-            mu * domega_dbeta * o[i];
-
-        dpdistorted_ddistortion[i * NdistortionParams + 0] -=
-            mu * omega * do_dalpha[i];
-        dpdistorted_ddistortion[i * NdistortionParams + 1] -=
-            mu * omega * do_dbeta[i];
-
-        dpdistorted_dpcam[3 * i + i] = mu + 1.0;
-        for (int j = 0; j < 3; j++) {
-            dpdistorted_dpcam[3 * i + j] +=
-                (p->xyz[i] - omega * o[i]) * dmu_dxyz[j];
-            dpdistorted_dpcam[3 * i + j] -= mu * o[i] * o[j];
-        }
-
-        p_distorted.xyz[i] = p->xyz[i] + mu * (p->xyz[i] - omega * o[i]);
-    }
-
-    // q = fxy pxy/pz + cxy
-    // dqx/dp = d( fx px/pz + cx ) = fx/pz^2 (pz [1 0 0] - px [0 0 1])
-    // dqy/dp = d( fy py/pz + cy ) = fy/pz^2 (pz [0 1 0] - py [0 0 1])
-    const double fx = intrinsics[0];
-    const double fy = intrinsics[1];
-    const double cx = intrinsics[2];
-    const double cy = intrinsics[3];
-    double pz_recip = 1. / p_distorted.z;
-    q->x = p_distorted.x * pz_recip * fx + cx;
-    q->y = p_distorted.y * pz_recip * fy + cy;
-
-    if (need_any_extrinsics_gradients) {
-        double dq_dp[2][3] = {
-            {fx * pz_recip, 0, -fx * p_distorted.x * pz_recip * pz_recip},
-            {0, fy * pz_recip, -fy * p_distorted.y * pz_recip * pz_recip}
-        };
-        // This is for the DISTORTED p.
-        // dq/deee = dq/dpdistorted dpdistorted/dpundistorted dpundistorted/deee
-
-        double dq_dpundistorted[6];
-        mul_genN3_gen33_vout(
-            2,
-            (double*)dq_dp,
-            dpdistorted_dpcam,
-            dq_dpundistorted
-        );
-
-        // dq/deee = dq/dp dp/deee
-        if (camera_at_identity) {
-            if (dq_drcamera != NULL) {
-                memset(dq_drcamera, 0, 6 * sizeof(double));
-            }
-            if (dq_dtcamera != NULL) {
-                memset(dq_dtcamera, 0, 6 * sizeof(double));
-            }
-            if (dq_drframe != NULL) {
-                mul_genN3_gen33_vout(
-                    2,
-                    (double*)dq_dpundistorted,
-                    (double*)dp_drf,
-                    (double*)dq_drframe
-                );
-            }
-            if (dq_dtframe != NULL) {
-                memcpy(dq_dtframe, dq_dpundistorted, 6 * sizeof(double));
-            }
-        } else {
-            if (dq_drcamera != NULL) {
-                mul_genN3_gen33_vout(
-                    2,
-                    (double*)dq_dpundistorted,
-                    (double*)dp_drc,
-                    (double*)dq_drcamera
-                );
-            }
-            if (dq_dtcamera != NULL) {
-                mul_genN3_gen33_vout(
-                    2,
-                    (double*)dq_dpundistorted,
-                    (double*)dp_dtc,
-                    (double*)dq_dtcamera
-                );
-            }
-            if (dq_drframe != NULL) {
-                mul_genN3_gen33_vout(
-                    2,
-                    (double*)dq_dpundistorted,
-                    (double*)dp_drf,
-                    (double*)dq_drframe
-                );
-            }
-            if (dq_dtframe != NULL) {
-                mul_genN3_gen33_vout(
-                    2,
-                    (double*)dq_dpundistorted,
-                    (double*)dp_dtf,
-                    (double*)dq_dtframe
-                );
-            }
-        }
-    }
-
-    if (dq_dintrinsics_nocore != NULL) {
-        for (int i = 0; i < NdistortionParams; i++) {
-            const double dx =
-                dpdistorted_ddistortion[i + 0 * NdistortionParams];
-            const double dy =
-                dpdistorted_ddistortion[i + 1 * NdistortionParams];
-            const double dz =
-                dpdistorted_ddistortion[i + 2 * NdistortionParams];
-            dq_dintrinsics_nocore[0 * NdistortionParams + i] =
-                fx * pz_recip * (dx - p_distorted.x * pz_recip * dz);
-            dq_dintrinsics_nocore[1 * NdistortionParams + i] =
-                fy * pz_recip * (dy - p_distorted.y * pz_recip * dz);
-        }
-    }
-
-    if (dq_dfxy) {
-        // I have the projection, and I now need to propagate the gradients
-        // xy = fxy * distort(xy)/distort(z) + cxy
-        dq_dfxy->x = (q->x - cx) / fx;  // dqx/dfx
-        dq_dfxy->y = (q->y - cy) / fy;  // dqy/dfy
-    }
-}
-
-static bool project_cahvore(
-    // outputs
-    drcal_point2_t* restrict q,
-    drcal_point2_t* restrict dq_dfxy,
-    double* restrict dq_dintrinsics_nocore,
-    drcal_point3_t* restrict dq_drcamera,
-    drcal_point3_t* restrict dq_dtcamera,
-    drcal_point3_t* restrict dq_drframe,
-    drcal_point3_t* restrict dq_dtframe,
-
-    // inputs
-    const drcal_point3_t* restrict p,
-    const drcal_point3_t* restrict dp_drc,
-    const drcal_point3_t* restrict dp_dtc,
-    const drcal_point3_t* restrict dp_drf,
-    const drcal_point3_t* restrict dp_dtf,
-
-    const double* restrict intrinsics,
-    bool camera_at_identity,
-    const drcal_lensmodel_t* lensmodel
-) {
-    int NdistortionParams =
-        drcal_lensmodel_num_params(lensmodel) - 4;  // This is 8: alpha,beta,R,E
-
-    drcal_point3_t p_distorted;
-    double
-        dpdistorted_ddistortion[8 * 3];  // 8 intrinsics parameters, nvec(p)=3
-    double dpdistorted_dpcam[3 * 3];
-
-    bool need_any_extrinsics_gradients =
-        (dq_drcamera != NULL) || (dq_dtcamera != NULL) ||
-        (dq_drframe != NULL) || (dq_dtframe != NULL);
-
-    if (!project_cahvore_internals(  // outputs
-            &p_distorted,
-            dq_dintrinsics_nocore ? dpdistorted_ddistortion : NULL,
-            need_any_extrinsics_gradients ? dpdistorted_dpcam : NULL,
-
-            // inputs
-            p,
-            &intrinsics[4],
-            lensmodel->LENSMODEL_CAHVORE__config.linearity
-        )) {
-        return false;
-    }
-
-    ////////////// exactly like in project_cahvor() above. Consolidate.
-
-    // q = fxy pxy/pz + cxy
-    // dqx/dp = d( fx px/pz + cx ) = fx/pz^2 (pz [1 0 0] - px [0 0 1])
-    // dqy/dp = d( fy py/pz + cy ) = fy/pz^2 (pz [0 1 0] - py [0 0 1])
-    const double fx = intrinsics[0];
-    const double fy = intrinsics[1];
-    const double cx = intrinsics[2];
-    const double cy = intrinsics[3];
-    double pz_recip = 1. / p_distorted.z;
-    q->x = p_distorted.x * pz_recip * fx + cx;
-    q->y = p_distorted.y * pz_recip * fy + cy;
-
-    if (need_any_extrinsics_gradients) {
-        double dq_dp[2][3] = {
-            {fx * pz_recip, 0, -fx * p_distorted.x * pz_recip * pz_recip},
-            {0, fy * pz_recip, -fy * p_distorted.y * pz_recip * pz_recip}
-        };
-        // This is for the DISTORTED p.
-        // dq/deee = dq/dpdistorted dpdistorted/dpundistorted dpundistorted/deee
-
-        double dq_dpundistorted[6];
-        mul_genN3_gen33_vout(
-            2,
-            (double*)dq_dp,
-            dpdistorted_dpcam,
-            dq_dpundistorted
-        );
-
-        // dq/deee = dq/dp dp/deee
-        if (camera_at_identity) {
-            if (dq_drcamera != NULL) {
-                memset(dq_drcamera, 0, 6 * sizeof(double));
-            }
-            if (dq_dtcamera != NULL) {
-                memset(dq_dtcamera, 0, 6 * sizeof(double));
-            }
-            if (dq_drframe != NULL) {
-                mul_genN3_gen33_vout(
-                    2,
-                    (double*)dq_dpundistorted,
-                    (double*)dp_drf,
-                    (double*)dq_drframe
-                );
-            }
-            if (dq_dtframe != NULL) {
-                memcpy(dq_dtframe, dq_dpundistorted, 6 * sizeof(double));
-            }
-        } else {
-            if (dq_drcamera != NULL) {
-                mul_genN3_gen33_vout(
-                    2,
-                    (double*)dq_dpundistorted,
-                    (double*)dp_drc,
-                    (double*)dq_drcamera
-                );
-            }
-            if (dq_dtcamera != NULL) {
-                mul_genN3_gen33_vout(
-                    2,
-                    (double*)dq_dpundistorted,
-                    (double*)dp_dtc,
-                    (double*)dq_dtcamera
-                );
-            }
-            if (dq_drframe != NULL) {
-                mul_genN3_gen33_vout(
-                    2,
-                    (double*)dq_dpundistorted,
-                    (double*)dp_drf,
-                    (double*)dq_drframe
-                );
-            }
-            if (dq_dtframe != NULL) {
-                mul_genN3_gen33_vout(
-                    2,
-                    (double*)dq_dpundistorted,
-                    (double*)dp_dtf,
-                    (double*)dq_dtframe
-                );
-            }
-        }
-    }
-
-    if (dq_dintrinsics_nocore != NULL) {
-        for (int i = 0; i < NdistortionParams; i++) {
-            const double dx =
-                dpdistorted_ddistortion[i + 0 * NdistortionParams];
-            const double dy =
-                dpdistorted_ddistortion[i + 1 * NdistortionParams];
-            const double dz =
-                dpdistorted_ddistortion[i + 2 * NdistortionParams];
-            dq_dintrinsics_nocore[0 * NdistortionParams + i] =
-                fx * pz_recip * (dx - p_distorted.x * pz_recip * dz);
-            dq_dintrinsics_nocore[1 * NdistortionParams + i] =
-                fy * pz_recip * (dy - p_distorted.y * pz_recip * dz);
-        }
-    }
-
-    if (dq_dfxy) {
-        // I have the projection, and I now need to propagate the gradients
-        // xy = fxy * distort(xy)/distort(z) + cxy
-        dq_dfxy->x = (q->x - cx) / fx;  // dqx/dfx
-        dq_dfxy->y = (q->y - cy) / fy;  // dqy/dfy
-    }
-    return true;
-}
 
 // These are all internals for project(). It was getting unwieldy otherwise
 static void _project_point_parametric(
@@ -2847,73 +2409,6 @@ static void _project_point(
                 sizeof(double) * runlen * 2
             );
         }
-    } else if (lensmodel->type == drcal_LENSMODEL_CAHVOR) {
-        project_cahvor(  // outputs
-            q,
-            p_dq_dfxy,
-            p_dq_dintrinsics_nocore,
-            dq_drcamera,
-            dq_dtcamera,
-            dq_drframe,
-            dq_dtframe,
-            // inputs
-            p,
-            dp_drc,
-            dp_dtc,
-            dp_drf,
-            dp_dtf,
-            intrinsics,
-            camera_at_identity,
-            lensmodel
-        );
-    } else if (lensmodel->type == drcal_LENSMODEL_CAHVORE) {
-        if (!project_cahvore(  // outputs
-                q,
-                p_dq_dfxy,
-                p_dq_dintrinsics_nocore,
-                dq_drcamera,
-                dq_dtcamera,
-                dq_drframe,
-                dq_dtframe,
-                // inputs
-                p,
-                dp_drc,
-                dp_dtc,
-                dp_drf,
-                dp_dtf,
-                intrinsics,
-                camera_at_identity,
-                lensmodel
-            )) {
-            MSG("CAHVORE PROJECTION OF (%f,%f,%f) FAILED. I don't know what to "
-                "do. Setting result and all gradients to 0",
-                p->x,
-                p->y,
-                p->z);
-            memset(q, 0, sizeof(*q));
-            if (p_dq_dfxy) {
-                memset(p_dq_dfxy, 0, sizeof(*p_dq_dfxy));
-            }
-            if (p_dq_dintrinsics_nocore) {
-                memset(
-                    p_dq_dintrinsics_nocore,
-                    0,
-                    sizeof(*p_dq_dintrinsics_nocore) * 2 * (Nintrinsics - 4)
-                );
-            }
-            if (dq_drcamera) {
-                memset(dq_drcamera, 0, sizeof(*dq_drcamera));
-            }
-            if (dq_dtcamera) {
-                memset(dq_dtcamera, 0, sizeof(*dq_dtcamera));
-            }
-            if (dq_drframe) {
-                memset(dq_drframe, 0, sizeof(*dq_drframe));
-            }
-            if (dq_dtframe) {
-                memset(dq_dtframe, 0, sizeof(*dq_dtframe));
-            }
-        }
     } else {
         _project_point_parametric(  // outputs
             q,
@@ -3728,19 +3223,6 @@ bool _drcal_unproject_internal(
     if (lensmodel->type == drcal_LENSMODEL_LATLON) {
         drcal_unproject_latlon(out, NULL, q, N, intrinsics);
         return true;
-    }
-
-    if (lensmodel->type == drcal_LENSMODEL_CAHVORE) {
-        const int Nintrinsics = drcal_lensmodel_num_params(lensmodel);
-
-        for (int i = Nintrinsics - 3; i < Nintrinsics; i++) {
-            if (intrinsics[i] != 0.) {
-                MSG("unproject() currently only works with a central "
-                    "projection. So I cannot unproject(CAHVORE,E!=0). Please "
-                    "set E=0 to centralize this model");
-                return false;
-            }
-        }
     }
 
     // I optimize in the space of the stereographic projection. This is a 2D

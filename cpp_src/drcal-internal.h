@@ -32,10 +32,6 @@ typedef struct {
 } drcal_LENSMODEL_OPENCV8__precomputed_t;
 typedef struct {
 } drcal_LENSMODEL_OPENCV12__precomputed_t;
-typedef struct {
-} drcal_LENSMODEL_CAHVOR__precomputed_t;
-typedef struct {
-} drcal_LENSMODEL_CAHVORE__precomputed_t;
 
 // The splined stereographic models configuration parameters can be used to
 // compute the segment size. I cache this computation

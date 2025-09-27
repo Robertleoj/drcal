@@ -32,16 +32,13 @@
     _(LENSMODEL_OPENCV4, 8)                                             \
     _(LENSMODEL_OPENCV5, 9)                                             \
     _(LENSMODEL_OPENCV8, 12)                                            \
-    _(LENSMODEL_OPENCV12, 16) /* available in OpenCV >= 3.0.0) */       \
-    _(LENSMODEL_CAHVOR, 9)
-#define drcal_LENSMODEL_WITHCONFIG_STATIC_NPARAMS_LIST(_) \
-    _(LENSMODEL_CAHVORE, 12)
+    _(LENSMODEL_OPENCV12, 16) /* available in OpenCV >= 3.0.0) */
+
 #define drcal_LENSMODEL_WITHCONFIG_DYNAMIC_NPARAMS_LIST(_) \
     _(LENSMODEL_SPLINED_STEREOGRAPHIC, -1)
-#define drcal_LENSMODEL_LIST(_)                           \
-    drcal_LENSMODEL_NOCONFIG_LIST(_)                      \
-        drcal_LENSMODEL_WITHCONFIG_STATIC_NPARAMS_LIST(_) \
-            drcal_LENSMODEL_WITHCONFIG_DYNAMIC_NPARAMS_LIST(_)
+#define drcal_LENSMODEL_LIST(_)      \
+    drcal_LENSMODEL_NOCONFIG_LIST(_) \
+        drcal_LENSMODEL_WITHCONFIG_DYNAMIC_NPARAMS_LIST(_)
 
 // parametric models have no extra configuration
 typedef struct {
@@ -60,8 +57,6 @@ typedef struct {
 } drcal_LENSMODEL_OPENCV8__config_t;
 typedef struct {
 } drcal_LENSMODEL_OPENCV12__config_t;
-typedef struct {
-} drcal_LENSMODEL_CAHVOR__config_t;
 
 #define _drcal_ITEM_DEFINE_ELEMENT( \
     name,                           \
@@ -83,16 +78,6 @@ _Static_assert(
     "that. H means 'unsigned short'"
 );
 #endif
-
-// Configuration for CAHVORE. These are given as an an
-// "X macro": https://en.wikipedia.org/wiki/X_Macro
-#define drcal_LENSMODEL_CAHVORE_CONFIG_LIST(_, cookie) \
-    _(linearity, double, "d", ".2f", "lf", , cookie)
-typedef struct {
-    drcal_LENSMODEL_CAHVORE_CONFIG_LIST(
-        _drcal_ITEM_DEFINE_ELEMENT,
-    )
-} drcal_LENSMODEL_CAHVORE__config_t;
 
 // Configuration for the splined stereographic models. These are given as an an
 // "X macro": https://en.wikipedia.org/wiki/X_Macro
@@ -179,18 +164,13 @@ typedef union {
                                                                                \
     /* Whether a model is able to project points behind the camera          */ \
     /* (z<0 in the camera coordinate system). Models based on a pinhole     */ \
-    /* projection (pinhole, OpenCV, CAHVOR(E)) cannot do this. models based */ \
+    /* projection (pinhole, OpenCV) cannot do this. models based */            \
     /* on a stereographic projection (stereographic, splined stereographic) */ \
     /* can                                                                  */ \
     _(can_project_behind_camera, bool, "i", , , : 1, cookie)                   \
                                                                                \
-    /* Whether gradients are available for this model. Currently only */       \
-    /* CAHVORE does not have gradients                                */       \
-    _(has_gradients, bool, "i", , , : 1, cookie)                               \
-                                                                               \
-    /* Whether this is a noncentral model.Currently the only noncentral  */    \
-    /* model we have is CAHVORE. There will be more later.               */    \
-    _(noncentral, bool, "i", , , : 1, cookie)
+    /* Whether gradients are available for this model. */                      \
+    _(has_gradients, bool, "i", , , : 1, cookie)
 
 typedef struct {
     drcal_LENSMODEL_META_LIST(
@@ -413,6 +393,3 @@ typedef struct {
 drcal_LENSMODEL_NOCONFIG_LIST(
     DEFINE_drcal_cameramodel_MODEL_t
 )
-    drcal_LENSMODEL_WITHCONFIG_STATIC_NPARAMS_LIST(
-        DEFINE_drcal_cameramodel_MODEL_t
-    )

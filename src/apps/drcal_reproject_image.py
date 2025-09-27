@@ -380,13 +380,6 @@ def load_model_or_keep_filename(filename):
     try:
         m = drcal.cameramodel(filename)
     except:
-        # Couldn't load this file as a model. Are we pretty sure it WAS a model?
-        if re.search(r"\.(cameramodel|cahv|cahvor|cahvore)$", filename, flags=re.I):
-            # Filename tells us that this WAS a model. So I give up
-            print(f"Couldn't read camera model '{filename}'", file=sys.stderr)
-            sys.exit(1)
-
-        # Let's try to interpret this as an image
         return filename
 
     return m

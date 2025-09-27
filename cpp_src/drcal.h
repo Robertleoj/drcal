@@ -150,9 +150,6 @@ bool drcal_knots_for_splined_models(
 // and very sparse gradients. THIS function reports the gradients densely,
 // however, so it is inefficient for splined models.
 //
-// This function supports CAHVORE distortions only if we don't ask for any
-// gradients
-//
 // Projecting out-of-bounds points (beyond the field of view) returns undefined
 // values. Generally things remain continuous even as we move off the imager
 // domain. Pinhole-like projections will work normally if projecting a point
@@ -186,8 +183,6 @@ bool drcal_project(  // out
 // drcal_project(). For OpenCV models specifically, OpenCV has
 // cvUndistortPoints() (and cv2.undistortPoints()), but these are unreliable:
 // https://github.com/opencv/opencv/issues/8811
-//
-// This function does NOT support CAHVORE
 bool drcal_unproject(  // out
     drcal_point3_t* v,
 

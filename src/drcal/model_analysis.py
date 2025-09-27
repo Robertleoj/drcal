@@ -1840,29 +1840,6 @@ def projection_diff(
     lensmodels = [model.intrinsics()[0] for model in models]
     intrinsics_data = [model.intrinsics()[1] for model in models]
 
-    for i in range(len(models)):
-        if lensmodel_metadata_and_config(lensmodels[i])["noncentral"] and not (
-            re.match("LENSMODEL_CAHVORE_", models[i].intrinsics()[0])
-            and nps.norm2(models[i].intrinsics()[1][-3:]) < 1e-12
-        ):
-            if not atinfinity:
-                raise Exception(
-                    f"Model {i} is noncentral, so I can only evaluate the diff at infinity"
-                )
-            if re.match("LENSMODEL_CAHVORE_", lensmodels[i]):
-                if use_uncertainties:
-                    raise Exception(
-                        "I have a noncentral model. No usable uncertainties for those yet"
-                    )
-                # Special-case to centralize CAHVORE. This path will need to be
-                # redone when I do noncentral models "properly", but this will
-                # do in the meantime
-                intrinsics_data[i][-3:] = 0
-            else:
-                raise Exception(
-                    "I have a non-CAHVORE noncentral model. This isn't supported yet"
-                )
-
     # v  shape (Ncameras,Nheight,Nwidth,3)
     # q0 shape (         Nheight,Nwidth,2)
     v, q0 = sample_imager_unproject(
@@ -2242,36 +2219,6 @@ def stereo_pair_diff(model_pairs, *, gridn_width=60, gridn_height=None, distance
     if atinfinity:
         for Rt10 in Rt10_pairs:
             Rt10[3, :] = 0
-
-    for model_pair in model_pairs:
-        for model in model_pair:
-            if lensmodel_metadata_and_config(model.intrinsics()[0])[
-                "noncentral"
-            ] and not (
-                re.match("LENSMODEL_CAHVORE_", model.intrinsics()[0])
-                and nps.norm2(model.intrinsics()[1][-3:]) < 1e-12
-            ):
-                if not atinfinity:
-                    raise Exception(
-                        f"Model {model.intrinsics()[0]} is noncentral, so I can only evaluate the diff at infinity"
-                    )
-                if re.match("LENSMODEL_CAHVORE_", model.intrinsics()[0]):
-                    if use_uncertainties:
-                        raise Exception(
-                            "I have a noncentral model. No usable uncertainties for those yet"
-                        )
-                    # Special-case to centralize CAHVORE. This path will need to be
-                    # redone when I do noncentral models "properly", but this will
-                    # do in the meantime
-                    intrinsics_data = model.intrinsics()[1]
-                    intrinsics_data[-3:] = 0
-                    model.intrinsics(
-                        intrinsics=(model.intrinsics()[0], intrinsics_data)
-                    )
-                else:
-                    raise Exception(
-                        "I have a non-CAHVORE noncentral model. This isn't supported yet"
-                    )
 
     imagersizes0 = np.array([model_pair[0].imagersize() for model_pair in model_pairs])
     if np.linalg.norm(np.std(imagersizes0, axis=-2)) != 0:

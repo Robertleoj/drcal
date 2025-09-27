@@ -451,7 +451,6 @@ def lensmodel_num_params(*args, **kwargs):
     
       LENSMODEL_PINHOLE
       LENSMODEL_OPENCV4
-      LENSMODEL_CAHVOR
       LENSMODEL_SPLINED_STEREOGRAPHIC_order=3_Nx=16_Ny=12_fov_x_deg=100
     
     The full list can be obtained with drcal.supported_lensmodels()
@@ -1725,7 +1724,6 @@ def optimize(*args, **kwargs):
     
       LENSMODEL_PINHOLE
       LENSMODEL_OPENCV4
-      LENSMODEL_CAHVOR
       LENSMODEL_SPLINED_STEREOGRAPHIC_order=3_Nx=16_Ny=12_fov_x_deg=100
     
     - imagersizes: integer array of dims (Ncameras_intrinsics,2)
@@ -2361,9 +2359,7 @@ def supported_lensmodels():
          'LENSMODEL_OPENCV4',
          'LENSMODEL_OPENCV5',
          'LENSMODEL_OPENCV8',
-         'LENSMODEL_OPENCV12',
-         'LENSMODEL_CAHVOR',
-         'LENSMODEL_CAHVORE_linearity=...')
+         'LENSMODEL_OPENCV12')
     
     drcal knows about some set of lens models, which can be queried here. The above
     list is correct as of this writing, but more models could be added with time.

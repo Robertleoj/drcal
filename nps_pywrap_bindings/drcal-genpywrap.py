@@ -85,32 +85,6 @@ t0 = time.time()
 mapxy = drcal.project( v, *m.intrinsics() )
 print(time.time()-t0)
 """
-# To test the broadcast-using-the-drcal-loop, apply this patch:
-r"""
-diff --git a/drcal-genpywrap.py b/drcal-genpywrap.py
-index 666f48e..2a4edff 100644
---- a/drcal-genpywrap.py
-+++ b/drcal-genpywrap.py
-@@ -89,7 +93,7 @@
- 
-             args_input       = ('points', 'intrinsics'),
--            prototype_input  = ((3,), ('Nintrinsics',)),
--            prototype_output = (2,),
-+            prototype_input  = (('N',3,), ('Nintrinsics',)),
-+            prototype_output = ('N',2,),
- 
-             extra_args = (("const char*", "lensmodel", "NULL", "s"),),
- 
-@@ -113,7 +117,7 @@ _project_withgrad() in drcal-genpywrap.py. Please keep them in sync
-             Ccode_slice_eval = \
-                 {np.float64:
-                  r'''
--                 const int N = 1;
-+                 const int N = dims_slice__points[0];
- 
-                  if(cookie->lensmodel.type == drcal_LENSMODEL_CAHVORE)
-                      return _drcal_project_internal_cahvore(
-"""
 # I see 0.9 sec with the code as is, and 0.8 sec with the patch. Or before I
 # moved on to this whole npsp thing in 482728c. As it stands, the patch is not
 # committable. It assumes contiguous memory, and it'll produce incorrect output
@@ -274,8 +248,7 @@ function, and see the docs for that function. The differences:
   different. numpysane_pywrap broadcasts the leading arguments, so this function
   takes the lensmodel (the one argument that does not broadcast) last
 
-- This function requires gradients, so it does not support some lens models;
-  CAHVORE for instance
+- This function requires gradients, so it does not support some lens models.
 
 - To speed things up, this function doesn't call the C drcal_unproject(), but
   uses the _drcal_unproject_internal...() functions instead. That allows as much

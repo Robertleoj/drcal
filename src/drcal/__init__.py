@@ -6,7 +6,6 @@ from .image_transforms import (
     transform_image,
 )
 from .model_analysis import is_within_valid_intrinsics_region, projection_diff
-from . import cahvor
 from .bindings_poseutils_npsp import identity_Rt
 from .projections import unproject
 from .visualization import (
@@ -71,7 +70,6 @@ __all__ = [
     "transform_image",
     "is_within_valid_intrinsics_region",
     "projection_diff",
-    "cahvor",
     "identity_Rt",
     "unproject",
     "annotate_image__valid_intrinsics_region",
