@@ -258,8 +258,7 @@ def _unproject(*args, **kwargs):
       different. numpysane_pywrap broadcasts the leading arguments, so this function
       takes the lensmodel (the one argument that does not broadcast) last
     
-    - This function requires gradients, so it does not support some lens models;
-      CAHVORE for instance
+    - This function requires gradients, so it does not support some lens models.
     
     - To speed things up, this function doesn't call the C drcal_unproject(), but
       uses the _drcal_unproject_internal...() functions instead. That allows as much
